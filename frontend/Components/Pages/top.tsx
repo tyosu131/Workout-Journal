@@ -7,4 +7,4 @@ export const TOP = memo(() => {
 });
 
 const onClickUpdate = () => alert();
-<PrimaryButton onClick={onClickUpdate}>更新</PrimaryButton>
+<PrimaryButton onClick={onClickUpdate}>作成</PrimaryButton>
