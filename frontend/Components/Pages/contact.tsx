@@ -11,9 +11,9 @@ import {
   ModalHeader,
   ModalOverlay,
   Stack,
-  Button, 
-  ButtonGroup
+  Button
 } from "@chakra-ui/react";
+import { FaUser, FaEnvelope } from "react-icons/fa";
 import useAutosizeTextArea from '../../hooks/useAutosizeTextArea';
 
 interface ContactProps {
@@ -35,31 +35,41 @@ const Contact: React.FC<ContactProps> = memo(({ isOpen, onClose }) => {
       motionPreset="slideInBottom"
     >
       <ModalOverlay />
-      <ModalContent maxWidth="500px" mx="auto" pb={2} alignItems="center">
-        <ModalHeader>Contact</ModalHeader>
-        <ModalBody mx={4} display="flex" justifyContent="center">
-          <Stack spacing={4} width="100%">
+      <ModalContent maxWidth="800px" mx="auto" pb={6}>
+        <ModalHeader fontSize="3xl" textAlign="center">Contact</ModalHeader>
+        <ModalBody mx={4} display="flex" justifyContent="center" pt="50px">
+          <Stack spacing={10} width="100%" pt="80px">
             <FormControl>
-              <InputGroup>
-                <Input placeholder="Name" size="lg" />
+              <InputGroup size="lg">
+                <InputLeftElement pointerEvents="none" height="100%">
+                  <FaUser color="gray.300" />
+                </InputLeftElement>
+                <Input placeholder="Name" py={6} fontSize="lg" width="100%" height={20} pl={20} />
               </InputGroup>
             </FormControl>
             <FormControl>
-              <InputGroup>
-                <Input placeholder="Email" size="lg" />
+              <InputGroup size="lg">
+                <InputLeftElement pointerEvents="none" height="100%">
+                  <FaEnvelope color="gray.300" />
+                </InputLeftElement>
+                <Input placeholder="Email" py={6} fontSize="lg" width="100%" height={20} pl={20} />
               </InputGroup>
             </FormControl>
             <FormControl>
               <Textarea
                 ref={textAreaRef}
                 placeholder="Message"
-                size="lg"
+                fontSize="lg"
+                py={6}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 style={{ resize: "none" }}
+                rows={6}
+                width="99%"
+                height="60px"
               />
             </FormControl>
-            <Button colorScheme='blue'>Button</Button>
+            <Button colorScheme="blue" size="lg" py={6} width="100%" height="50px">Submit</Button>
           </Stack>
         </ModalBody>
       </ModalContent>
