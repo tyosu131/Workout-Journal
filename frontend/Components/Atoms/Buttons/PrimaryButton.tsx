@@ -1,4 +1,4 @@
-import { ReactNode, VFC } from "react";
+import { ReactNode, FC } from "react";
 import { Button } from "@chakra-ui/react";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   onClick: () => void;
 };
 
-export const PrimaryButton: VFC<Props> = (props) => {
+const PrimaryButton: FC<Props> = (props) => {
   const {
     children,
     isFullWidth = false,
@@ -34,3 +34,5 @@ export const PrimaryButton: VFC<Props> = (props) => {
     </Button>
   );
 };
+
+export default PrimaryButton;

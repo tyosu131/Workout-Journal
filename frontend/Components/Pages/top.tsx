@@ -1,8 +1,8 @@
-import React, { memo } from 'react';
-import { PrimaryButton } from '../Atoms/Buttons/PrimaryButton';
+import React from 'react';
+import PrimaryButton from '../Atoms/Buttons/PrimaryButton';
 
-export const TOP: React.FC = memo(() => {
-  const onClickUpdate = () => alert();
+const TOP: React.FC = () => {
+  const onClickUpdate = () => alert('Button clicked');
 
   return (
     <div>
@@ -10,4 +10,8 @@ export const TOP: React.FC = memo(() => {
       <PrimaryButton onClick={onClickUpdate}>作成</PrimaryButton>
     </div>
   );
-});
+};
+
+TOP.displayName = 'TOP';
+
+export default React.memo(TOP);
