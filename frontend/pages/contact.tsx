@@ -1,5 +1,5 @@
 import React from 'react';
-import Contact from '../Components/Pages/contact';
+import Contact from '../components/Pages/contact';
 
 const ContactPage: React.FC = () => {
   return <Contact isOpen={true} onClose={() => {}} />;

@@ -1,15 +1,30 @@
-// src/App.tsx
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { Contact } from "../Components/Pages/contact";
-import { TOP } from "../Components/Pages/top";
+import { Button } from "@chakra-ui/react";
+import Contact from "../components/Pages/contact"; 
+import { TOP } from "../components/Pages/top";
 
 const App: React.FC = () => {
+  const [isContactOpen, setContactOpen] = useState(false);
+
+  const openContact = () => setContactOpen(true);
+  const closeContact = () => setContactOpen(false);
+
   return (
     <Router>
       <Routes>
         <Route path="/" element={<TOP />} />
-        <Route path="/contact" element={<Contact />} />
+        <Route
+          path="/contact"
+          element={
+            <>
+              <Button onClick={openContact} colorScheme="teal" size="lg">
+                Open Contact
+              </Button>
+              <Contact isOpen={isContactOpen} onClose={closeContact} />
+            </>
+          }
+        />
       </Routes>
     </Router>
   );

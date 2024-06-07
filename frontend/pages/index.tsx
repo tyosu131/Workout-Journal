@@ -1,5 +1,5 @@
 import React from "react";
-import TOP from "../Components/Pages/top";
+import TOP from "../components/Pages/top";
 
 const HomePage: React.FC = () => {
   return <TOP />;

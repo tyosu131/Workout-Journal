@@ -1,8 +1,8 @@
 import React, { memo } from "react";
 import { Route, Routes } from "react-router-dom";
 
-import { TOP } from "../Components/Pages/top";
-import { Contact } from "../Components/Pages/contact";
+import { TOP } from "../components/Pages/top";
+import { Contact } from "../components/Pages/contact";
 
 interface RouteProps {
   path: string;
