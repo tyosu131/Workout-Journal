@@ -1,5 +1,5 @@
-import { TOP } from "../Components/Pages/top";
-import { Contact } from '../Components/Pages/contact';
+import { TOP } from "../components/Pages/top";
+import { Contact } from '../components/Pages/contact';
 
 
 export const homeRoutes = [

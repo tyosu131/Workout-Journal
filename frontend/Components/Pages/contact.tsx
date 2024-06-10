@@ -14,18 +14,18 @@ import {
   Button
 } from "@chakra-ui/react";
 import { FaUser, FaEnvelope } from "react-icons/fa";
-import useAutosizeTextArea from '../../hooks/useAutosizeTextArea';
+import useAutosizeTextAreaEffect from '../../hooks/useAutosizeTextArea';
 
 interface ContactProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const Contact: React.FC<ContactProps> = memo(({ isOpen, onClose }) => {
+export const Contact: React.FC<ContactProps> = memo(({ isOpen, onClose }) => {
   const [message, setMessage] = useState("");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  useAutosizeTextArea(textAreaRef.current, message);
+  useAutosizeTextAreaEffect(textAreaRef.current, message);
 
   return (
     <Modal
