@@ -20,12 +20,14 @@
     "framer-motion": "^11.2.6",
     "next": "^14.2.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
     "@types/node": "^20.4.2",
     "@types/react": "^18.2.8",
     "@types/react-dom": "^18.2.4",
+    "@types/react-router-dom": "^5.3.3",
     "eslint": "^8.42.0",
     "eslint-config-next": "14.2.3",
     "typescript": "^5.0.0"

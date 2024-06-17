@@ -1,4 +1,3 @@
-// components/CustomLink.tsx
 import { Link as ChakraLink, LinkProps as ChakraLinkProps } from "@chakra-ui/react";
 import NextLink, { LinkProps as NextLinkProps } from "next/link";
 import { PropsWithChildren } from "react";

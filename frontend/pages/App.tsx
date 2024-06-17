@@ -1,4 +1,3 @@
-// pages/_app.tsx
 import { ChakraProvider } from '@chakra-ui/react';
 import { AppProps } from 'next/app';
 
