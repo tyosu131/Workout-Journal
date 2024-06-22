@@ -1,81 +1,106 @@
-import React, { useRef, useState, memo } from "react";
-import {
-  FormControl,
-  Input,
-  InputGroup,
-  InputLeftElement,
-  Modal,
-  ModalBody,
-  Textarea,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  Stack,
-  Button
-} from "@chakra-ui/react";
+import React, { useState } from "react";
+import { Box, Button, FormControl, FormLabel, Input, Textarea, IconButton, CloseButton, useToast, InputGroup, InputLeftElement } from "@chakra-ui/react";
 import { FaUser, FaEnvelope } from "react-icons/fa";
-import useAutosizeTextAreaEffect from '../../hooks/useAutosizeTextArea';
+import { useRouter } from 'next/router';
 
-interface ContactProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const Contact: React.FC<ContactProps> = memo(({ isOpen, onClose }) => {
+const ContactPage: React.FC = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const toast = useToast();
+  const router = useRouter();
 
-  useAutosizeTextAreaEffect(textAreaRef.current, message);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Form submitted.",
+      description: "We've received your message.",
+      status: "success",
+      duration: 5000,
+      isClosable: true,
+    });
+  };
+
+  const handleClose = () => {
+    router.push("/");
+  };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      autoFocus={false}
-      motionPreset="slideInBottom"
-    >
-      <ModalOverlay />
-      <ModalContent maxWidth="800px" mx="auto" pb={6}>
-        <ModalHeader fontSize="3xl" textAlign="center">Contact</ModalHeader>
-        <ModalBody mx={4} display="flex" justifyContent="center" pt="50px">
-          <Stack spacing={10} width="100%" pt="80px">
-            <FormControl>
-              <InputGroup size="lg">
-                <InputLeftElement pointerEvents="none" height="100%">
-                  <FaUser color="gray.300" />
-                </InputLeftElement>
-                <Input placeholder="Name" py={6} fontSize="lg" width="100%" height={20} pl={20} />
-              </InputGroup>
-            </FormControl>
-            <FormControl>
-              <InputGroup size="lg">
-                <InputLeftElement pointerEvents="none" height="100%">
-                  <FaEnvelope color="gray.300" />
-                </InputLeftElement>
-                <Input placeholder="Email" py={6} fontSize="lg" width="100%" height={20} pl={20} />
-              </InputGroup>
-            </FormControl>
-            <FormControl>
-              <Textarea
-                ref={textAreaRef}
-                placeholder="Message"
-                fontSize="lg"
-                py={6}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                style={{ resize: "none" }}
-                rows={6}
-                width="99%"
-                height="60px"
-              />
-            </FormControl>
-            <Button colorScheme="blue" size="lg" py={6} width="100%" height="50px">Submit</Button>
-          </Stack>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+    <Box maxW="md" mx="auto" mt={10} p={8} boxShadow="lg" borderRadius="md" position="relative">
+      <IconButton
+        aria-label="Close"
+        icon={<CloseButton />}
+        onClick={handleClose}
+        position="absolute"
+        top={2}
+        right={2}
+        variant="ghost"
+        size="lg"
+      />
+      <Box as="form" onSubmit={handleSubmit}>
+        <FormControl id="name" mb={6} isRequired>
+          <FormLabel fontSize="lg">Name</FormLabel>
+          <InputGroup>
+            <InputLeftElement
+              pointerEvents="none"
+              display="flex"
+              alignItems="center"
+              height="100%"
+            >
+              <FaUser color="gray.300" />
+            </InputLeftElement>
+            <Input
+              type="text"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              pl="3rem"
+              fontSize="lg"
+              py={6}
+            />
+          </InputGroup>
+        </FormControl>
+        <FormControl id="email" mb={6} isRequired>
+          <FormLabel fontSize="lg">Email</FormLabel>
+          <InputGroup>
+            <InputLeftElement
+              pointerEvents="none"
+              display="flex"
+              alignItems="center"
+              height="100%"
+            >
+              <FaEnvelope color="gray.300" />
+            </InputLeftElement>
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              pl="3rem"
+              fontSize="lg"
+              py={6}
+            />
+          </InputGroup>
+        </FormControl>
+        <FormControl id="message" mb={6} isRequired>
+          <FormLabel fontSize="lg">Message</FormLabel>
+          <Textarea
+            placeholder="Message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            resize="none"
+            overflowY="auto"
+            maxH="200px"
+            fontSize="lg"
+            py={6}
+          />
+        </FormControl>
+        <Button type="submit" colorScheme="blue" width="full" size="lg" fontSize="lg" py={6}>
+          Submit
+        </Button>
+      </Box>
+    </Box>
   );
-});
+};
 
-Contact.displayName = "Contact";
-export default Contact;
+export default ContactPage;
