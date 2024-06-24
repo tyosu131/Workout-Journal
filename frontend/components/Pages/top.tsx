@@ -1,38 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Box, Stack, Text, IconButton, Grid, GridItem, Button, Menu, MenuButton, MenuList, MenuItem, Link as ChakraLink } from "@chakra-ui/react";
 import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { useRouter } from 'next/router';
+import { URLS } from '../../constants/urls';
+import { generateCalendarDates } from '../../utils/calendarUtils';
 
 const TOP: React.FC = () => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const handleDateClick = (date: string) => {
-    router.push(`/note/new/${date}`);
-  };
-
-  const generateCalendarDates = (year: number, month: number) => {
-    const datesArray = [];
-    const date = new Date(year, month, 1);
-    const startDay = date.getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
-
-    for (let i = 0; i < startDay; i++) {
-      datesArray.push(null);
-    }
-
-    for (let i = 1; i <= lastDate; i++) {
-      datesArray.push({ date: `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}` });
-    }
-
-    const remainingCells = 7 - (datesArray.length % 7);
-    if (remainingCells < 7) {
-      for (let i = 0; i < remainingCells; i++) {
-        datesArray.push(null);
-      }
-    }
-
-    return datesArray;
+    router.push(URLS.NOTE_NEW(date));
   };
 
   const handlePrevMonth = () => {
@@ -49,6 +27,8 @@ const TOP: React.FC = () => {
 
   const todayString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式で今日の日付を取得
 
+  const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
+
   return (
     <Box>
       <Box position="absolute" top="10px" right="10px">
@@ -62,7 +42,7 @@ const TOP: React.FC = () => {
           />
           <MenuList>
             <MenuItem 
-              onClick={() => router.push("/user")} 
+              onClick={() => router.push(URLS.USER_PAGE)} 
               _hover={{ bg: "gray.100", cursor: "pointer" }}
             >
               <Box fontSize="lg" py={4}>
@@ -70,7 +50,7 @@ const TOP: React.FC = () => {
               </Box>
             </MenuItem>
             <MenuItem 
-              onClick={() => router.push("/contact")} 
+              onClick={() => router.push(URLS.CONTACT_PAGE)} 
               _hover={{ bg: "gray.100", cursor: "pointer" }}
             >
               <Box fontSize="lg" py={4}>
@@ -99,7 +79,7 @@ const TOP: React.FC = () => {
             />
           </Stack>
           <Button 
-            onClick={() => router.push("/note/new")} 
+            onClick={() => router.push(URLS.NOTE_NEW(new Date().toISOString().split('T')[0]))} 
             width="200px" 
             mt={4} 
             mb={8} 
@@ -112,7 +92,7 @@ const TOP: React.FC = () => {
 
       <Box mt={4} textAlign="center" w="100%">
         <Grid templateColumns="repeat(7, 1fr)" gap={0} border="1px solid" borderColor="gray.200">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
+          {daysOfWeek.map((day, index) => (
             <GridItem 
               key={day} 
               textAlign="center" 
@@ -160,8 +140,24 @@ const TOP: React.FC = () => {
       </Box>
 
       <Box mt={8} display="flex" justifyContent="center">
-        <ChakraLink href="/" ml={4} _hover={{ cursor: "pointer", color: "blue.500", bg: "gray.100" }}>Top</ChakraLink>
-        <ChakraLink href="/timer" ml={4} _hover={{ cursor: "pointer", color: "blue.500", bg: "gray.100" }}>Timer</ChakraLink>
+        <Button 
+          onClick={() => router.push(URLS.TOP_PAGE)} 
+          width="200px" 
+          mt={4} 
+          mb={8} 
+          _hover={{ bg: "gray.200", cursor: "pointer" }}
+        >
+          Top
+        </Button>
+        <Button 
+          onClick={() => router.push(URLS.TIMER_PAGE)} 
+          width="200px" 
+          mt={4} 
+          mb={8} 
+          _hover={{ bg: "gray.200", cursor: "pointer" }}
+        >
+          Timer
+        </Button>
       </Box>
     </Box>
   );
