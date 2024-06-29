@@ -1,17 +1,28 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box, Button, FormControl, FormLabel, Input, Textarea, IconButton, CloseButton, useToast, InputGroup, InputLeftElement } from "@chakra-ui/react";
 import { FaUser, FaEnvelope } from "react-icons/fa";
 import { useRouter } from 'next/router';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const contactSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  message: z.string().min(1, "Message is required"),
+});
+
+type ContactFormInputs = z.infer<typeof contactSchema>;
 
 const ContactPage: React.FC = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const { register, handleSubmit, formState: { errors } } = useForm<ContactFormInputs>({
+    resolver: zodResolver(contactSchema),
+  });
   const toast = useToast();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: ContactFormInputs) => {
+    console.log(data);
     toast({
       title: "Form submitted.",
       description: "We've received your message.",
@@ -37,8 +48,8 @@ const ContactPage: React.FC = () => {
         variant="ghost"
         size="lg"
       />
-      <Box as="form" onSubmit={handleSubmit}>
-        <FormControl id="name" mb={6} isRequired>
+      <Box as="form" onSubmit={handleSubmit(onSubmit)}>
+        <FormControl id="name" mb={6} isInvalid={!!errors.name}>
           <FormLabel fontSize="lg">Name</FormLabel>
           <InputGroup>
             <InputLeftElement
@@ -52,15 +63,19 @@ const ContactPage: React.FC = () => {
             <Input
               type="text"
               placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               pl="3rem"
               fontSize="lg"
               py={6}
             />
           </InputGroup>
+          {errors.name && (
+            <Box color="red.500" fontSize="sm" mt={2}>
+              {errors.name.message}
+            </Box>
+          )}
         </FormControl>
-        <FormControl id="email" mb={6} isRequired>
+        <FormControl id="email" mb={6} isInvalid={!!errors.email}>
           <FormLabel fontSize="lg">Email</FormLabel>
           <InputGroup>
             <InputLeftElement
@@ -74,26 +89,33 @@ const ContactPage: React.FC = () => {
             <Input
               type="email"
               placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
               pl="3rem"
               fontSize="lg"
               py={6}
             />
           </InputGroup>
+          {errors.email && (
+            <Box color="red.500" fontSize="sm" mt={2}>
+              {errors.email.message}
+            </Box>
+          )}
         </FormControl>
-        <FormControl id="message" mb={6} isRequired>
+        <FormControl id="message" mb={6} isInvalid={!!errors.message}>
           <FormLabel fontSize="lg">Message</FormLabel>
           <Textarea
-            placeholder="Message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            {...register("message")}
             resize="none"
             overflowY="auto"
-            maxH="200px"
+            minH="200px"
             fontSize="lg"
             py={6}
           />
+          {errors.message && (
+            <Box color="red.500" fontSize="sm" mt={2}>
+              {errors.message.message}
+            </Box>
+          )}
         </FormControl>
         <Button type="submit" colorScheme="blue" width="full" size="lg" fontSize="lg" py={6}>
           Submit

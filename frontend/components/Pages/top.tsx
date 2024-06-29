@@ -27,6 +27,7 @@ const TOP: React.FC = () => {
 
   const todayString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式で今日の日付を取得
 
+  // 曜日の配列をメモ化
   const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
 
   return (
