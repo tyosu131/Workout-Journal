@@ -7,9 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const contactSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  message: z.string().min(1, "Message is required"),
+  name: z.string().min(1, "名前は必須です"),
+  email: z.string().email("無効なメールアドレスです"),
+  message: z.string().min(1, "メッセージは必須です"),
 });
 
 type ContactFormInputs = z.infer<typeof contactSchema>;
@@ -22,7 +22,6 @@ const ContactPage: React.FC = () => {
   const router = useRouter();
 
   const onSubmit = (data: ContactFormInputs) => {
-    console.log(data);
     toast({
       title: "Form submitted.",
       description: "We've received your message.",
