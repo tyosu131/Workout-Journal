@@ -14,7 +14,12 @@ const contactSchema = z.object({
 
 type ContactFormInputs = z.infer<typeof contactSchema>;
 
-const ContactPage: React.FC = () => {
+interface ContactProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<ContactFormInputs>({
     resolver: zodResolver(contactSchema),
   });
@@ -31,16 +36,12 @@ const ContactPage: React.FC = () => {
     });
   };
 
-  const handleClose = () => {
-    router.push("/");
-  };
-
   return (
     <Box maxW="md" mx="auto" mt={10} p={8} boxShadow="lg" borderRadius="md" position="relative">
       <IconButton
         aria-label="Close"
         icon={<CloseButton />}
-        onClick={handleClose}
+        onClick={onClose}
         position="absolute"
         top={2}
         right={2}
@@ -124,4 +125,4 @@ const ContactPage: React.FC = () => {
   );
 };
 
-export default ContactPage;
+export default Contact;

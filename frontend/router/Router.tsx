@@ -1,17 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import TOP from '../components/Pages/top';
-import Contact from '../components/Pages/contact';
+import Top from '../components/pages/top';
+import Contact from '../components/pages/contact';
 
 const AppRouter: React.FC = () => {
-  const onOpenContact = () => {
+  const handleOpenContact = () => {
+    // 必要に応じて、onOpenContactのロジックを追加
+  };
+
+  const handleCloseContact = () => {
+    // Contactページを閉じるロジックを追加
   };
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<TOP onOpenContact={onOpenContact} />} />
-        <Route path="/contact" element={<Contact isOpen={true} onClose={() => {}} />} />
+        <Route path="/" element={<Top onOpenContact={handleOpenContact} />} />
+        <Route path="/contact" element={<Contact isOpen={true} onClose={handleCloseContact} />} />
       </Routes>
     </Router>
   );
