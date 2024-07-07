@@ -38,9 +38,13 @@ const Note: React.FC<{ date: string }> = ({ date }) => {
   useEffect(() => {
     const fetchNote = async () => {
       try {
+        console.log(`Fetching note for date: ${date}`);
         const response = await axios.get(`/api/notes/${date}`);
         if (response.data) {
+          console.log('Fetched note data:', response.data);
           setNoteData(response.data);
+        } else {
+          console.log('No note found for date:', date);
         }
       } catch (error) {
         console.error('Failed to fetch note', error);
@@ -68,7 +72,9 @@ const Note: React.FC<{ date: string }> = ({ date }) => {
 
   const handleSave = useCallback(async () => {
     try {
+      console.log('Saving note data:', noteData);
       await axios.post(`/api/notes/${noteData.date}`, noteData);
+      console.log('Saved successfully');
       alert('Saved successfully!');
     } catch (error) {
       console.error('Failed to save note', error);
