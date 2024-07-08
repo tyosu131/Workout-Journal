@@ -2,7 +2,7 @@ const express = require('express');
 const next = require('next');
 const sqlite3 = require('sqlite3').verbose();
 const { open } = require('sqlite');
-const { createServer } = require('http');
+const cors = require('cors');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -25,8 +25,10 @@ app.prepare().then(async () => {
   db = await initDb();
 
   const server = express();
+  server.use(cors());
   server.use(express.json());
 
+  // API Routes
   server.get('/api/notes/:date', async (req, res) => {
     try {
       console.log(`Fetching note for date: ${req.params.date}`);
@@ -58,7 +60,7 @@ app.prepare().then(async () => {
   });
 
   const port = process.env.PORT || 3001;
-  createServer(server).listen(port, (err) => {
+  server.listen(port, (err) => {
     if (err) throw err;
     console.log(`> Ready on http://localhost:${port}`);
   });
