@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Table, Button, Text } from '@chakra-ui/react';
+import { Box, Table, Text } from '@chakra-ui/react';
 import axios from 'axios';
+import useSWR from 'swr';
+import { useDebouncedCallback } from 'use-debounce';
 import Header from '../note/header';
 import DateInput from '../note/dateInput';
 import NoteInput from '../note/noteInput';
 import TableHeader from '../note/tableheader';
 import TableBody from '../note/tablebody';
-import { useDebouncedCallback } from 'use-debounce';
 
 interface Set {
   weight: string;
@@ -29,7 +30,10 @@ interface NoteProps {
   date: string;
 }
 
+const fetcher = (url: string) => axios.get(url).then(res => res.data);
+
 const Note: React.FC<NoteProps> = ({ date }) => {
+  const { data, error } = useSWR(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}`, fetcher);
   const [noteData, setNoteData] = useState<NoteData>({
     date: date,
     note: '',
@@ -40,30 +44,19 @@ const Note: React.FC<NoteProps> = ({ date }) => {
   });
 
   useEffect(() => {
-    const fetchNote = async () => {
-      try {
-        console.log(`Fetching note for date: ${date}`);
-        const response = await axios.get(`http://localhost:3001/api/notes/${date}`);
-        console.log('Fetched note:', response.data);
-        if (response.data) {
-          const parsedData = {
-            ...response.data,
-            exercises: JSON.parse(response.data.exercises)
-          };
-          setNoteData(parsedData);
-        }
-      } catch (error) {
-        console.error('Failed to fetch note', error);
-      }
-    };
-
-    fetchNote();
-  }, [date]);
+    if (data) {
+      const parsedData = {
+        ...data,
+        exercises: JSON.parse(data.exercises)
+      };
+      setNoteData(parsedData);
+    }
+  }, [data]);
 
   const debouncedSave = useDebouncedCallback(async (data) => {
     try {
       console.log('Auto-saving note data:', data);
-      await axios.post(`http://localhost:3001/api/notes/${data.date}`, data);
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`, data);
       console.log('Saved successfully!');
     } catch (error) {
       console.error('Failed to save note', error);
@@ -91,6 +84,9 @@ const Note: React.FC<NoteProps> = ({ date }) => {
     setNoteData(newData);
     debouncedSave(newData);
   }, [noteData, debouncedSave]);
+
+  if (error) return <div>Failed to load</div>;
+  if (!data) return <div>Loading...</div>;
 
   return (
     <Box p={4}>

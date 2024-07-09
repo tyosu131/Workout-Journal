@@ -5,11 +5,11 @@ import Contact from '../components/pages/contact';
 
 const AppRouter: React.FC = () => {
   const handleOpenContact = () => {
-    // 必要に応じて、onOpenContactのロジックを追加
+    // TODO:  必要に応じて、onOpenContactのロジックを追加
   };
 
   const handleCloseContact = () => {
-    // Contactページを閉じるロジックを追加
+    // TODO:  Contactページを閉じるロジックを追加
   };
 
   return (

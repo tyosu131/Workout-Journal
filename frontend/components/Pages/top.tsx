@@ -32,9 +32,9 @@ const TOP: React.FC<TOPProps> = ({ onOpenContact }) => {
     setCurrentDate(nextMonthDate);
   };
 
-  const calendarDates = generateCalendarDates(currentDate.getFullYear(), currentDate.getMonth());
+  const calendarDates = useMemo(() => generateCalendarDates(currentDate.getFullYear(), currentDate.getMonth()), [currentDate]);
 
-  const todayString = new Date().toISOString().split('T')[0];
+  const todayString = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
 

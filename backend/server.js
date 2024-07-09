@@ -1,13 +1,9 @@
 const express = require('express');
-const next = require('next');
 const sqlite3 = require('sqlite3').verbose();
 const { open } = require('sqlite');
 const cors = require('cors');
 
-const dev = process.env.NODE_ENV !== 'production';
-const app = next({ dev });
-const handle = app.getRequestHandler();
-
+// データベースの初期化
 const initDb = async () => {
   const db = await open({
     filename: './database.sqlite',
@@ -21,7 +17,7 @@ const initDb = async () => {
 };
 
 let db;
-app.prepare().then(async () => {
+const setupServer = async () => {
   db = await initDb();
 
   const server = express();
@@ -55,13 +51,11 @@ app.prepare().then(async () => {
     }
   });
 
-  server.all('*', (req, res) => {
-    return handle(req, res);
-  });
-
   const port = process.env.PORT || 3001;
   server.listen(port, (err) => {
     if (err) throw err;
     console.log(`> Ready on http://localhost:${port}`);
   });
-});
+};
+
+setupServer();

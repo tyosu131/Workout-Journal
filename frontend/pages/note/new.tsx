@@ -6,7 +6,7 @@ const NewNotePage: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
 
-  return <Note date={date as string} />;
+  return <Note date={String(date)} />;
 };
 
 export default NewNotePage;
