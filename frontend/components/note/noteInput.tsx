@@ -1,17 +1,24 @@
-import React from 'react';
-import { Box, Input } from '@chakra-ui/react';
+import React from "react";
+import { Box, FormLabel, Input } from "@chakra-ui/react";
 
 interface NoteInputProps {
   note: string;
   onNoteChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const NoteInput: React.FC<NoteInputProps> = ({ note, onNoteChange }) => (
-  <Box mb={4}>
-    <label htmlFor="note">Note:</label>
-    <Input type="text" id="note" name="note" ml={2} value={note} onChange={onNoteChange} />
-  </Box>
-);
+const NoteInput: React.FC<NoteInputProps> = ({ note, onNoteChange }) => {
+  return (
+    <Box>
+      <FormLabel>Note:</FormLabel>
+      <Input
+        type="text"
+        value={note}
+        onChange={onNoteChange}
+        size="md"
+        width="200px"
+      />
+    </Box>
+  );
+};
 
-NoteInput.displayName = 'NoteInput';
 export default NoteInput;
