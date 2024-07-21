@@ -43,8 +43,8 @@ const setupServer = async () => {
         console.log('Fetched note:', note);
         res.json(note);
       } else {
-        console.log('No note found for date:', date);
-        res.status(404).json({ error: 'Note not found' });
+        console.log(`No note found for date: ${date}`);
+        res.status(404).json({ error: `No note found for date: ${date}` });
       }
     } catch (error) {
       console.error('Failed to fetch note', error);
