@@ -55,16 +55,39 @@ const Note: React.FC = () => {
     if (data) {
       try {
         console.log('Fetched data:', data); // デバッグ用のログ
+        const exercises = JSON.parse(data.exercises);
         const parsedData = {
           ...data,
-          exercises: JSON.parse(data.exercises),
+          exercises: Array.isArray(exercises) && exercises.length > 0 ? exercises : Array.from({ length: 30 }).map(() => ({
+            exercise: "",
+            sets: Array.from({ length: 5 }).map(() => ({
+              weight: "",
+              reps: "",
+              rest: "",
+            })),
+          })),
         };
         setNoteData(parsedData);
       } catch (error) {
         console.error("Failed to parse exercises data:", error);
       }
+    } else if (error && error.response?.status === 404) {
+      console.log('Data not found:', error);
+      // 404エラーが発生した場合は未編集のnoteページ画面を表示
+      setNoteData({
+        date: date as string,
+        note: "",
+        exercises: Array.from({ length: 30 }).map(() => ({
+          exercise: "",
+          sets: Array.from({ length: 5 }).map(() => ({
+            weight: "",
+            reps: "",
+            rest: "",
+          })),
+        })),
+      });
     }
-  }, [data]);
+  }, [data, error, date]);
 
   const debouncedSave = useDebouncedCallback(async (data) => {
     try {
@@ -98,12 +121,15 @@ const Note: React.FC = () => {
     debouncedSave(newData);
   }, [noteData, debouncedSave]);
 
-  if (error) {
-    console.error('Failed to load data:', error);
-    return <div>Failed to load</div>;
-  }
-  
-  if (!data) {
+  const handleDateChange = useCallback((newDate: string) => {
+    setNoteData((prevData) => ({
+      ...prevData,
+      date: newDate,
+    }));
+    router.push(`/note/new?date=${newDate}`);
+  }, [router]);
+
+  if (!data && !error) {
     console.log('Data is still loading...');
     return (
       <Center height="100vh">
@@ -124,7 +150,7 @@ const Note: React.FC = () => {
         Note
       </Text>
       {isValidDate ? (
-        <DateInput selectedDate={selectedDate} onDateChange={() => {}} />
+        <DateInput date={noteData.date} onDateChange={handleDateChange} />
       ) : (
         <div>Invalid Date</div>
       )}

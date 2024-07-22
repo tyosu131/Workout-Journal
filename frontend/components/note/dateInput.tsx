@@ -1,25 +1,24 @@
-import React from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { Box, FormLabel, Input } from "@chakra-ui/react";
+import React from 'react';
+import { Box, Input } from '@chakra-ui/react';
 
 interface DateInputProps {
-  selectedDate: Date | null;
-  onDateChange: (date: Date | null) => void;
+  date: string;
+  onDateChange: (newDate: string) => void;
 }
 
-const DateInput: React.FC<DateInputProps> = ({ selectedDate, onDateChange }) => {
-  return (
-    <Box>
-      <FormLabel>Date:</FormLabel>
-      <DatePicker
-        selected={selectedDate}
-        onChange={onDateChange}
-        dateFormat="yyyy/MM/dd"
-        customInput={<Input width="200px" />}
-      />
-    </Box>
-  );
-};
+const DateInput: React.FC<DateInputProps> = ({ date, onDateChange }) => (
+  <Box mb={4}>
+    <label htmlFor="date">Date:</label>
+    <Input
+      type="date"
+      id="date"
+      name="date"
+      ml={2}
+      defaultValue={date}
+      onChange={(e) => onDateChange(e.target.value)}
+    />
+  </Box>
+);
 
+DateInput.displayName = 'DateInput';
 export default DateInput;
