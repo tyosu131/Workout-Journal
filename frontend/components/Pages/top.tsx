@@ -14,12 +14,7 @@ const TOP: React.FC<TOPProps> = ({ onOpenContact }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const handleDateClick = (date: string) => {
-    const editedDates = ['2024-07-01', '2024-07-02'];
-    if (editedDates.includes(date)) {
-      router.push(`/note/${date}`);
-    } else {
-      router.push(`/note/new?date=${date}`);
-    }
+    router.push(`/note/${date}`);
   };
 
   const handlePrevMonth = () => {

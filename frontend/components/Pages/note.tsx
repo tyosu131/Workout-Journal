@@ -1,42 +1,24 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Table, Text, Spinner, Center } from "@chakra-ui/react";
-import axios from "axios";
 import useSWR from "swr";
-import { useDebouncedCallback } from "use-debounce";
 import Header from "../note/header";
 import DateInput from "../note/dateInput";
 import NoteInput from "../note/noteInput";
 import TableHeader from "../note/tableheader";
 import TableBody from "../note/tablebody";
+import useNoteHandlers from "../../hooks/useNoteHandlers";
+import { NoteData } from "../../utils/types";
+import axios from "axios";
 
-interface Set {
-  weight: string;
-  reps: string;
-  rest: string;
-}
+const fetchNoteData = async (url: string): Promise<NoteData> => {
+  const res = await axios.get(url);
+  const data = res.data;
+  const exercises = JSON.parse(data.exercises);
 
-interface Exercise {
-  exercise: string;
-  sets: Set[];
-}
-
-interface NoteData {
-  date: string;
-  note: string;
-  exercises: Exercise[];
-}
-
-const fetcher = (url: string) => axios.get(url).then((res) => res.data);
-
-const Note: React.FC = () => {
-  const router = useRouter();
-  const { date } = router.query;
-  const { data, error } = useSWR(date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null, fetcher);
-  const [noteData, setNoteData] = useState<NoteData>({
-    date: "",
-    note: "",
-    exercises: Array.from({ length: 30 }).map(() => ({
+  return {
+    ...data,
+    exercises: Array.isArray(exercises) && exercises.length > 0 ? exercises : Array.from({ length: 30 }).map(() => ({
       exercise: "",
       sets: Array.from({ length: 5 }).map(() => ({
         weight: "",
@@ -44,36 +26,21 @@ const Note: React.FC = () => {
         rest: "",
       })),
     })),
-  });
-  const [isClient, setIsClient] = useState(false);
+  };
+};
+
+const Note: React.FC = () => {
+  const router = useRouter();
+  const { date } = router.query;
+
+  const { data, error } = useSWR(date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null, fetchNoteData);
+  const [noteData, setNoteData] = useState<NoteData | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (data) {
-      try {
-        console.log('Fetched data:', data); // デバッグ用のログ
-        const exercises = JSON.parse(data.exercises);
-        const parsedData = {
-          ...data,
-          exercises: Array.isArray(exercises) && exercises.length > 0 ? exercises : Array.from({ length: 30 }).map(() => ({
-            exercise: "",
-            sets: Array.from({ length: 5 }).map(() => ({
-              weight: "",
-              reps: "",
-              rest: "",
-            })),
-          })),
-        };
-        setNoteData(parsedData);
-      } catch (error) {
-        console.error("Failed to parse exercises data:", error);
-      }
-    } else if (error && error.response?.status === 404) {
+    if (data && !noteData) {
+      setNoteData(data);
+    } else if (error && error.response?.status === 404 && !noteData) {
       console.log('Data not found:', error);
-      // 404エラーが発生した場合は未編集のnoteページ画面を表示
       setNoteData({
         date: date as string,
         note: "",
@@ -87,47 +54,9 @@ const Note: React.FC = () => {
         })),
       });
     }
-  }, [data, error, date]);
+  }, [data, error, date, noteData]);
 
-  const debouncedSave = useDebouncedCallback(async (data) => {
-    try {
-      console.log("Auto-saving note data:", data);
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`, data);
-      console.log("Saved successfully!");
-    } catch (error) {
-      console.error("Failed to save note", error);
-    }
-  }, 1000);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, exerciseIndex: number, setIndex: number, field: keyof Set) => {
-    const newExercises = [...noteData.exercises];
-    newExercises[exerciseIndex].sets[setIndex][field] = e.target.value;
-    const newData = { ...noteData, exercises: newExercises };
-    setNoteData(newData);
-    debouncedSave(newData);
-  }, [noteData, debouncedSave]);
-
-  const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newData = { ...noteData, note: e.target.value };
-    setNoteData(newData);
-    debouncedSave(newData);
-  }, [noteData, debouncedSave]);
-
-  const handleExerciseChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const newExercises = [...noteData.exercises];
-    newExercises[index].exercise = e.target.value;
-    const newData = { ...noteData, exercises: newExercises };
-    setNoteData(newData);
-    debouncedSave(newData);
-  }, [noteData, debouncedSave]);
-
-  const handleDateChange = useCallback((newDate: string) => {
-    setNoteData((prevData) => ({
-      ...prevData,
-      date: newDate,
-    }));
-    router.push(`/note/new?date=${newDate}`);
-  }, [router]);
+  const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
 
   if (!data && !error) {
     console.log('Data is still loading...');
@@ -138,7 +67,7 @@ const Note: React.FC = () => {
     );
   }
 
-  if (!isClient) return null;
+  if (!noteData) return null;
 
   const selectedDate = new Date(noteData.date);
   const isValidDate = !isNaN(selectedDate.getTime());
