@@ -8,7 +8,7 @@ import NoteInput from "../note/noteInput";
 import TableHeader from "../note/tableheader";
 import TableBody from "../note/tablebody";
 import useNoteHandlers from "../../hooks/useNoteHandlers";
-import { NoteData } from "../../utils/types";
+import { NoteData } from "../../types/types";
 import axios from "axios";
 
 const fetchNoteData = async (url: string): Promise<NoteData> => {
@@ -37,9 +37,9 @@ const Note: React.FC = () => {
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
   useEffect(() => {
-    if (data && !noteData) {
+    if (data) {
       setNoteData(data);
-    } else if (error && error.response?.status === 404 && !noteData) {
+    } else if (error && error.response?.status === 404) {
       console.log('Data not found:', error);
       setNoteData({
         date: date as string,
@@ -54,7 +54,7 @@ const Note: React.FC = () => {
         })),
       });
     }
-  }, [data, error, date, noteData]);
+  }, [data, error, date]);
 
   const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
 

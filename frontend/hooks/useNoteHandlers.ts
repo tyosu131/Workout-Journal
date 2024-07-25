@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useRouter } from "next/router";
-import { NoteData, Set, Exercise } from "../utils/types";
+import { NoteData, Set, Exercise } from "../types/types";
 import { useDebouncedCallback } from "use-debounce";
 import axios from "axios";
 
