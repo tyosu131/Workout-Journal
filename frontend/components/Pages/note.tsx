@@ -32,7 +32,6 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
 const Note: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
-
   const { data, error } = useSWR(date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null, fetchNoteData);
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
