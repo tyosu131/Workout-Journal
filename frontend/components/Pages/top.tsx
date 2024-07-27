@@ -1,16 +1,20 @@
 import React, { useState, useMemo } from "react";
-import { Box, Stack, Text, IconButton, Grid, GridItem, Button, Menu, MenuButton, MenuList, MenuItem, Link as ChakraLink } from "@chakra-ui/react";
+import { Box, Stack, Text, IconButton, Grid, GridItem, Button, Menu, MenuButton, MenuList, MenuItem } from "@chakra-ui/react";
 import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { useRouter } from 'next/router';
 import { URLS } from '../../constants/urls';
 import { generateCalendarDates } from '../../utils/calendarUtils';
 
-const TOP: React.FC = () => {
+interface TOPProps {
+  onOpenContact: () => void;
+}
+
+const TOP: React.FC<TOPProps> = ({ onOpenContact }) => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const handleDateClick = (date: string) => {
-    router.push(URLS.NOTE_NEW(date));
+    router.push(`/note/${date}`);
   };
 
   const handlePrevMonth = () => {
@@ -23,11 +27,10 @@ const TOP: React.FC = () => {
     setCurrentDate(nextMonthDate);
   };
 
-  const calendarDates = generateCalendarDates(currentDate.getFullYear(), currentDate.getMonth());
+  const calendarDates = useMemo(() => generateCalendarDates(currentDate.getFullYear(), currentDate.getMonth()), [currentDate]);
 
-  const todayString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式で今日の日付を取得
+  const todayString = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // 曜日の配列をメモ化
   const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
 
   return (

@@ -1,8 +1,11 @@
 import React from 'react';
-import Top from '../components/Pages/top'; 
+import Top from '../components/pages/top';
 
 const HomePage: React.FC = () => {
-  return <Top />;
+  const handleOpenContact = () => {
+  };
+
+  return <Top onOpenContact={handleOpenContact} />;
 };
 
 export default HomePage;
