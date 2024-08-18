@@ -1,69 +1,117 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set } from "../types/types";
 import { useDebouncedCallback } from "use-debounce";
 import axios from "axios";
 
-const useNoteHandlers = (noteData: NoteData | null, setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>) => {
+interface User {
+  id: number;
+  email: string;
+}
+
+const useNoteHandlers = (
+  noteData: NoteData | null,
+  setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>
+) => {
   const router = useRouter();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
 
   const debouncedSave = useDebouncedCallback(async (data: NoteData) => {
     try {
-      await axios.post(`http://localhost:3001/api/notes/${user.id}/${data.date}`, data);
+      if (user) {
+        const token = localStorage.getItem("token");
+        if (token) {
+          const response = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`,
+            data,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          console.log("Saved response:", response.data);
+        }
+      }
     } catch (error) {
       console.error("Failed to save note", error);
     }
-  }, 1000);
+  }, 1000); // 1秒の遅延後に保存
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, exerciseIndex: number, setIndex: number, field: keyof Set) => {
-    if (!noteData) return;
-    const newExercises = [...noteData.exercises];
-    newExercises[exerciseIndex].sets[setIndex][field] = e.target.value;
-    const newData = { ...noteData, exercises: newExercises };
-    setNoteData(newData);
-    debouncedSave(newData);
-  }, [noteData, debouncedSave, setNoteData]);
+  const handleInputChange = useCallback(
+    (
+      e: React.ChangeEvent<HTMLInputElement>,
+      exerciseIndex: number,
+      setIndex: number,
+      field: keyof Set
+    ) => {
+      if (!noteData) return;
+      const newExercises = [...noteData.exercises];
+      newExercises[exerciseIndex].sets[setIndex][field] = e.target.value;
+      const newData = { ...noteData, exercises: newExercises };
+      setNoteData(newData);
+      debouncedSave(newData);
+    },
+    [noteData, debouncedSave, setNoteData]
+  );
 
-  const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!noteData) return;
-    const newData = { ...noteData, note: e.target.value };
-    setNoteData(newData);
-    debouncedSave(newData);
-  }, [noteData, debouncedSave, setNoteData]);
+  const handleNoteChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!noteData) return;
+      const newData = { ...noteData, note: e.target.value };
+      setNoteData(newData);
+      debouncedSave(newData);
+    },
+    [noteData, debouncedSave, setNoteData]
+  );
 
-  const handleExerciseChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    if (!noteData) return;
-    const newExercises = [...noteData.exercises];
-    newExercises[index].exercise = e.target.value;
-    const newData = { ...noteData, exercises: newExercises };
-    setNoteData(newData);
-    debouncedSave(newData);
-  }, [noteData, debouncedSave, setNoteData]);
+  const handleExerciseChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+      if (!noteData) return;
+      const newExercises = [...noteData.exercises];
+      newExercises[index].exercise = e.target.value;
+      const newData = { ...noteData, exercises: newExercises };
+      setNoteData(newData);
+      debouncedSave(newData);
+    },
+    [noteData, debouncedSave, setNoteData]
+  );
 
-  const handleDateChange = useCallback((newDate: string) => {
-    setNoteData((prevData: NoteData | null) => {
-      if (!prevData) {
-        return {
-          date: newDate,
-          note: "",
-          exercises: Array.from({ length: 30 }).map(() => ({
-            exercise: "",
-            sets: Array.from({ length: 5 }).map(() => ({
-              weight: "",
-              reps: "",
-              rest: "",
+  const handleDateChange = useCallback(
+    (newDate: string) => {
+      setNoteData((prevData: NoteData | null) => {
+        if (!prevData) {
+          return {
+            date: newDate,
+            note: "",
+            exercises: Array.from({ length: 30 }).map(() => ({
+              exercise: "",
+              sets: Array.from({ length: 5 }).map(() => ({
+                weight: "",
+                reps: "",
+                rest: "",
+              })),
             })),
-          })),
+          };
+        }
+        return {
+          ...prevData,
+          date: newDate,
         };
-      }
-      return {
-        ...prevData,
-        date: newDate,
-      };
-    });
-    router.push(`/note/new?date=${newDate}`);
-  }, [router, setNoteData]);
+      });
+      router.push(`/note/new?date=${newDate}`);
+    },
+    [router, setNoteData]
+  );
 
   return {
     handleInputChange,

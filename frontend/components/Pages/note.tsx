@@ -11,6 +11,7 @@ import useNoteHandlers from "../../hooks/useNoteHandlers";
 import { NoteData } from "../../types/types";
 import axios from "axios";
 
+// ノートデータをAPIから取得
 const fetchNoteData = async (url: string): Promise<NoteData> => {
   const token = localStorage.getItem("token");
   const res = await axios.get(url, {
@@ -18,7 +19,7 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
       Authorization: `Bearer ${token}`,
     },
   });
-  const data = res.data;
+  const data = res.data[0]; // データの最初の要素を取得
   const exercises = JSON.parse(data.exercises);
 
   return {
@@ -37,14 +38,19 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
 const Note: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
-  const { data, error } = useSWR(date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null, fetchNoteData);
+  const { data, error } = useSWR(
+    date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
+    fetchNoteData,
+    { revalidateOnFocus: false, shouldRetryOnError: false } // 再フェッチ制御
+  );
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
+  // データ取得が成功した場合のノートデータの設定、または見つからなかった場合の初期化
   useEffect(() => {
     if (data) {
       setNoteData(data);
     } else if (error && error.response?.status === 404) {
-      console.log('Data not found:', error);
+      console.log("Data not found:", error);
       setNoteData({
         date: date as string,
         note: "",
@@ -60,10 +66,12 @@ const Note: React.FC = () => {
     }
   }, [data, error, date]);
 
+  // ノート変更を処理するカスタムフック
   const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
 
-  if (!data && !error) {
-    console.log('Data is still loading...');
+  // データ取得中にスピナーを表示
+  if (!data && !error && !noteData) {
+    console.log("Data is still loading...");
     return (
       <Center height="100vh">
         <Spinner size="xl" />
@@ -71,11 +79,14 @@ const Note: React.FC = () => {
     );
   }
 
+  // ノートデータがない場合は何も表示しない
   if (!noteData) return null;
 
+  // 選択された日付が有効か確認
   const selectedDate = new Date(noteData.date);
   const isValidDate = !isNaN(selectedDate.getTime());
 
+  // コンポーネントのレンダリング
   return (
     <Box p={4}>
       <Header />

@@ -1,39 +1,47 @@
 import React, { createContext, useContext, useState } from 'react';
-import { useRouter } from 'next/router';
 
-interface AuthContextProps {
-  token: string | null;
-  login: (token: string) => void;
+// ユーザー型の定義
+type User = {
+  id: string;
+  email: string;
+};
+
+type AuthContextProps = {
+  user: User | null;
+  login: (user: User) => void;
   logout: () => void;
-}
+};
 
-const AuthContext = createContext<AuthContextProps>({
-  token: null,
-  login: () => {},
-  logout: () => {},
-});
+type AuthProviderProps = {
+  children: React.ReactNode;
+};
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const router = useRouter();
+// AuthContextの作成
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-  const login = (token: string) => {
-    setToken(token);
-    localStorage.setItem('token', token);
-    router.push('/');  // トップページへリダイレクト
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+
+  const login = (user: User) => {
+    setUser(user);
   };
 
   const logout = () => {
-    setToken(null);
-    localStorage.removeItem('token');
-    router.push('/login');
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ token, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+// useAuthフックの作成
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
