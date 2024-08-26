@@ -1,44 +1,63 @@
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
+import supabase from '../../../backend/supabaseClient';
 
 const SignUp: React.FC = () => {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(''); // 名前フィールドを追加
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const toast = useToast();
-  const { login } = useAuth();
   const router = useRouter();
 
   const handleSignUp = async () => {
     try {
-      console.log("Signing up with", { name, email, password });
-      const response = await axios.post('http://localhost:3001/api/signup', { name, email, password });
-      console.log("Signup response:", response.data);
-      login(response.data.token);
-      router.push('/');  // トップページへリダイレクト
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        console.error("Signup error:", error.response ? error.response.data : error.message);
-        toast({
-          title: 'Error',
-          description: 'There was an error signing up. Please try again.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        console.error("Unexpected error:", error);
-        toast({
-          title: 'Error',
-          description: 'An unexpected error occurred. Please try again later.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
+      console.log("Signing up with", { email, password, name });
+
+      // Supabaseのauth.signUpを使用してユーザーを登録
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
       }
+
+      // 新規ユーザーをカスタムのusersテーブルに追加
+      const user = data.user;
+
+      if (user) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ name, email, password }]); // nameフィールドを挿入
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        toast({
+          title: 'Signup successful!',
+          description: 'You have been registered successfully.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+
+        // メール確認後にトップページへリダイレクト
+        router.push('/login');
+      } else {
+        throw new Error('User data is missing in the response');
+      }
+    } catch (error: any) {
+      console.error("Signup error:", error.message);
+      toast({
+        title: 'Error',
+        description: error.message || 'There was an error signing up. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -50,7 +69,7 @@ const SignUp: React.FC = () => {
           placeholder="Please enter your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          my={4}
+          mb={4}
         />
         <Input
           placeholder="Please enter your e-mail address"
