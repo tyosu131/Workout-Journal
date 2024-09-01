@@ -1,10 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
-
-// ユーザー型の定義
-type User = {
-  id: string;
-  email: string;
-};
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import supabase from '../../backend/supabaseClient'; // Supabase クライアントのデフォルトインポート
+import { User } from '@supabase/supabase-js'; // Supabase の User 型をインポート
 
 type AuthContextProps = {
   user: User | null;
@@ -22,12 +18,29 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
+    };
+
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   const login = (user: User) => {
     setUser(user);
   };
 
   const logout = () => {
-    setUser(null);
+    supabase.auth.signOut().then(() => setUser(null));
   };
 
   return (

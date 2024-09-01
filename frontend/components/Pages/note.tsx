@@ -19,6 +19,22 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
       Authorization: `Bearer ${token}`,
     },
   });
+  
+  if (res.data.length === 0) {
+    return {
+      date: url.split('/').pop() as string,
+      note: "",
+      exercises: Array.from({ length: 30 }).map(() => ({
+        exercise: "",
+        sets: Array.from({ length: 5 }).map(() => ({
+          weight: "",
+          reps: "",
+          rest: "",
+        })),
+      })),
+    };
+  }
+  
   const data = res.data[0]; // データの最初の要素を取得
   const exercises = JSON.parse(data.exercises);
 
@@ -38,19 +54,20 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
 const Note: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
+  const [noteData, setNoteData] = useState<NoteData | null>(null);
+
   const { data, error } = useSWR(
     date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
     fetchNoteData,
     { revalidateOnFocus: false, shouldRetryOnError: false } // 再フェッチ制御
   );
-  const [noteData, setNoteData] = useState<NoteData | null>(null);
 
   // データ取得が成功した場合のノートデータの設定、または見つからなかった場合の初期化
   useEffect(() => {
     if (data) {
       setNoteData(data);
-    } else if (error && error.response?.status === 404) {
-      console.log("Data not found:", error);
+    } else if (error) {
+      console.error("Failed to fetch note:", error);
       setNoteData({
         date: date as string,
         note: "",
@@ -71,7 +88,6 @@ const Note: React.FC = () => {
 
   // データ取得中にスピナーを表示
   if (!data && !error && !noteData) {
-    console.log("Data is still loading...");
     return (
       <Center height="100vh">
         <Spinner size="xl" />
@@ -79,8 +95,15 @@ const Note: React.FC = () => {
     );
   }
 
-  // ノートデータがない場合は何も表示しない
-  if (!noteData) return null;
+  // dateが取得される前にnoteDataを使用しないようにする
+  if (!date || !noteData) {
+    return (
+      <Center height="100vh">
+        <Spinner size="xl" />
+        <Text>Loading...</Text>
+      </Center>
+    );
+  }
 
   // 選択された日付が有効か確認
   const selectedDate = new Date(noteData.date);
