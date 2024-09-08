@@ -1,8 +1,9 @@
+// frontend/hooks/useNoteHandlers.ts
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set } from "../types/types";
-import { useDebouncedCallback } from "use-debounce";
 import axios from "axios";
+import { getToken } from "../utils/tokenUtils"; // トークン取得関数をインポート
 
 interface User {
   id: number;
@@ -25,17 +26,17 @@ const useNoteHandlers = (
     }
   }, []);
 
-  const debouncedSave = useDebouncedCallback(async (data: NoteData) => {
+  const saveNote = useCallback(async (data: NoteData) => {
     try {
       if (user) {
-        const token = localStorage.getItem("token");
+        const token = getToken(); // トークンを取得
         if (token) {
           const response = await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`,
             data,
             {
               headers: {
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${token}`, // 取得したトークンを使用
               },
             }
           );
@@ -45,7 +46,7 @@ const useNoteHandlers = (
     } catch (error) {
       console.error("Failed to save note", error);
     }
-  }, 1000); // 1秒の遅延後に保存
+  }, [user]);
 
   const handleInputChange = useCallback(
     (
@@ -59,9 +60,9 @@ const useNoteHandlers = (
       newExercises[exerciseIndex].sets[setIndex][field] = e.target.value;
       const newData = { ...noteData, exercises: newExercises };
       setNoteData(newData);
-      debouncedSave(newData);
+      saveNote(newData); // 即時保存
     },
-    [noteData, debouncedSave, setNoteData]
+    [noteData, saveNote, setNoteData]
   );
 
   const handleNoteChange = useCallback(
@@ -69,9 +70,9 @@ const useNoteHandlers = (
       if (!noteData) return;
       const newData = { ...noteData, note: e.target.value };
       setNoteData(newData);
-      debouncedSave(newData);
+      saveNote(newData); // 即時保存
     },
-    [noteData, debouncedSave, setNoteData]
+    [noteData, saveNote, setNoteData]
   );
 
   const handleExerciseChange = useCallback(
@@ -81,9 +82,9 @@ const useNoteHandlers = (
       newExercises[index].exercise = e.target.value;
       const newData = { ...noteData, exercises: newExercises };
       setNoteData(newData);
-      debouncedSave(newData);
+      saveNote(newData); // 即時保存
     },
-    [noteData, debouncedSave, setNoteData]
+    [noteData, saveNote, setNoteData]
   );
 
   const handleDateChange = useCallback(

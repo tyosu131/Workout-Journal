@@ -19,7 +19,7 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
       Authorization: `Bearer ${token}`,
     },
   });
-  
+
   if (res.data.length === 0) {
     return {
       date: url.split('/').pop() as string,
@@ -34,7 +34,7 @@ const fetchNoteData = async (url: string): Promise<NoteData> => {
       })),
     };
   }
-  
+
   const data = res.data[0]; // データの最初の要素を取得
   const exercises = JSON.parse(data.exercises);
 
@@ -59,15 +59,18 @@ const Note: React.FC = () => {
   const { data, error } = useSWR(
     date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
     fetchNoteData,
-    { revalidateOnFocus: false, shouldRetryOnError: false } // 再フェッチ制御
+    { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
-  // データ取得が成功した場合のノートデータの設定、または見つからなかった場合の初期化
   useEffect(() => {
     if (data) {
       setNoteData(data);
     } else if (error) {
-      console.error("Failed to fetch note:", error);
+      if (error instanceof Error) {
+        console.error("Failed to fetch note:", error.message);
+      } else {
+        console.error("Unknown error:", error);
+      }
       setNoteData({
         date: date as string,
         note: "",
@@ -83,10 +86,8 @@ const Note: React.FC = () => {
     }
   }, [data, error, date]);
 
-  // ノート変更を処理するカスタムフック
   const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
 
-  // データ取得中にスピナーを表示
   if (!data && !error && !noteData) {
     return (
       <Center height="100vh">
@@ -95,7 +96,6 @@ const Note: React.FC = () => {
     );
   }
 
-  // dateが取得される前にnoteDataを使用しないようにする
   if (!date || !noteData) {
     return (
       <Center height="100vh">
@@ -105,11 +105,9 @@ const Note: React.FC = () => {
     );
   }
 
-  // 選択された日付が有効か確認
   const selectedDate = new Date(noteData.date);
   const isValidDate = !isNaN(selectedDate.getTime());
 
-  // コンポーネントのレンダリング
   return (
     <Box p={4}>
       <Header />
@@ -134,5 +132,4 @@ const Note: React.FC = () => {
   );
 };
 
-Note.displayName = "Note";
 export default Note;

@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import supabase from '../../backend/supabaseClient'; // Supabase クライアントのデフォルトインポート
-import { User } from '@supabase/supabase-js'; // Supabase の User 型をインポート
+import supabase from '../../backend/supabaseClient'; // Supabase クライアント
+import { User } from '@supabase/supabase-js';
+import { getToken, setToken, removeToken } from '../utils/tokenUtils'; // トークン管理用関数をインポート
 
 type AuthContextProps = {
   user: User | null;
-  login: (user: User) => void;
+  login: (user: User, token: string) => void;
   logout: () => void;
 };
 
@@ -12,7 +13,6 @@ type AuthProviderProps = {
   children: React.ReactNode;
 };
 
-// AuthContextの作成
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -27,7 +27,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        setToken(session.access_token); // トークンを保存
+      }
     });
 
     return () => {
@@ -35,12 +38,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const login = (user: User) => {
+  const login = (user: User, token: string) => {
     setUser(user);
+    setToken(token); // ログイン時にトークンを保存
   };
 
   const logout = () => {
-    supabase.auth.signOut().then(() => setUser(null));
+    supabase.auth.signOut().then(() => {
+      setUser(null);
+      removeToken(); // ログアウト時にトークンを削除
+    });
   };
 
   return (
@@ -50,7 +57,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-// useAuthフックの作成
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

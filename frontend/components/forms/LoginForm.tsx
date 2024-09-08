@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Box, Input, Button, useToast } from "@chakra-ui/react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { setToken } from "../../utils/tokenUtils"; // トークン保存の関数をインポート
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -13,7 +14,7 @@ const LoginForm: React.FC = () => {
   const handleLogin = async () => {
     try {
       const response = await axios.post("http://localhost:3001/api/login", { email, password });
-      localStorage.setItem("token", response.data.accessToken);
+      setToken(response.data.token); // トークンを保存
       toast({
         title: "Login Successful",
         description: "You have successfully logged in.",

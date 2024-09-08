@@ -2,13 +2,14 @@ require('dotenv').config({ path: './.env.local' });
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const supabase = require('./supabaseClient');
 
 const server = express();
 
 // CORS設定
 const corsOptions = {
-  origin: '*',
+  origin: '*', // 必要に応じてオリジンを限定する
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -16,6 +17,7 @@ const corsOptions = {
 
 server.use(cors(corsOptions));
 server.use(express.json());
+server.use(cookieParser());
 
 // JWT_SECRETの確認
 if (!process.env.JWT_SECRET) {
@@ -29,6 +31,16 @@ const validateEmail = (email) => {
   return re.test(email);
 };
 
+// トークン発行関数
+const generateAccessToken = (user) => {
+  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+};
+
+// リフレッシュトークン発行関数
+const generateRefreshToken = (user) => {
+  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
 // ユーザー登録API
 server.post('/api/signup', async (req, res) => {
   const { name, email, password } = req.body;
@@ -38,8 +50,7 @@ server.post('/api/signup', async (req, res) => {
   }
 
   try {
-    // Supabaseから既存ユーザーをチェック
-    const { data: existingUser, error: selectError } = await supabase
+    const { data: existingUser } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
@@ -49,23 +60,27 @@ server.post('/api/signup', async (req, res) => {
       return res.status(409).json({ error: 'Email already exists' });
     }
 
-    // 新規ユーザーをSupabaseに挿入
     const { data, error } = await supabase
       .from('users')
       .insert([{ name, email, password }])
       .select();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     if (!data || !data[0]) {
-      console.error('No data returned after insert');
       return res.status(500).json({ error: 'Failed to create user' });
     }
 
-    // JWTトークンを生成
-    const token = jwt.sign({ id: data[0].id, email: data[0].email }, process.env.JWT_SECRET);
+    const token = generateAccessToken(data[0]);
+    const refreshToken = generateRefreshToken(data[0]);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     res.status(201).json({ token });
   } catch (error) {
     console.error('Failed to create user:', error);
@@ -91,7 +106,16 @@ server.post('/api/login', async (req, res) => {
       return res.status(500).json({ error: 'Failed to login: ' + (error?.message || 'Unknown error') });
     }
 
-    const token = jwt.sign({ id: session.user.id, email: session.user.email }, process.env.JWT_SECRET);
+    const token = generateAccessToken(session.user);
+    const refreshToken = generateRefreshToken(session.user);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     res.status(200).json({ token, user: session.user });
   } catch (error) {
     console.error('Login failed:', error);
@@ -99,48 +123,36 @@ server.post('/api/login', async (req, res) => {
   }
 });
 
-// パスワードリセットリクエストAPI
-server.post('/api/forgot-password', async (req, res) => {
-  const { email } = req.body;
-
-  if (!validateEmail(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
+// トークンリフレッシュAPI
+server.post('/api/refresh-token', (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(403).json({ error: 'Refresh token not provided' });
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'Email not found' });
+  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid refresh token' });
     }
 
-    const resetToken = jwt.sign({ id: data.id, email: data.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    console.log(`Password reset link: http://localhost:3000/reset-password?token=${resetToken}`);
-    res.json({ message: 'Password reset link sent to your email.' });
-  } catch (error) {
-    console.error('Failed to request password reset:', error);
-    res.status(500).json({ error: 'Failed to request password reset' });
-  }
+    const newToken = generateAccessToken(user);
+    res.status(200).json({ token: newToken });
+  });
 });
 
 // ミドルウェアで認証
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    console.log('No token provided');
     return res.status(401).json({ error: 'No token provided' });
   }
 
   const token = authHeader.split(' ')[1];
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err || !user || !user.id) {
-      console.error('Invalid token or user:', err);
+    if (err) {
       return res.status(403).json({ error: 'Invalid token or user' });
     }
+
     req.user = user;
     next();
   });
@@ -161,11 +173,8 @@ server.get('/api/notes/:date', authenticate, async (req, res) => {
       .eq('date', date)
       .eq('userid', req.user.id);
 
-    if (error) {
-      throw new Error(`Supabase error: ${error.message}`);
-    }
+    if (error) throw new Error(`Supabase error: ${error.message}`);
 
-    // ノートが存在しない場合は空の配列を返す
     if (!data || data.length === 0) {
       return res.json([]);
     }
@@ -173,7 +182,7 @@ server.get('/api/notes/:date', authenticate, async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Failed to fetch note:', error);
-    res.status(500).json({ error: 'Failed to fetch note: ' + error.message });
+    res.status(500).json({ error: 'Failed to fetch note' });
   }
 });
 
@@ -191,14 +200,12 @@ server.post('/api/notes/:date', authenticate, async (req, res) => {
       .from('notes')
       .upsert([{ date, note, exercises: JSON.stringify(exercises), userid: req.user.id }]);
 
-    if (error) {
-      throw new Error(`Supabase error: ${error.message}`);
-    }
+    if (error) throw new Error(`Supabase error: ${error.message}`);
 
     res.status(200).json({ message: 'Note saved successfully' });
   } catch (error) {
     console.error('Failed to save note:', error);
-    res.status(500).json({ error: 'Failed to save note: ' + error.message });
+    res.status(500).json({ error: 'Failed to save note' });
   }
 });
 
