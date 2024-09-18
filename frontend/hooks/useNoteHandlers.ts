@@ -1,36 +1,40 @@
-// frontend/hooks/useNoteHandlers.ts
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set } from "../types/types";
 import axios from "axios";
-import { getToken } from "../utils/tokenUtils"; // トークン取得関数をインポート
-
-interface User {
-  id: number;
-  email: string;
-}
+import supabase from "../../backend/supabaseClient"; // Supabaseクライアントをインポート
 
 const useNoteHandlers = (
   noteData: NoteData | null,
   setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>
 ) => {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter(); // routerを定義
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const fetchToken = async () => {
+      const { data: sessionData, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Failed to get session:", error);
+        return;
       }
-    }
+
+      if (sessionData?.session) {
+        const accessToken = sessionData.session.access_token;
+        setToken(accessToken); // トークンを保存
+      }
+    };
+
+    fetchToken();
   }, []);
 
-  const saveNote = useCallback(async (data: NoteData) => {
-    try {
-      if (user) {
-        const token = getToken(); // トークンを取得
-        if (token) {
+  const saveNote = useCallback(
+    async (data: NoteData) => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData?.session?.user;
+
+        if (user && token) {
           const response = await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`,
             data,
@@ -42,11 +46,12 @@ const useNoteHandlers = (
           );
           console.log("Saved response:", response.data);
         }
+      } catch (error) {
+        console.error("Failed to save note", error);
       }
-    } catch (error) {
-      console.error("Failed to save note", error);
-    }
-  }, [user]);
+    },
+    [token] // tokenを依存関係として追加
+  );
 
   const handleInputChange = useCallback(
     (
@@ -62,7 +67,7 @@ const useNoteHandlers = (
       setNoteData(newData);
       saveNote(newData); // 即時保存
     },
-    [noteData, saveNote, setNoteData]
+    [noteData, saveNote, setNoteData] // 依存関係としてnoteData, saveNote, setNoteDataを追加
   );
 
   const handleNoteChange = useCallback(
@@ -72,7 +77,7 @@ const useNoteHandlers = (
       setNoteData(newData);
       saveNote(newData); // 即時保存
     },
-    [noteData, saveNote, setNoteData]
+    [noteData, saveNote, setNoteData] // 依存関係としてnoteData, saveNote, setNoteDataを追加
   );
 
   const handleExerciseChange = useCallback(
@@ -84,7 +89,7 @@ const useNoteHandlers = (
       setNoteData(newData);
       saveNote(newData); // 即時保存
     },
-    [noteData, saveNote, setNoteData]
+    [noteData, saveNote, setNoteData] // 依存関係としてnoteData, saveNote, setNoteDataを追加
   );
 
   const handleDateChange = useCallback(
@@ -111,7 +116,7 @@ const useNoteHandlers = (
       });
       router.push(`/note/new?date=${newDate}`);
     },
-    [router, setNoteData]
+    [router, setNoteData] // router, setNoteDataを依存関係に追加
   );
 
   return {

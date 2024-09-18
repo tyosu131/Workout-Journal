@@ -1,9 +1,10 @@
 require("dotenv").config({ path: "./.env.local" });
 const express = require("express");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const supabase = require("./supabaseClient");
+const { validateEmail, generateAccessToken, generateRefreshToken } = require('./authUtils'); // 切り出した関数をインポート
+const authenticate = require('./authMiddleware'); // 認証ミドルウェアをインポート
 
 const server = express();
 
@@ -21,31 +22,9 @@ server.use(cookieParser());
 
 // JWT_SECRETの確認
 if (!process.env.JWT_SECRET) {
-  console.error(
-    "JWT_SECRET is not set. Please set it in your .env.local file."
-  );
+  console.error("JWT_SECRET is not set. Please set it in your .env.local file.");
   process.exit(1);
 }
-
-// メールアドレスの形式を検証する関数
-const validateEmail = (email) => {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
-};
-
-// トークン発行関数
-const generateAccessToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: "1h",
-  });
-};
-
-// リフレッシュトークン発行関数
-const generateRefreshToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
-};
 
 // ユーザー登録API
 server.post("/api/signup", async (req, res) => {
@@ -109,11 +88,9 @@ server.post("/api/login", async (req, res) => {
     });
 
     if (error || !session || !session.user) {
-      return res
-        .status(500)
-        .json({
-          error: "Failed to login: " + (error?.message || "Unknown error"),
-        });
+      return res.status(500).json({
+        error: "Failed to login: " + (error?.message || "Unknown error"),
+      });
     }
 
     const token = generateAccessToken(session.user);
@@ -150,32 +127,10 @@ server.post("/api/refresh-token", (req, res) => {
   });
 });
 
-// ミドルウェアで認証
-const authenticate = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    console.log("No token provided");
-    return res.status(401).json({ error: "No token provided" });
-  }
-
-  const token = authHeader.split(" ")[1];
-  console.log("Token received:", token); // デバッグ用ログ
-
-  console.log("環境変数", process.env.JWT_SECRET);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser(token);
-  console.log("ユーザー", user);
-  req.user = user;
-  next();
-};
-
 // ノート取得API
 server.get("/api/notes/:date", authenticate, async (req, res) => {
   const { date } = req.params;
 
-  // まずUUIDからユーザーのint4のIDを取得
   try {
     const { data: userRecord, error: userError } = await supabase
       .from("users")
@@ -224,14 +179,12 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
   try {
     const { error } = await supabase
       .from("notes")
-      .upsert([
-        {
-          date,
-          note,
-          exercises: JSON.stringify(exercises),
-          userid: req.user.id,
-        },
-      ]);
+      .upsert([{
+        date,
+        note,
+        exercises: JSON.stringify(exercises),
+        userid: req.user.id,
+      }]);
 
     if (error) throw new Error(`Supabase error: ${error.message}`);
 
