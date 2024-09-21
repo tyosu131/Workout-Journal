@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set } from "../types/types";
-import axios from "axios";
-import supabase from "../../backend/supabaseClient"; // Supabaseクライアントをインポート
+import supabase from "../../backend/supabaseClient";
+import { apiRequestWithAuth } from "../../frontend/utils/apiClient"; // APIクライアントのインポート
 
 const useNoteHandlers = (
   noteData: NoteData | null,
@@ -31,26 +31,17 @@ const useNoteHandlers = (
   const saveNote = useCallback(
     async (data: NoteData) => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData?.session?.user;
-
-        if (user && token) {
-          const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`,
-            data,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`, // 取得したトークンを使用
-              },
-            }
-          );
-          console.log("Saved response:", response.data);
-        }
+        const response = await apiRequestWithAuth(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`,
+          "post",
+          data
+        );
+        console.log("Saved response:", response);
       } catch (error) {
         console.error("Failed to save note", error);
       }
     },
-    [token] // tokenを依存関係として追加
+    [] // トークンは内部でAPIクライアントが処理するので、依存関係に含めない
   );
 
   const handleInputChange = useCallback(

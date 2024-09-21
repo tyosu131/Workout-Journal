@@ -1,4 +1,3 @@
-// frontend/components/Pages/note.tsx
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Table, Text, Spinner, Center } from "@chakra-ui/react";
@@ -13,38 +12,10 @@ import { NoteData } from "../../types/types";
 import { apiRequestWithAuth } from "../../utils/apiClient"; // APIクライアントのインポート
 
 // ノートデータをAPIから取得
-const fetchNoteData = async (url: string): Promise<NoteData> => {
+const fetchNoteData = async (url: string): Promise<NoteData[]> => {
   try {
     const data = await apiRequestWithAuth(url, 'get');
-    if (data.length === 0) {
-      return {
-        date: url.split('/').pop() as string,
-        note: "",
-        exercises: Array.from({ length: 30 }).map(() => ({
-          exercise: "",
-          sets: Array.from({ length: 5 }).map(() => ({
-            weight: "",
-            reps: "",
-            rest: "",
-          })),
-        })),
-      };
-    }
-
-    const exercises = JSON.parse(data[0].exercises);
-    return {
-      ...data[0],
-      exercises: Array.isArray(exercises) && exercises.length > 0
-        ? exercises
-        : Array.from({ length: 30 }).map(() => ({
-            exercise: "",
-            sets: Array.from({ length: 5 }).map(() => ({
-              weight: "",
-              reps: "",
-              rest: "",
-            })),
-          })),
-    };
+    return data as NoteData[];
   } catch (error) {
     console.error("Failed to fetch note data:", error);
     throw error;
@@ -56,17 +27,33 @@ const Note: React.FC = () => {
   const { date } = router.query;
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
-  const { data, error } = useSWR(
+  const { data, error, isValidating } = useSWR<NoteData[]>(
     date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
     fetchNoteData,
     { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
   useEffect(() => {
-    if (data) {
-      setNoteData(data);
-    } else if (error) {
-      console.error("Failed to fetch note:", error);
+    if (data && data.length > 0) {
+      const exercises = typeof data[0].exercises === 'string'
+        ? JSON.parse(data[0].exercises)
+        : data[0].exercises;
+
+      setNoteData({
+        ...data[0],
+        exercises: Array.isArray(exercises) && exercises.length > 0
+          ? exercises
+          : Array.from({ length: 30 }).map(() => ({
+              exercise: "",
+              sets: Array.from({ length: 5 }).map(() => ({
+                weight: "",
+                reps: "",
+                rest: "",
+              })),
+            })),
+      });
+    } else if (!data || data.length === 0 || error) {
+      // データがない、もしくはエラーの場合でもフォームを表示
       setNoteData({
         date: date as string,
         note: "",
@@ -84,15 +71,8 @@ const Note: React.FC = () => {
 
   const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
 
-  if (!data && !error && !noteData) {
-    return (
-      <Center height="100vh">
-        <Spinner size="xl" />
-      </Center>
-    );
-  }
-
-  if (!date || !noteData) {
+  // ローディング中でもnoteDataが生成されていれば、フォームを表示
+  if (!noteData) {
     return (
       <Center height="100vh">
         <Spinner size="xl" />

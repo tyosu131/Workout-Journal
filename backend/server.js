@@ -132,6 +132,7 @@ server.get("/api/notes/:date", authenticate, async (req, res) => {
   const { date } = req.params;
 
   try {
+    // UUIDからint4のIDを取得
     const { data: userRecord, error: userError } = await supabase
       .from("users")
       .select("id") // int4型のIDを取得
@@ -172,18 +173,41 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
   const { date } = req.params;
   const { note, exercises } = req.body;
 
+  // 日付フォーマットの確認
   if (!isValidDate(date)) {
     return res.status(400).json({ error: "Invalid date format" });
   }
 
   try {
+    // UUIDからint4のIDを取得
+    const { data: userRecord, error: userError } = await supabase
+      .from("users")
+      .select("id") // int4型のIDを取得
+      .eq("uuid", req.user.id) // UUIDから整数IDを取得
+      .single();
+
+    if (userError || !userRecord) {
+      throw new Error(`Failed to find user with UUID: ${req.user.id}`);
+    }
+
+    const userId = userRecord.id;
+
+    // exercisesデータの中から空のexerciseとセットをフィルタリングする
+    const exercisesToSave = exercises
+      .filter(exercise => exercise.exercise.trim() !== "") // 空のexercise名を除外
+      .map(exercise => ({
+        exercise: exercise.exercise,
+        sets: exercise.sets.filter(set => set.weight || set.reps || set.rest) // 空のセットを除外
+      }));
+
+    // notesテーブルに保存
     const { error } = await supabase
       .from("notes")
       .upsert([{
         date,
         note,
-        exercises: JSON.stringify(exercises),
-        userid: req.user.id,
+        exercises: JSON.stringify(exercisesToSave), // JSONBとして保存
+        userid: userId, // int4のuseridを利用
       }]);
 
     if (error) throw new Error(`Supabase error: ${error.message}`);
