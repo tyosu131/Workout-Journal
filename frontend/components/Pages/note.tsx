@@ -39,18 +39,22 @@ const Note: React.FC = () => {
         ? JSON.parse(data[0].exercises)
         : data[0].exercises;
 
+      // 必ず30個のexercisesがあり、各exerciseには5つのセットがあるようにする
+      const filledExercises = Array.from({ length: 30 }).map((_, exerciseIndex) => {
+        const existingExercise = exercises[exerciseIndex] || { exercise: "", sets: [] };
+        return {
+          exercise: existingExercise.exercise || "",
+          sets: Array.from({ length: 5 }).map((_, setIndex) => existingExercise.sets[setIndex] || {
+            weight: "",
+            reps: "",
+            rest: "",
+          })
+        };
+      });
+
       setNoteData({
         ...data[0],
-        exercises: Array.isArray(exercises) && exercises.length > 0
-          ? exercises
-          : Array.from({ length: 30 }).map(() => ({
-              exercise: "",
-              sets: Array.from({ length: 5 }).map(() => ({
-                weight: "",
-                reps: "",
-                rest: "",
-              })),
-            })),
+        exercises: filledExercises,
       });
     } else if (!data || data.length === 0 || error) {
       // データがない、もしくはエラーの場合でもフォームを表示

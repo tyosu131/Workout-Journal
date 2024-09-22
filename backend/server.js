@@ -194,10 +194,13 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
 
     // exercisesデータの中から空のexerciseとセットをフィルタリングする
     const exercisesToSave = exercises
-      .filter(exercise => exercise.exercise.trim() !== "") // 空のexercise名を除外
       .map(exercise => ({
-        exercise: exercise.exercise,
-        sets: exercise.sets.filter(set => set.weight || set.reps || set.rest) // 空のセットを除外
+        exercise: exercise.exercise || "",
+        sets: exercise.sets.map(set => ({
+          weight: set.weight || "",
+          reps: set.reps || "",
+          rest: set.rest || ""
+        }))
       }));
 
     // notesテーブルに保存
