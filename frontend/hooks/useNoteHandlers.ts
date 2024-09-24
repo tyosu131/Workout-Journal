@@ -31,7 +31,7 @@ const useNoteHandlers = (
   const saveNote = useCallback(
     async (data: NoteData) => {
       try {
-        const response = await apiRequestWithAuth(
+        const response = await apiRequestWithAuth<NoteData, NoteData>(
           `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${data.date}`,
           "post",
           data
