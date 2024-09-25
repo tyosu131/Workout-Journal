@@ -28,7 +28,7 @@ if (!process.env.JWT_SECRET) {
 
 // ユーザー登録API
 server.post("/api/signup", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { username, email, password } = req.body; // name -> usernameに修正
 
   if (!validateEmail(email)) {
     return res.status(400).json({ error: "Invalid email format" });
@@ -47,7 +47,7 @@ server.post("/api/signup", async (req, res) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ name, email, password }])
+      .insert([{ name: username, email, password }]) // name -> usernameに修正
       .select();
 
     if (error) throw error;
@@ -70,6 +70,32 @@ server.post("/api/signup", async (req, res) => {
   } catch (error) {
     console.error("Failed to create user:", error);
     res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+// ユーザー情報更新API
+server.put("/api/update-user", async (req, res) => {
+  const { username, email, password } = req.body; // name -> usernameに修正
+
+  try {
+    const updates = { name: username, email }; // 更新するフィールドのオブジェクト
+
+    // パスワードが存在する場合にのみパスワードを更新
+    if (password && password !== "******") {
+      updates.password = password;
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .update(updates) // 必要なフィールドだけ更新
+      .eq("email", email);
+
+    if (error) throw error;
+
+    res.status(200).json({ message: "User updated successfully" });
+  } catch (error) {
+    console.error("Failed to update user:", error);
+    res.status(500).json({ error: "Failed to update user" });
   }
 });
 
