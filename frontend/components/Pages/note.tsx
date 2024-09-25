@@ -9,37 +9,55 @@ import TableHeader from "../note/tableheader";
 import TableBody from "../note/tablebody";
 import useNoteHandlers from "../../hooks/useNoteHandlers";
 import { NoteData } from "../../types/types";
-import axios from "axios";
+import { apiRequestWithAuth } from "../../utils/apiClient"; // APIクライアントのインポート
 
-const fetchNoteData = async (url: string): Promise<NoteData> => {
-  const res = await axios.get(url);
-  const data = res.data;
-  const exercises = JSON.parse(data.exercises);
-
-  return {
-    ...data,
-    exercises: Array.isArray(exercises) && exercises.length > 0 ? exercises : Array.from({ length: 30 }).map(() => ({
-      exercise: "",
-      sets: Array.from({ length: 5 }).map(() => ({
-        weight: "",
-        reps: "",
-        rest: "",
-      })),
-    })),
-  };
+// ノートデータをAPIから取得
+const fetchNoteData = async (url: string): Promise<NoteData[]> => {
+  try {
+    const data = await apiRequestWithAuth<NoteData[]>(url, 'get'); // ジェネリクスを使用して型定義
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch note data:", error);
+    throw error;
+  }
 };
 
 const Note: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
-  const { data, error } = useSWR(date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null, fetchNoteData);
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
+  const { data, error, isValidating } = useSWR<NoteData[]>(
+    date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
+    fetchNoteData,
+    { revalidateOnFocus: false, shouldRetryOnError: false }
+  );
+
   useEffect(() => {
-    if (data) {
-      setNoteData(data);
-    } else if (error && error.response?.status === 404) {
-      console.log('Data not found:', error);
+    if (data && data.length > 0) {
+      const exercises = typeof data[0].exercises === 'string'
+        ? JSON.parse(data[0].exercises)
+        : data[0].exercises;
+
+      // 必ず30個のexercisesがあり、各exerciseには5つのセットがあるようにする
+      const filledExercises = Array.from({ length: 30 }).map((_, exerciseIndex) => {
+        const existingExercise = exercises[exerciseIndex] || { exercise: "", sets: [] };
+        return {
+          exercise: existingExercise.exercise || "",
+          sets: Array.from({ length: 5 }).map((_, setIndex) => existingExercise.sets[setIndex] || {
+            weight: "",
+            reps: "",
+            rest: "",
+          })
+        };
+      });
+
+      setNoteData({
+        ...data[0],
+        exercises: filledExercises,
+      });
+    } else if (!data || data.length === 0 || error) {
+      // データがない、もしくはエラーの場合でもフォームを表示
       setNoteData({
         date: date as string,
         note: "",
@@ -57,16 +75,15 @@ const Note: React.FC = () => {
 
   const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
 
-  if (!data && !error) {
-    console.log('Data is still loading...');
+  // ローディング中でもnoteDataが生成されていれば、フォームを表示
+  if (!noteData) {
     return (
       <Center height="100vh">
         <Spinner size="xl" />
+        <Text>Loading...</Text>
       </Center>
     );
   }
-
-  if (!noteData) return null;
 
   const selectedDate = new Date(noteData.date);
   const isValidDate = !isNaN(selectedDate.getTime());
@@ -95,5 +112,4 @@ const Note: React.FC = () => {
   );
 };
 
-Note.displayName = "Note";
 export default Note;

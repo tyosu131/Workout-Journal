@@ -1,4 +1,4 @@
-echo "# dependencies
+# dependencies
 /node_modules
 
 # misc
@@ -58,4 +58,4 @@ jspm_packages
 .npm
 
 # Optional eslint cache
-.eslintcache" > .gitignore
+.eslintcache

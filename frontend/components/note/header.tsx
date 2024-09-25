@@ -11,7 +11,7 @@ const Header: React.FC = () => {
       <IconButton
         aria-label="Close"
         icon={<CloseIcon />}
-        onClick={() => router.push('/')}
+        onClick={() => router.push('/top')} // ここを修正してtopページにリダイレクト
         variant="outline"
         _hover={{ bg: "gray.200", cursor: "pointer" }}
       />
