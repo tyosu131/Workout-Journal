@@ -3,14 +3,14 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const supabase = require("./supabaseClient");
-const { validateEmail, generateAccessToken, generateRefreshToken } = require('./authUtils'); // 切り出した関数をインポート
-const authenticate = require('./authMiddleware'); // 認証ミドルウェアをインポート
+const { validateEmail, generateAccessToken, generateRefreshToken } = require('./authUtils');
+const authenticate = require('./authMiddleware');
 
 const server = express();
 
 // CORS設定
 const corsOptions = {
-  origin: "*", // 必要に応じてオリジンを限定する
+  origin: "*", 
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -28,7 +28,7 @@ if (!process.env.JWT_SECRET) {
 
 // ユーザー登録API
 server.post("/api/signup", async (req, res) => {
-  const { username, email, password } = req.body; // name -> usernameに修正
+  const { username, email, password } = req.body;
 
   if (!validateEmail(email)) {
     return res.status(400).json({ error: "Invalid email format" });
@@ -47,7 +47,7 @@ server.post("/api/signup", async (req, res) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ name: username, email, password }]) // name -> usernameに修正
+      .insert([{ name: username, email, password }])
       .select();
 
     if (error) throw error;
@@ -75,22 +75,32 @@ server.post("/api/signup", async (req, res) => {
 
 // ユーザー情報更新API
 server.put("/api/update-user", async (req, res) => {
-  const { username, email, password } = req.body; // name -> usernameに修正
+  const { username, email, password } = req.body;
 
   try {
-    const updates = { name: username, email }; // 更新するフィールドのオブジェクト
+    // ユーザー名とパスワードをSupabase DBで更新
+    const updates = { name: username };
 
-    // パスワードが存在する場合にのみパスワードを更新
     if (password && password !== "******") {
       updates.password = password;
     }
 
+    // ユーザーデータのDB側更新
     const { data, error } = await supabase
       .from("users")
-      .update(updates) // 必要なフィールドだけ更新
+      .update(updates)
       .eq("email", email);
 
     if (error) throw error;
+
+    // メールアドレスの更新をSupabase Authに反映
+    if (email) {
+      const { error: authError } = await supabase.auth.updateUser({
+        email,
+      });
+
+      if (authError) throw authError;
+    }
 
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
@@ -158,11 +168,10 @@ server.get("/api/notes/:date", authenticate, async (req, res) => {
   const { date } = req.params;
 
   try {
-    // UUIDからint4のIDを取得
     const { data: userRecord, error: userError } = await supabase
       .from("users")
-      .select("id") // int4型のIDを取得
-      .eq("uuid", req.user.id) // UUIDから整数IDを取得
+      .select("id")
+      .eq("uuid", req.user.id)
       .single();
 
     if (userError || !userRecord) {
@@ -179,15 +188,11 @@ server.get("/api/notes/:date", authenticate, async (req, res) => {
       .from("notes")
       .select("*")
       .eq("date", date)
-      .eq("userid", userId); // int4のuseridを利用
+      .eq("userid", userId);
 
     if (error) throw new Error(`Supabase error: ${error.message}`);
 
-    if (!data || data.length === 0) {
-      return res.json([]);
-    }
-
-    res.json(data);
+    res.json(data || []);
   } catch (error) {
     console.error("Failed to fetch note:", error);
     res.status(500).json({ error: "Failed to fetch note" });
@@ -199,17 +204,15 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
   const { date } = req.params;
   const { note, exercises } = req.body;
 
-  // 日付フォーマットの確認
   if (!isValidDate(date)) {
     return res.status(400).json({ error: "Invalid date format" });
   }
 
   try {
-    // UUIDからint4のIDを取得
     const { data: userRecord, error: userError } = await supabase
       .from("users")
-      .select("id") // int4型のIDを取得
-      .eq("uuid", req.user.id) // UUIDから整数IDを取得
+      .select("id")
+      .eq("uuid", req.user.id)
       .single();
 
     if (userError || !userRecord) {
@@ -218,25 +221,22 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
 
     const userId = userRecord.id;
 
-    // exercisesデータの中から空のexerciseとセットをフィルタリングする
-    const exercisesToSave = exercises
-      .map(exercise => ({
-        exercise: exercise.exercise || "",
-        sets: exercise.sets.map(set => ({
-          weight: set.weight || "",
-          reps: set.reps || "",
-          rest: set.rest || ""
-        }))
-      }));
+    const exercisesToSave = exercises.map(exercise => ({
+      exercise: exercise.exercise || "",
+      sets: exercise.sets.map(set => ({
+        weight: set.weight || "",
+        reps: set.reps || "",
+        rest: set.rest || ""
+      }))
+    }));
 
-    // notesテーブルに保存
     const { error } = await supabase
       .from("notes")
       .upsert([{
         date,
         note,
-        exercises: JSON.stringify(exercisesToSave), // JSONBとして保存
-        userid: userId, // int4のuseridを利用
+        exercises: JSON.stringify(exercisesToSave),
+        userid: userId,
       }]);
 
     if (error) throw new Error(`Supabase error: ${error.message}`);

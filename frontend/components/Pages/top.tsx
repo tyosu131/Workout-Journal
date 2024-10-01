@@ -1,29 +1,18 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Box, Stack, Text, IconButton, Grid, GridItem, Button, Menu, MenuButton, MenuList, MenuItem } from "@chakra-ui/react";
 import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { useRouter } from 'next/router';
 import { URLS } from '../../constants/urls';
 import { generateCalendarDates } from '../../utils/calendarUtils';
-import supabase  from '../../../backend/supabaseClient'; // Supabaseクライアント
+import supabase from '../../../backend/supabaseClient';
+import { useAuthCheck } from '../../hooks/useAuthCheck'; // useAuthCheckをインポート
 
 const Top: React.FC = () => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // 認証状態を管理
-
-  // 認証状態をチェック
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsAuthenticated(true); // 認証されている
-      } else {
-        router.push('/login'); // 認証されていない場合、ログインページにリダイレクト
-      }
-    };
-
-    checkUser();
-  }, [router]);
+  
+  // useAuthCheckフックを使用して認証状態を管理
+  const isAuthenticated = useAuthCheck();
 
   const handleDateClick = (date: string) => {
     router.push(`/note/${date}`);
