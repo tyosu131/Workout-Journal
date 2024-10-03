@@ -35,7 +35,14 @@ export const useUserEdit = () => {
     });
 
     try {
-      // Supabase Authでメールアドレスとパスワードを更新
+      // 1. ユーザーIDを一度だけ取得
+      const { data: authData, error: userError } = await supabase.auth.getUser();
+      if (userError || !authData?.user?.id) {
+        throw new Error("Failed to retrieve user ID");
+      }
+      const userId = authData.user.id;
+
+      // 2. Supabase Authでメールアドレスとパスワードを更新
       if (email || password !== "******") {
         const { error: authError } = await supabase.auth.updateUser({
           email,
@@ -44,14 +51,15 @@ export const useUserEdit = () => {
         if (authError) throw authError;
       }
 
-      // DBの`users`テーブルにメールアドレスを更新
-      const { data, error } = await supabase
+      // 3. DBの`users`テーブルにユーザー名やメールアドレスを更新
+      const { error: dbError } = await supabase
         .from("users")
         .update({ email, name: username })
-        .eq("id", (await supabase.auth.getUser()).data.user?.id);
+        .eq("id", userId); // 取得したユーザーIDを使用
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
+      // 成功時のトースト表示
       toast({
         title: "Saved!",
         description: `User data has been updated.`,
