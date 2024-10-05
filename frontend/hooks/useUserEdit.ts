@@ -1,8 +1,8 @@
 import { useState } from "react";
 import debounce from "lodash.debounce";
-import supabase from "../../backend/supabaseClient"; 
+import supabase from "../../backend/supabaseClient";
 import { useToast } from "@chakra-ui/react";
-import axios from 'axios';
+import axios from "axios"; // axios を使用
 
 export const useUserEdit = () => {
   const [isEditing, setIsEditing] = useState({
@@ -11,10 +11,11 @@ export const useUserEdit = () => {
     password: false,
   });
 
+  // ユーザーデータを保持する状態
   const [userData, setUserData] = useState({
     username: "",
     email: "",
-    password: "******",
+    password: "******", // 初期状態ではマスク
   });
 
   const toast = useToast();
@@ -22,44 +23,87 @@ export const useUserEdit = () => {
   const handleEdit = (field: keyof typeof isEditing) => {
     setIsEditing((prevState) => ({ ...prevState, [field]: true }));
     if (field === "password") {
-      setUserData((prevState) => ({ ...prevState, password: "" }));
+      setUserData((prevState) => ({ ...prevState, password: "" })); // パスワードを編集可能に
     }
   };
 
-  const handleSave = debounce(async (data: { username: string; email: string; password: string }) => {
-    const { username, email, password } = data;
+  const resetEditing = () => {
     setIsEditing({
       username: false,
       email: false,
       password: false,
     });
+  };
 
+  const handleSave = debounce(async (data: { username: string; email: string; password: string }) => {
+    const { username, email, password } = data;
     try {
-      // 1. ユーザーIDを一度だけ取得
+      // ユーザー情報の取得
       const { data: authData, error: userError } = await supabase.auth.getUser();
-      if (userError || !authData?.user?.id) {
-        throw new Error("Failed to retrieve user ID");
+      if (userError || !authData?.user) {
+        throw new Error("Failed to retrieve user information");
       }
+
       const userId = authData.user.id;
 
-      // 2. Supabase Authでメールアドレスとパスワードを更新
-      if (email || password !== "******") {
-        const { error: authError } = await supabase.auth.updateUser({
-          email,
-          password: password !== "******" ? password : undefined,
-        });
-        if (authError) throw authError;
+      if (!userId) {
+        throw new Error("Failed to retrieve user ID");
       }
 
-      // 3. DBの`users`テーブルにユーザー名やメールアドレスを更新
-      const { error: dbError } = await supabase
-        .from("users")
-        .update({ email, name: username })
-        .eq("id", userId); // 取得したユーザーIDを使用
+      // 現在の値と新しい値が同じかどうかを確認
+      const isPasswordChanged = password && password !== "******" && password !== "";
+      const isEmailChanged = email && email !== authData.user.email;
+      const isUsernameChanged = username && username !== authData.user.user_metadata?.username;
 
-      if (dbError) throw dbError;
+      // 変更がない場合は処理をスキップ
+      if (!isPasswordChanged && !isEmailChanged && !isUsernameChanged) {
+        return;
+      }
 
-      // 成功時のトースト表示
+      // パスワードの更新（変更があった場合のみ）
+      if (isPasswordChanged) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password,
+        });
+        if (passwordError) {
+          if (passwordError.message.includes("New password should be different from the old password")) {
+            console.log("Password is the same, skipping update.");
+          } else {
+            throw passwordError;
+          }
+        }
+      }
+
+      // メールアドレスの更新（変更があった場合のみ）
+      if (isEmailChanged) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email,
+        });
+        if (emailError) {
+          throw emailError;
+        }
+      }
+
+      // ユーザー名の更新（変更があった場合のみ）
+      if (isUsernameChanged) {
+        const { error: dbError } = await supabase
+          .from("users")
+          .update({ name: username, email }) // 名前（ユーザー名）とメールを更新
+          .eq("uuid", userId);
+
+        if (dbError) throw dbError;
+
+        // Supabase Authのユーザー名も更新
+        const { error: updateMetadataError } = await supabase.auth.updateUser({
+          data: { username: username },
+        });
+
+        if (updateMetadataError) {
+          throw updateMetadataError;
+        }
+      }
+
+      // 成功時のトースト表示（実際に変更があった場合のみ）
       toast({
         title: "Saved!",
         description: `User data has been updated.`,
@@ -68,14 +112,13 @@ export const useUserEdit = () => {
         isClosable: true,
       });
     } catch (error) {
-      // 型ガードを追加
       if (error instanceof Error) {
-        console.error("Error updating user:", error);
+        console.error("Error updating user:", error.message);
         toast({
           title: "Error!",
           description: `Failed to update user data: ${error.message}`,
           status: "error",
-          duration: 2000,
+          duration: 4000,
           isClosable: true,
         });
       } else {
@@ -84,10 +127,12 @@ export const useUserEdit = () => {
           title: "Error!",
           description: `An unexpected error occurred.`,
           status: "error",
-          duration: 2000,
+          duration: 4000,
           isClosable: true,
         });
       }
+    } finally {
+      resetEditing(); // 保存後に編集モードをリセット
     }
   }, 1000);
 
@@ -97,5 +142,6 @@ export const useUserEdit = () => {
     handleSave,
     userData,
     setUserData,
+    resetEditing, // リセット関数をエクスポート
   };
 };

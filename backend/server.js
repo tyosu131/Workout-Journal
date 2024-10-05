@@ -37,7 +37,7 @@ server.post("/api/signup", async (req, res) => {
   try {
     const { data: existingUser } = await supabase
       .from("users")
-      .select("id")
+      .select("uuid")
       .eq("email", email)
       .single();
 
@@ -78,6 +78,13 @@ server.put("/api/update-user", async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
+    // ユーザー情報の取得
+    const { data: user, error: getUserError } = await supabase.auth.getUser();
+
+    if (getUserError || !user) {
+      return res.status(500).json({ error: "Failed to retrieve user metadata ID" });
+    }
+
     // ユーザー名とパスワードをSupabase DBで更新
     const updates = { name: username };
 
@@ -93,14 +100,14 @@ server.put("/api/update-user", async (req, res) => {
 
     if (error) throw error;
 
-    // メールアドレスの更新をSupabase Authに反映
-    if (email) {
-      const { error: authError } = await supabase.auth.updateUser({
-        email,
-      });
+    // Supabase Authでメールアドレスやパスワードの更新
+    const authUpdates = {};
+    if (email) authUpdates.email = email;
+    if (password && password !== "******") authUpdates.password = password;
 
-      if (authError) throw authError;
-    }
+    const { error: authError } = await supabase.auth.updateUser(authUpdates);
+
+    if (authError) throw authError;
 
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
@@ -170,7 +177,7 @@ server.get("/api/notes/:date", authenticate, async (req, res) => {
   try {
     const { data: userRecord, error: userError } = await supabase
       .from("users")
-      .select("id")
+      .select("uuid")
       .eq("uuid", req.user.id)
       .single();
 
@@ -178,7 +185,7 @@ server.get("/api/notes/:date", authenticate, async (req, res) => {
       throw new Error(`Failed to find user with UUID: ${req.user.id}`);
     }
 
-    const userId = userRecord.id;
+    const userId = userRecord.uuid;
 
     if (!isValidDate(date)) {
       return res.status(400).json({ error: "Invalid date format" });
@@ -211,7 +218,7 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
   try {
     const { data: userRecord, error: userError } = await supabase
       .from("users")
-      .select("id")
+      .select("uuid")
       .eq("uuid", req.user.id)
       .single();
 
@@ -219,7 +226,7 @@ server.post("/api/notes/:date", authenticate, async (req, res) => {
       throw new Error(`Failed to find user with UUID: ${req.user.id}`);
     }
 
-    const userId = userRecord.id;
+    const userId = userRecord.uuid;
 
     const exercisesToSave = exercises.map(exercise => ({
       exercise: exercise.exercise || "",

@@ -15,11 +15,12 @@ import {
 import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/router";
 import { useUserEdit } from "../../hooks/useUserEdit";
-import supabase from "../../../backend/supabaseClient"; 
+import axios from "axios"; // axios を使用
+import supabase from "../../../backend/supabaseClient";
 
 const UserSettings: React.FC = () => {
-  const { isEditing, handleEdit, handleSave, userData, setUserData } = useUserEdit();
-  const [isClient, setIsClient] = useState(false); 
+  const { isEditing, handleEdit, handleSave, userData, setUserData, resetEditing } = useUserEdit();
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const toast = useToast();
 
@@ -34,9 +35,9 @@ const UserSettings: React.FC = () => {
 
         if (data.user) {
           setUserData({
-            username: data.user.user_metadata?.username || "test",
-            email: data.user.email || "test2@gmail.com",
-            password: "******",
+            username: data.user.user_metadata?.username || "No username set",
+            email: data.user.email || "",
+            password: "******", // パスワードはマスクする
           });
         }
       } catch (error) {
@@ -53,6 +54,37 @@ const UserSettings: React.FC = () => {
 
     fetchUserData();
   }, [setUserData, toast]);
+
+  const saveUserData = async (updatedUserData: any) => {
+    try {
+      // Supabaseのユーザー情報を更新するAPIリクエストをaxiosで行う
+      const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData);
+      if (response.status === 200) {
+        toast({
+          title: "Success",
+          description: "User data updated successfully.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+        setUserData({
+          ...updatedUserData,
+          password: "******", // パスワードは再度マスク
+        });
+      }
+    } catch (error) {
+      console.error("Error updating user data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user data.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      resetEditing(); // 保存後に編集モードをリセット
+    }
+  };
 
   const handleClose = () => {
     router.push("/top");
@@ -88,7 +120,7 @@ const UserSettings: React.FC = () => {
                 fontSize="lg"
                 w="60%"
               />
-              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
+              <Button onClick={() => saveUserData(userData)} ml={3} colorScheme="blue">
                 Save
               </Button>
             </>
@@ -119,7 +151,7 @@ const UserSettings: React.FC = () => {
                 fontSize="lg"
                 w="60%"
               />
-              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
+              <Button onClick={() => saveUserData(userData)} ml={3} colorScheme="blue">
                 Save
               </Button>
             </>
@@ -152,7 +184,7 @@ const UserSettings: React.FC = () => {
                 w="60%"
                 placeholder="Enter new password"
               />
-              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
+              <Button onClick={() => saveUserData(userData)} ml={3} colorScheme="blue">
                 Save
               </Button>
             </>
