@@ -80,7 +80,7 @@ export const useUserEdit = () => {
           email,
         });
         if (emailError) {
-          throw emailError;
+          throw new Error("Failed to update email. Ensure the user session is valid.");
         }
       }
 

@@ -57,8 +57,21 @@ const UserSettings: React.FC = () => {
 
   const saveUserData = async (updatedUserData: any) => {
     try {
+      // Supabaseのユーザーセッションを取得し、トークンを取得
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+
+      if (!session?.access_token) {
+        throw new Error("No access token found");
+      }
+
       // Supabaseのユーザー情報を更新するAPIリクエストをaxiosで行う
-      const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData);
+      const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`, // トークンを送信
+        },
+      });
+
       if (response.status === 200) {
         toast({
           title: "Success",
@@ -82,7 +95,7 @@ const UserSettings: React.FC = () => {
         isClosable: true,
       });
     } finally {
-      resetEditing(); // 保存後に編集モードをリセット
+      resetEditing(); // 編集状態をリセット
     }
   };
 

@@ -2,6 +2,7 @@ require("dotenv").config({ path: "./.env.local" });
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const supabase = require("./supabaseClient");
 const { validateEmail, generateAccessToken, generateRefreshToken } = require('./authUtils');
 const authenticate = require('./authMiddleware');
@@ -10,7 +11,7 @@ const server = express();
 
 // CORS設定
 const corsOptions = {
-  origin: "*", 
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -74,25 +75,32 @@ server.post("/api/signup", async (req, res) => {
 });
 
 // ユーザー情報更新API
-server.put("/api/update-user", async (req, res) => {
+server.put("/api/update-user", authenticate, async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
-    // ユーザー情報の取得
-    const { data: user, error: getUserError } = await supabase.auth.getUser();
+    // セッションからユーザー情報の取得
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData?.session) {
+      return res.status(401).json({ error: "Session is missing or invalid" });
+    }
+
+    const accessToken = sessionData.session.access_token;
+
+    // Supabaseからユーザー情報の取得
+    const { data: user, error: getUserError } = await supabase.auth.getUser(accessToken);
 
     if (getUserError || !user) {
       return res.status(500).json({ error: "Failed to retrieve user metadata ID" });
     }
 
-    // ユーザー名とパスワードをSupabase DBで更新
+    // ユーザー名とパスワードの更新
     const updates = { name: username };
-
     if (password && password !== "******") {
       updates.password = password;
     }
 
-    // ユーザーデータのDB側更新
+    // DB側のユーザーデータ更新
     const { data, error } = await supabase
       .from("users")
       .update(updates)
@@ -105,7 +113,9 @@ server.put("/api/update-user", async (req, res) => {
     if (email) authUpdates.email = email;
     if (password && password !== "******") authUpdates.password = password;
 
-    const { error: authError } = await supabase.auth.updateUser(authUpdates);
+    const { error: authError } = await supabase.auth.updateUser(authUpdates, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     if (authError) throw authError;
 
