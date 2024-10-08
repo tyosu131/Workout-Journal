@@ -79,43 +79,31 @@ server.put("/api/update-user", authenticate, async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
-    // セッションからユーザー情報の取得
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData?.session) {
-      return res.status(401).json({ error: "Session is missing or invalid" });
+    // Supabaseから現在のセッションを取得
+    const { data: session, error: getSessionError } = await supabase.auth.getSession();
+    if (getSessionError || !session || !session.user) {
+      return res.status(500).json({ error: "Failed to retrieve session or user information" });
     }
 
-    const accessToken = sessionData.session.access_token;
+    const user = session.user;
 
-    // Supabaseからユーザー情報の取得
-    const { data: user, error: getUserError } = await supabase.auth.getUser(accessToken);
-
-    if (getUserError || !user) {
-      return res.status(500).json({ error: "Failed to retrieve user metadata ID" });
-    }
-
-    // ユーザー名とパスワードの更新
     const updates = { name: username };
     if (password && password !== "******") {
       updates.password = password;
     }
 
-    // DB側のユーザーデータ更新
     const { data, error } = await supabase
       .from("users")
       .update(updates)
-      .eq("email", email);
+      .eq("uuid", user.id);
 
     if (error) throw error;
 
-    // Supabase Authでメールアドレスやパスワードの更新
     const authUpdates = {};
     if (email) authUpdates.email = email;
     if (password && password !== "******") authUpdates.password = password;
 
-    const { error: authError } = await supabase.auth.updateUser(authUpdates, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const { error: authError } = await supabase.auth.updateUser(authUpdates);
 
     if (authError) throw authError;
 

@@ -41,12 +41,14 @@ export const useUserEdit = () => {
       // ユーザー情報の取得
       const { data: authData, error: userError } = await supabase.auth.getUser();
       if (userError || !authData?.user) {
+        console.log("Failed to retrieve user information", userError);
         throw new Error("Failed to retrieve user information");
       }
 
       const userId = authData.user.id;
 
       if (!userId) {
+        console.log("Failed to retrieve user ID");
         throw new Error("Failed to retrieve user ID");
       }
 
@@ -57,6 +59,7 @@ export const useUserEdit = () => {
 
       // 変更がない場合は処理をスキップ
       if (!isPasswordChanged && !isEmailChanged && !isUsernameChanged) {
+        console.log("No changes detected");
         return;
       }
 
@@ -80,6 +83,7 @@ export const useUserEdit = () => {
           email,
         });
         if (emailError) {
+          console.log("Email update error:", emailError);
           throw new Error("Failed to update email. Ensure the user session is valid.");
         }
       }
