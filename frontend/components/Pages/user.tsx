@@ -14,9 +14,9 @@ import {
 } from "@chakra-ui/react";
 import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/router";
-import { useUserEdit } from "../../hooks/useUserEdit";
-import axios from "axios"; // axios を使用
+import axios from "axios";
 import supabase from "../../../backend/supabaseClient";
+import { useUserEdit } from "../../hooks/useUserEdit";
 
 const UserSettings: React.FC = () => {
   const { isEditing, handleEdit, handleSave, userData, setUserData, resetEditing } = useUserEdit();
@@ -40,8 +40,9 @@ const UserSettings: React.FC = () => {
             password: "******", // パスワードはマスクする
           });
         }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.error("Error fetching user data:", err.message);
         toast({
           title: "Error",
           description: "Failed to load user data.",
@@ -57,18 +58,20 @@ const UserSettings: React.FC = () => {
 
   const saveUserData = async (updatedUserData: any) => {
     try {
-      // Supabaseのユーザーセッションを取得し、トークンを取得
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session) {
+        throw new Error("No session found, please log in again.");
+      }
+
+      const session = sessionData.session;
 
       if (!session?.access_token) {
         throw new Error("No access token found");
       }
 
-      // Supabaseのユーザー情報を更新するAPIリクエストをaxiosで行う
       const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData, {
         headers: {
-          Authorization: `Bearer ${session.access_token}`, // トークンを送信
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
@@ -82,20 +85,21 @@ const UserSettings: React.FC = () => {
         });
         setUserData({
           ...updatedUserData,
-          password: "******", // パスワードは再度マスク
+          password: "******",
         });
       }
-    } catch (error) {
-      console.error("Error updating user data:", error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("Error updating user data:", err.message);
       toast({
         title: "Error",
-        description: "Failed to update user data.",
+        description: err.message || "Failed to update user data.",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
     } finally {
-      resetEditing(); // 編集状態をリセット
+      resetEditing();
     }
   };
 
@@ -121,7 +125,6 @@ const UserSettings: React.FC = () => {
         Account Settings
       </Box>
 
-      {/* User Name */}
       <FormControl mb={8}>
         <Flex alignItems="center">
           <FormLabel fontSize="lg" w="40%">User Name</FormLabel>

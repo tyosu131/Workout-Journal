@@ -2,16 +2,14 @@ require("dotenv").config({ path: "./.env.local" });
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
 const supabase = require("./supabaseClient");
-const { validateEmail, generateAccessToken, generateRefreshToken } = require('./authUtils');
-const authenticate = require('./authMiddleware');
+const { validateEmail, generateAccessToken, generateRefreshToken, verifyToken } = require('./authUtils');
 
 const server = express();
 
 // CORS設定
 const corsOptions = {
-  origin: "*",
+  origin: "http://localhost:3000", // フロントエンドのオリジンを特定
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -27,9 +25,9 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// エラーハンドリング用のミドルウェアを設定（エラーを詳細にログ出力）
+// エラーハンドリング用のミドルウェア
 server.use((err, req, res, next) => {
-  console.error("Unhandled error occurred:", err.stack); // スタックトレースをログ出力
+  console.error("Unhandled error occurred:", err.stack);
   res.status(500).json({ error: "Internal server error", details: err.message });
 });
 
@@ -42,7 +40,6 @@ server.post("/api/signup", async (req, res) => {
   }
 
   try {
-    console.log("Signup process started for:", email);
     const { data: existingUser, error: checkError } = await supabase
       .from("users")
       .select("uuid")
@@ -50,7 +47,6 @@ server.post("/api/signup", async (req, res) => {
       .single();
 
     if (checkError || existingUser) {
-      console.log("Email already exists or an error occurred:", checkError || existingUser);
       return res.status(409).json({ error: "Email already exists" });
     }
 
@@ -60,10 +56,6 @@ server.post("/api/signup", async (req, res) => {
       .select();
 
     if (error) throw error;
-
-    if (!data || !data[0]) {
-      return res.status(500).json({ error: "Failed to create user" });
-    }
 
     const token = generateAccessToken(data[0]);
     const refreshToken = generateRefreshToken(data[0]);
@@ -76,7 +68,6 @@ server.post("/api/signup", async (req, res) => {
     });
 
     res.status(201).json({ token });
-    console.log("User created successfully:", data[0].id);
   } catch (error) {
     console.error("Failed to create user:", error.stack);
     res.status(500).json({ error: "Failed to create user", details: error.message });
@@ -84,17 +75,29 @@ server.post("/api/signup", async (req, res) => {
 });
 
 // ユーザー情報更新API
-server.put("/api/update-user", authenticate, async (req, res) => {
+server.put("/api/update-user", async (req, res) => {
+  const token = req.headers.authorization && req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
   const { username, email, password } = req.body;
+  const userId = user.id;
 
   try {
-    console.log("Attempting to update user...");
-    
-    // authenticateミドルウェアでJWTから取得されたユーザーIDを利用
-    const userId = req.user.id;
-    
-    if (!userId) {
-      return res.status(400).json({ error: "User ID not found" });
+    const { data: userRecord, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("uuid", userId)
+      .single();
+
+    if (userError || !userRecord) {
+      return res.status(404).json({ error: "User not found" });
     }
 
     const updates = { name: username };
@@ -109,16 +112,7 @@ server.put("/api/update-user", authenticate, async (req, res) => {
 
     if (updateError) throw updateError;
 
-    const authUpdates = {};
-    if (email) authUpdates.email = email;
-    if (password && password !== "******") authUpdates.password = password;
-
-    const { error: authError } = await supabase.auth.updateUser(authUpdates);
-
-    if (authError) throw authError;
-
     res.status(200).json({ message: "User updated successfully" });
-    console.log("User updated successfully:", userId);
   } catch (error) {
     console.error("Failed to update user:", error.stack);
     res.status(500).json({ error: "Failed to update user", details: error.message });
@@ -134,7 +128,6 @@ server.post("/api/login", async (req, res) => {
   }
 
   try {
-    console.log("Login attempt for:", email);
     const { session, error } = await supabase.auth.signIn({
       email,
       password,
@@ -157,7 +150,6 @@ server.post("/api/login", async (req, res) => {
     });
 
     res.status(200).json({ token, user: session.user });
-    console.log("User logged in successfully:", session.user.id);
   } catch (error) {
     console.error("Login failed:", error.stack);
     res.status(500).json({ error: "Login failed", details: error.message });
@@ -165,56 +157,41 @@ server.post("/api/login", async (req, res) => {
 });
 
 // トークンリフレッシュAPI
-server.post("/api/refresh-token", (req, res) => {
+server.post("/api/refresh-token", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) {
     return res.status(403).json({ error: "Refresh token not provided" });
   }
 
-  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error("Invalid refresh token:", err.stack);
-      return res.status(403).json({ error: "Invalid refresh token" });
-    }
+  const user = await verifyToken(refreshToken);
+  if (!user) {
+    return res.status(403).json({ error: "Invalid refresh token" });
+  }
 
-    const newToken = generateAccessToken(user);
-    res.status(200).json({ token: newToken });
-    console.log("Token refreshed successfully for user:", user.id);
-  });
+  const newToken = generateAccessToken(user);
+  res.status(200).json({ token: newToken });
 });
 
 // ノート取得API
-server.get("/api/notes/:date", authenticate, async (req, res) => {
+server.get("/api/notes/:date", async (req, res) => {
   const { date } = req.params;
+  const token = req.headers.authorization && req.headers.authorization.split(" ")[1];
+
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   try {
-    console.log("Fetching notes for date:", date);
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("uuid")
-      .eq("uuid", req.user.id)
-      .single();
-
-    if (userError || !userRecord) {
-      throw new Error(`Failed to find user with UUID: ${req.user.id}`);
-    }
-
-    const userId = userRecord.uuid;
-
-    if (!isValidDate(date)) {
-      return res.status(400).json({ error: "Invalid date format" });
-    }
-
     const { data, error } = await supabase
       .from("notes")
       .select("*")
       .eq("date", date)
-      .eq("userid", userId);
+      .eq("userid", user.id);
 
-    if (error) throw new Error(`Supabase error: ${error.message}`);
+    if (error) throw error;
 
-    res.json(data || []);
-    console.log("Notes fetched successfully for user:", userId);
+    res.status(200).json(data || []);
   } catch (error) {
     console.error("Failed to fetch note:", error.stack);
     res.status(500).json({ error: "Failed to fetch note", details: error.message });
@@ -222,50 +199,40 @@ server.get("/api/notes/:date", authenticate, async (req, res) => {
 });
 
 // ノート保存API
-server.post("/api/notes/:date", authenticate, async (req, res) => {
+server.post("/api/notes/:date", async (req, res) => {
   const { date } = req.params;
   const { note, exercises } = req.body;
+  const token = req.headers.authorization && req.headers.authorization.split(" ")[1];
 
-  if (!isValidDate(date)) {
-    return res.status(400).json({ error: "Invalid date format" });
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    console.log("Saving note for date:", date);
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("uuid")
-      .eq("uuid", req.user.id)
-      .single();
-
-    if (userError || !userRecord) {
-      throw new Error(`Failed to find user with UUID: ${req.user.id}`);
-    }
-
-    const userId = userRecord.uuid;
-
-    const exercisesToSave = exercises.map(exercise => ({
+    const exercisesToSave = exercises.map((exercise) => ({
       exercise: exercise.exercise || "",
-      sets: exercise.sets.map(set => ({
+      sets: exercise.sets.map((set) => ({
         weight: set.weight || "",
         reps: set.reps || "",
-        rest: set.rest || ""
-      }))
+        rest: set.rest || "",
+      })),
     }));
 
     const { error } = await supabase
       .from("notes")
-      .upsert([{
-        date,
-        note,
-        exercises: JSON.stringify(exercisesToSave),
-        userid: userId,
-      }]);
+      .upsert([
+        {
+          date,
+          note,
+          exercises: JSON.stringify(exercisesToSave),
+          userid: user.id,
+        },
+      ]);
 
-    if (error) throw new Error(`Supabase error: ${error.message}`);
+    if (error) throw error;
 
     res.status(200).json({ message: "Note saved successfully" });
-    console.log("Note saved successfully for user:", userId);
   } catch (error) {
     console.error("Failed to save note:", error.stack);
     res.status(500).json({ error: "Failed to save note", details: error.message });

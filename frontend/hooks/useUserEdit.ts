@@ -2,7 +2,6 @@ import { useState } from "react";
 import debounce from "lodash.debounce";
 import supabase from "../../backend/supabaseClient";
 import { useToast } from "@chakra-ui/react";
-import axios from "axios"; 
 
 export const useUserEdit = () => {
   const [isEditing, setIsEditing] = useState({
