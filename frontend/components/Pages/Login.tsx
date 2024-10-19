@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { createClient } from '@supabase/supabase-js';
-
-// 環境変数を使用してSupabaseクライアントを作成
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
-);
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -28,12 +21,25 @@ const Login: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
+      const result = await response.json();
+      if (response.ok) {
+        toast({
+          title: 'Login successful',
+          description: 'Redirecting to the top...',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        setTimeout(() => {
+          router.push('/top');
+        }, 1000);
+      } else {
         toast({
           title: 'Login failed',
           description: 'Invalid email or password.',
@@ -41,25 +47,8 @@ const Login: React.FC = () => {
           duration: 5000,
           isClosable: true,
         });
-        return;
       }
-
-      toast({
-        title: 'Login successful',
-        description: 'Redirecting to the top...',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-
-      setTimeout(() => {
-        router.push('/top').then(() => {
-          console.log("Redirected to TOP_PAGE successfully.");
-        }).catch((err) => {
-          console.error("Redirect failed:", err);
-        });
-      }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Login failed',
         description: 'An error occurred during login. Please try again later.',
@@ -70,7 +59,6 @@ const Login: React.FC = () => {
     }
   };
 
-  // メールアドレスの形式を検証する関数
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);

@@ -15,7 +15,6 @@ import {
 import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/router";
 import axios from "axios";
-import supabase from "../../../backend/supabaseClient";
 import { useUserEdit } from "../../hooks/useUserEdit";
 
 const UserSettings: React.FC = () => {
@@ -30,8 +29,9 @@ const UserSettings: React.FC = () => {
     // ユーザーデータを取得する
     const fetchUserData = async () => {
       try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) throw error;
+        const { data } = await axios.get("http://localhost:3001/api/get-user", {
+          withCredentials: true, // 認証情報を含める
+        });
 
         if (data.user) {
           setUserData({
@@ -40,9 +40,8 @@ const UserSettings: React.FC = () => {
             password: "******", // パスワードはマスクする
           });
         }
-      } catch (error: unknown) {
-        const err = error as Error;
-        console.error("Error fetching user data:", err.message);
+      } catch (error: any) {
+        console.error("Error fetching user data:", error.message);
         toast({
           title: "Error",
           description: "Failed to load user data.",
@@ -58,21 +57,18 @@ const UserSettings: React.FC = () => {
 
   const saveUserData = async (updatedUserData: any) => {
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData?.session) {
-        throw new Error("No session found, please log in again.");
-      }
+      const { data: sessionData } = await axios.get("http://localhost:3001/api/session", {
+        withCredentials: true, // 認証情報を含める
+      });
 
       const session = sessionData.session;
 
-      if (!session?.access_token) {
-        throw new Error("No access token found");
-      }
-
+      // Supabase APIにリクエストを送信し、ユーザーデータを更新
       const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData, {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`, // セッショントークンをヘッダーに含める
         },
+        withCredentials: true,
       });
 
       if (response.status === 200) {
@@ -85,15 +81,16 @@ const UserSettings: React.FC = () => {
         });
         setUserData({
           ...updatedUserData,
-          password: "******",
+          password: "******", // パスワードはマスクしたままにする
         });
+      } else {
+        throw new Error(response.data.error || "Failed to update user data.");
       }
-    } catch (error: unknown) {
-      const err = error as Error;
-      console.error("Error updating user data:", err.message);
+    } catch (error: any) {
+      console.error("Error updating user data:", error.message);
       toast({
         title: "Error",
-        description: err.message || "Failed to update user data.",
+        description: error.message || "Failed to update user data.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -136,7 +133,7 @@ const UserSettings: React.FC = () => {
                 fontSize="lg"
                 w="60%"
               />
-              <Button onClick={() => saveUserData(userData)} ml={3} colorScheme="blue">
+              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
                 Save
               </Button>
             </>
@@ -167,7 +164,7 @@ const UserSettings: React.FC = () => {
                 fontSize="lg"
                 w="60%"
               />
-              <Button onClick={() => saveUserData(userData)} ml={3} colorScheme="blue">
+              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
                 Save
               </Button>
             </>
@@ -200,7 +197,7 @@ const UserSettings: React.FC = () => {
                 w="60%"
                 placeholder="Enter new password"
               />
-              <Button onClick={() => saveUserData(userData)} ml={3} colorScheme="blue">
+              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
                 Save
               </Button>
             </>

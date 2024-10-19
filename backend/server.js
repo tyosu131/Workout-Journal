@@ -25,10 +25,46 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+// 環境変数のログ出力（デバッグ用）
+console.log("Supabase URL:", process.env.SUPABASE_URL);
+console.log("Supabase Key:", process.env.SUPABASE_KEY);
+console.log("JWT Secret:", process.env.JWT_SECRET);
+
 // エラーハンドリング用のミドルウェア
 server.use((err, req, res, next) => {
-  console.error("Unhandled error occurred:", err.stack);
-  res.status(500).json({ error: "Internal server error", details: err.message });
+  if (err instanceof Error) {
+    console.error("Unhandled error occurred:", err.stack);
+    res.status(500).json({ error: "Internal server error", details: err.message });
+  } else {
+    console.error("Unhandled unknown error occurred:", err);
+    res.status(500).json({ error: "Internal server error", details: "Unknown error occurred" });
+  }
+});
+
+// セッション情報を取得するAPI
+server.get("/api/auth/session", async (req, res) => {
+  const token = req.headers.authorization ? req.headers.authorization.split(" ")[1] : null;
+
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+
+  try {
+    const user = await verifyToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData?.session) {
+      return res.status(401).json({ error: "No valid session found, please log in again." });
+    }
+
+    res.status(200).json({ session: sessionData.session });
+  } catch (error) {
+    console.error("Failed to get session:", error.stack);
+    res.status(500).json({ error: "Failed to get session", details: error.message });
+  }
 });
 
 // ユーザー登録API
@@ -40,25 +76,28 @@ server.post("/api/signup", async (req, res) => {
   }
 
   try {
-    const { data: existingUser, error: checkError } = await supabase
-      .from("users")
-      .select("uuid")
-      .eq("email", email)
-      .single();
+    const { data: user, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username }
+      }
+    });
 
-    if (checkError || existingUser) {
-      return res.status(409).json({ error: "Email already exists" });
+    if (signUpError) {
+      throw signUpError;
     }
 
-    const { data, error } = await supabase
+    const { error: dbError } = await supabase
       .from("users")
-      .insert([{ name: username, email, password }])
-      .select();
+      .insert([{ uuid: user.user.id, name: username, email }]);
 
-    if (error) throw error;
+    if (dbError) {
+      throw dbError;
+    }
 
-    const token = generateAccessToken(data[0]);
-    const refreshToken = generateRefreshToken(data[0]);
+    const token = generateAccessToken(user.user);
+    const refreshToken = generateRefreshToken(user.user);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -67,50 +106,69 @@ server.post("/api/signup", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(201).json({ token });
+    res.status(201).json({ token, user: user.user });
   } catch (error) {
-    console.error("Failed to create user:", error.stack);
-    res.status(500).json({ error: "Failed to create user", details: error.message });
+    console.error("Failed to sign up user:", error.stack);
+    res.status(500).json({ error: "Failed to sign up user", details: error.message });
   }
 });
 
 // ユーザー情報更新API
 server.put("/api/update-user", async (req, res) => {
-  const token = req.headers.authorization && req.headers.authorization.split(" ")[1];
+  const token = req.headers.authorization ? req.headers.authorization.split(" ")[1] : null;
   if (!token) {
     return res.status(401).json({ error: "Authorization token missing" });
   }
 
-  const user = await verifyToken(token);
-  if (!user) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
-  const { username, email, password } = req.body;
-  const userId = user.id;
-
   try {
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("uuid", userId)
-      .single();
-
-    if (userError || !userRecord) {
-      return res.status(404).json({ error: "User not found" });
+    const user = await verifyToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid token" });
     }
 
-    const updates = { name: username };
+    const { username, email, password } = req.body;
+    const userId = user.id;
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData?.session) {
+      return res.status(401).json({ error: "No valid session found, please log in again." });
+    }
+
+    const session = sessionData.session;
+
+    if (email) {
+      const { error: emailError } = await supabase.auth.updateUser({
+        email
+      }, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (emailError) throw emailError;
+
+      await supabase
+        .from("users")
+        .update({ email })
+        .eq("uuid", userId);
+    }
+
     if (password && password !== "******") {
-      updates.password = password;
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password
+      }, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (passwordError) throw passwordError;
+
+      await supabase.auth.signOut();
+      return res.status(200).json({ message: "Password updated successfully. Please log in again." });
     }
 
-    const { error: updateError } = await supabase
-      .from("users")
-      .update(updates)
-      .eq("uuid", userId);
-
-    if (updateError) throw updateError;
+    if (username) {
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ name: username })
+        .eq("uuid", userId);
+      if (updateError) throw updateError;
+    }
 
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
@@ -128,15 +186,13 @@ server.post("/api/login", async (req, res) => {
   }
 
   try {
-    const { session, error } = await supabase.auth.signIn({
+    const { session, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error || !session || !session.user) {
-      return res.status(500).json({
-        error: "Failed to login: " + (error?.message || "Unknown error"),
-      });
+      return res.status(500).json({ error: "Failed to login: " + (error?.message || "Unknown error") });
     }
 
     const token = generateAccessToken(session.user);
@@ -221,14 +277,12 @@ server.post("/api/notes/:date", async (req, res) => {
 
     const { error } = await supabase
       .from("notes")
-      .upsert([
-        {
-          date,
-          note,
-          exercises: JSON.stringify(exercisesToSave),
-          userid: user.id,
-        },
-      ]);
+      .upsert([{
+        date,
+        note,
+        exercises: JSON.stringify(exercisesToSave),
+        userid: user.id,
+      }]);
 
     if (error) throw error;
 
@@ -239,12 +293,7 @@ server.post("/api/notes/:date", async (req, res) => {
   }
 });
 
-// 日付の検証関数
-const isValidDate = (date) => {
-  const re = /^\d{4}-\d{2}-\d{2}$/;
-  return re.test(date);
-};
-
+// サーバー起動
 const port = process.env.PORT || 3001;
 server.listen(port, (err) => {
   if (err) throw err;

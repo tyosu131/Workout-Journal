@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import supabase from '../../backend/supabaseClient'; // Supabase クライアント
+import axios from 'axios'; // axios を利用してバックエンド API を呼び出す
 import { User } from '@supabase/supabase-js';
 import { getToken, setToken, removeToken } from '../utils/tokenUtils'; // トークン管理用関数をインポート
 
 type AuthContextProps = {
   user: User | null;
-  login: (user: User, token: string) => void;
+  login: (email: string, password: string) => Promise<void>; // login 関数の型を修正
   logout: () => void;
 };
 
@@ -20,34 +20,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
+      try {
+        const token = getToken(); // 保存されているトークンを取得
+        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`, {
+          headers: { Authorization: `Bearer ${token}` }, // トークンをヘッダーに追加
+          withCredentials: true, // Cookie による認証情報をバックエンドに送信
+        });
+        setUser(data?.session?.user ?? null);
+        if (data?.session?.access_token) {
+          setToken(data.session.access_token); // トークンを保存
+        }
+      } catch (error) {
+        console.error('Failed to get session:', error);
+      }
     };
 
     getSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        setToken(session.access_token); // トークンを保存
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
 
-  const login = (user: User, token: string) => {
-    setUser(user);
-    setToken(token); // ログイン時にトークンを保存
+  const login = async (email: string, password: string) => { // email と password を引数にするよう修正
+    try {
+      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/login`, {
+        email,
+        password,
+      });
+      setUser(data.user); // ユーザー情報をセット
+      setToken(data.token); // ログイン時にトークンを保存
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
   };
 
-  const logout = () => {
-    supabase.auth.signOut().then(() => {
+  const logout = async () => {
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`);
       setUser(null);
       removeToken(); // ログアウト時にトークンを削除
-    });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (

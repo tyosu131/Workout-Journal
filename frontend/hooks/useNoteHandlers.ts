@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set } from "../types/types";
-import supabase from "../../backend/supabaseClient";
 import { apiRequestWithAuth } from "../../frontend/utils/apiClient"; // APIクライアントのインポート
+import { getToken } from "../utils/tokenUtils"; // トークン管理用関数のインポート
 
 const useNoteHandlers = (
   noteData: NoteData | null,
@@ -13,15 +13,9 @@ const useNoteHandlers = (
 
   useEffect(() => {
     const fetchToken = async () => {
-      const { data: sessionData, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Failed to get session:", error);
-        return;
-      }
-
-      if (sessionData?.session) {
-        const accessToken = sessionData.session.access_token;
-        setToken(accessToken); // トークンを保存
+      const savedToken = getToken(); // トークン取得
+      if (savedToken) {
+        setToken(savedToken);
       }
     };
 

@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const supabase = require("./supabaseClient");
 
 // メールアドレスの形式を検証する関数
@@ -8,29 +9,29 @@ const validateEmail = (email) => {
 
 // アクセストークン発行関数
 const generateAccessToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: "1h",
-  });
+  return jwt.sign(
+    { id: user.id, email: user.email, sub: user.id },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES || "1h" } // 環境変数を利用
+  );
 };
 
 // リフレッシュトークン発行関数
 const generateRefreshToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
+  return jwt.sign(
+    { id: user.id, email: user.email, sub: user.id },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES || "7d" } // 環境変数を利用
+  );
 };
 
-// トークンの検証関数（Supabaseを使用）
+// JWTのトークンを検証する関数
 const verifyToken = async (token) => {
   try {
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error) {
-      console.error("Supabase token verification failed:", error.message);
-      return null;
-    }
-    return data.user;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // JWTの検証
+    return decoded;
   } catch (error) {
-    console.error("Token verification failed:", error);
+    console.error("Token verification failed:", error.message);
     return null;
   }
 };
@@ -39,5 +40,5 @@ module.exports = {
   validateEmail,
   generateAccessToken,
   generateRefreshToken,
-  verifyToken, // verifyTokenをエクスポート
+  verifyToken,
 };
