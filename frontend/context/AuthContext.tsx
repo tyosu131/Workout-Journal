@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios'; // axios を利用してバックエンド API を呼び出す
+import axios from 'axios'; 
 import { User } from '@supabase/supabase-js';
-import { getToken, setToken, removeToken } from '../utils/tokenUtils'; // トークン管理用関数をインポート
+import { getToken, setToken, removeToken } from '../utils/tokenUtils';
 
 type AuthContextProps = {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>; // login 関数の型を修正
+  login: (email: string, password: string) => Promise<void>; 
   logout: () => void;
 };
 
@@ -22,9 +22,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const getSession = async () => {
       try {
         const token = getToken(); // 保存されているトークンを取得
+        console.log('Retrieved token:', token); // 取得したトークンをログ出力
+        if (!token) {
+          console.error('No token found during session retrieval.');
+          return;
+        }
         const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`, {
-          headers: { Authorization: `Bearer ${token}` }, // トークンをヘッダーに追加
-          withCredentials: true, // Cookie による認証情報をバックエンドに送信
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true, 
         });
         setUser(data?.session?.user ?? null);
         if (data?.session?.access_token) {
@@ -38,14 +43,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     getSession();
   }, []);
 
-  const login = async (email: string, password: string) => { // email と password を引数にするよう修正
+  const login = async (email: string, password: string) => {
     try {
       const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/login`, {
         email,
         password,
       });
-      setUser(data.user); // ユーザー情報をセット
-      setToken(data.token); // ログイン時にトークンを保存
+      setUser(data.user); 
+      setToken(data.token); 
+      console.log('Login successful, token set:', data.token);
     } catch (error) {
       console.error('Login failed:', error);
     }
@@ -55,7 +61,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`);
       setUser(null);
-      removeToken(); // ログアウト時にトークンを削除
+      removeToken(); 
+      console.log('Logout successful, token removed.');
     } catch (error) {
       console.error('Logout failed:', error);
     }

@@ -5,6 +5,7 @@ export const setToken = (token: string) => {
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem(TOKEN_KEY, token);
+      console.log("Token set:", token); // トークンが正しくセットされたか確認
     }
   } catch (error) {
     console.error("Error setting token:", error);
@@ -15,7 +16,9 @@ export const setToken = (token: string) => {
 export const getToken = (): string | null => {
   try {
     if (typeof window !== "undefined") {
-      return localStorage.getItem(TOKEN_KEY);
+      const token = localStorage.getItem(TOKEN_KEY);
+      console.log("Token retrieved:", token); // トークンが正しく取得されたか確認
+      return token;
     }
     return null;
   } catch (error) {
@@ -29,18 +32,9 @@ export const removeToken = () => {
   try {
     if (typeof window !== "undefined") {
       localStorage.removeItem(TOKEN_KEY);
+      console.log("Token removed"); // トークンが削除されたか確認
     }
   } catch (error) {
     console.error("Error removing token:", error);
-  }
-};
-
-// トークンが存在するかを確認する関数
-export const hasToken = (): boolean => {
-  try {
-    return !!getToken(); // トークンが存在するかをチェック
-  } catch (error) {
-    console.error("Error checking token:", error);
-    return false;
   }
 };

@@ -1,6 +1,9 @@
+// C:\Users\User\Desktop\web Development Projects\portfolio real\frontend\components\pages\Login.tsx
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
+import { setToken } from "../../utils/tokenUtils"; // トークン保存関数をインポート
+import { validateEmail } from "../../utils/validationUtils";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -29,6 +32,7 @@ const Login: React.FC = () => {
 
       const result = await response.json();
       if (response.ok) {
+        setToken(result.token); // トークンを保存
         toast({
           title: 'Login successful',
           description: 'Redirecting to the top...',
@@ -51,17 +55,12 @@ const Login: React.FC = () => {
     } catch (error: any) {
       toast({
         title: 'Login failed',
-        description: 'An error occurred during login. Please try again later.',
+        description: `An error occurred: ${error.message}. Please try again later.`,
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
     }
-  };
-
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
   };
 
   return (
