@@ -1,8 +1,7 @@
-// C:\Users\User\Desktop\web Development Projects\portfolio real\frontend\components\pages\Login.tsx
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { setToken } from "../../utils/tokenUtils"; // トークン保存関数をインポート
+import { setToken } from "../../utils/tokenUtils";
 import { validateEmail } from "../../utils/validationUtils";
 
 const Login: React.FC = () => {
@@ -30,28 +29,22 @@ const Login: React.FC = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      const result = await response.json();
-      if (response.ok) {
-        setToken(result.token); // トークンを保存
-        toast({
-          title: 'Login successful',
-          description: 'Redirecting to the top...',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-        setTimeout(() => {
-          router.push('/top');
-        }, 1000);
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
       }
+
+      const result = await response.json();
+      setToken(result.token);  // トークン設定
+      router.push('/top');      // トークン設定後に遷移
+
+      toast({
+        title: 'Login successful',
+        description: 'Redirecting to the top...',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
     } catch (error: any) {
       toast({
         title: 'Login failed',

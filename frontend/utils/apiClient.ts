@@ -1,22 +1,18 @@
+// apiClient.ts
 import axios, { AxiosRequestHeaders } from 'axios';
-import supabase from '../../backend/supabaseClient'; // Supabaseクライアントをインポート
+import supabase from '../../backend/supabaseClient';
+import { getToken } from './tokenUtils';
 
-// ジェネリクスを使った型定義
 export const apiRequestWithAuth = async <TResponse, TData = any>(
   url: string,
   method: 'get' | 'post' | 'put' | 'delete',
-  data?: TData, // data にもジェネリクスを適用
+  data?: TData,
   additionalHeaders?: AxiosRequestHeaders
 ): Promise<TResponse> => {
-  // セッション取得のロジックを共通化
-  const { data: sessionData, error } = await supabase.auth.getSession();
-  if (error || !sessionData?.session) {
-    throw new Error('Failed to retrieve session');
-  }
-
-  const token = sessionData.session.access_token;
+  // SupabaseのセッションやlocalStorageからトークンを取得
+  const token = getToken();
   if (!token) {
-    throw new Error('No access token found');
+    throw new Error('アクセストークンが見つかりません');
   }
 
   try {
@@ -26,13 +22,13 @@ export const apiRequestWithAuth = async <TResponse, TData = any>(
       data,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...additionalHeaders, // 外部から渡されたヘッダーを追加
+        ...additionalHeaders,
       },
     });
 
-    return response.data as TResponse; // ジェネリクスを使って型を推論
+    return response.data as TResponse;
   } catch (error) {
-    console.error('API request failed', error);
+    console.error('APIリクエストに失敗しました:', error);
     throw error;
   }
 };
