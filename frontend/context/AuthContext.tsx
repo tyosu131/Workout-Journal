@@ -23,11 +23,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const router = useRouter();
 
   const getSession = async () => {
+    console.log("getSession called");
     setLoading(true);
     try {
       const token = getToken();
+      console.log("Token in getSession:", token);
       if (!token) {
-        console.warn('No token found. Redirecting to login.');
         setLoading(false);
         router.push('/login');
         return;
@@ -65,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh`, {}, { withCredentials: true }
       );
       setToken(refreshResponse.data.access_token);
+      console.log("Token refreshed:", refreshResponse.data.access_token);
       await getSession(); 
     } catch (error) {
       removeToken();
@@ -76,15 +78,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const token = getToken();
-    if (token) {
+    console.log("Token in useEffect:", token);
+    if (token && !user) { // 初回ロードまたは user が設定されていない場合のみ getSession を実行
       console.log("Valid token found, fetching session...");
       getSession();
-    } else {
+    } else if (!token) {
       console.log("No valid token found, redirecting to login...");
       router.push('/login');
       setLoading(false);
     }
-  }, []);
+  }, [user]); // user に依存
 
   const login = async (email: string, password: string) => {
     try {
@@ -94,8 +97,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       setUser(data.user);
       setToken(data.token);
+      console.log("Token set in login:", data.token);
       console.log('Login successful.');
       router.push('/top');
+      await getSession();
     } catch (error: any) {
       console.error('Login failed:', error);
     }

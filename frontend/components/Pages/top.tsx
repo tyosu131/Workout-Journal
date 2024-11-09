@@ -1,18 +1,27 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Box, Stack, Text, IconButton, Grid, GridItem, Button, Menu, MenuButton, MenuList, MenuItem } from "@chakra-ui/react";
 import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { useRouter } from 'next/router';
 import { URLS } from '../../constants/urls';
 import { generateCalendarDates } from '../../utils/calendarUtils';
-import supabase from '../../../backend/supabaseClient';
-import { useAuthCheck } from '../../hooks/useAuthCheck'; // useAuthCheckをインポート
+import { useAuth } from '../../context/AuthContext';
+import supabase  from '../../../backend/supabaseClient';
 
 const Top: React.FC = () => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
-  
-  // useAuthCheckフックを使用して認証状態を管理
-  const isAuthenticated = useAuthCheck();
+  const { user, logout } = useAuth(); // AuthContextからuserとlogout関数を取得
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Session data:", session);
+      if (!session) {
+        router.push('/login');
+      }
+    };
+    fetchSession();
+  }, []);
 
   const handleDateClick = (date: string) => {
     router.push(`/note/${date}`);
@@ -29,7 +38,7 @@ const Top: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     router.push('/login');
   };
 
@@ -38,7 +47,7 @@ const Top: React.FC = () => {
   const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
 
   return (
-    isAuthenticated ? (
+    user ? (
       <Box>
         <Box position="absolute" top="10px" right="10px">
           <Menu>
