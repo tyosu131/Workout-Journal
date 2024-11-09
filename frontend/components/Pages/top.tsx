@@ -4,18 +4,19 @@ import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/ico
 import { useRouter } from 'next/router';
 import { URLS } from '../../constants/urls';
 import { generateCalendarDates } from '../../utils/calendarUtils';
-import { useAuth } from '../../context/AuthContext';
-import supabase  from '../../../backend/supabaseClient';
+import supabase from '../../../backend/supabaseClient';
+import { Session } from '@supabase/supabase-js'; // Session 型のインポート
 
 const Top: React.FC = () => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const { user, logout } = useAuth(); // AuthContextからuserとlogout関数を取得
+  const [session, setSession] = useState<Session | null>(null); // Session | null に設定
 
   useEffect(() => {
     const fetchSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       console.log("Session data:", session);
+      setSession(session);
       if (!session) {
         router.push('/login');
       }
@@ -38,7 +39,7 @@ const Top: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await supabase.auth.signOut();
     router.push('/login');
   };
 
@@ -47,7 +48,7 @@ const Top: React.FC = () => {
   const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
 
   return (
-    user ? (
+    session ? (
       <Box>
         <Box position="absolute" top="10px" right="10px">
           <Menu>
