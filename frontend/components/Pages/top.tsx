@@ -4,42 +4,60 @@ import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/ico
 import { useRouter } from 'next/router';
 import { URLS } from '../../constants/urls';
 import { generateCalendarDates } from '../../utils/calendarUtils';
-import supabase from '../../../backend/supabaseClient';
-import { Session } from '@supabase/supabase-js'; // Session 型のインポート
 
 const Top: React.FC = () => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [session, setSession] = useState<Session | null>(null); // Session | null に設定
+  const [session, setSession] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Session data:", session);
-      setSession(session);
-      if (!session) {
-        router.push('/login');
+    const fetchUser = async () => {
+      try {
+        console.log("Attempting to retrieve token from localStorage...");
+        
+        // localStorageからトークンを直接取得
+        const token = localStorage.getItem('token');  // トークンのキー名を確認してください
+        console.log("Retrieved token from localStorage:", token);
+
+        if (!token) {
+          console.log("No token found, redirecting to login...");
+          router.push('/login');
+          return;
+        }
+
+        // トークンが取得できた場合、セッションとして設定
+        setSession(token);
+        console.log("Session set with token from localStorage");
+
+      } catch (error) {
+        console.error("Error fetching user/session data:", error);
       }
     };
-    fetchSession();
-  }, []);
+
+    console.log("Calling fetchUser...");
+    fetchUser();
+  }, [router]);
 
   const handleDateClick = (date: string) => {
+    console.log(`Date clicked: ${date}`);
     router.push(`/note/${date}`);
   };
 
   const handlePrevMonth = () => {
     const prevMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
     setCurrentDate(prevMonthDate);
+    console.log("Previous month selected:", prevMonthDate);
   };
 
   const handleNextMonth = () => {
     const nextMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     setCurrentDate(nextMonthDate);
+    console.log("Next month selected:", nextMonthDate);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    console.log("Logging out...");
+    localStorage.removeItem('token'); // トークンをlocalStorageから削除
     router.push('/login');
   };
 

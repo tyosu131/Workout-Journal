@@ -11,6 +11,8 @@ const Login: React.FC = () => {
   const router = useRouter();
 
   const handleLogin = async () => {
+    console.log("Attempting login with email:", email); // メールアドレス確認
+
     if (!validateEmail(email)) {
       toast({
         title: 'Invalid email format',
@@ -29,14 +31,18 @@ const Login: React.FC = () => {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log("Login response:", response); // レスポンス確認
+
       if (!response.ok) {
         const error = await response.json();
+        console.log("Login failed with error:", error); // エラーレスポンス確認
         throw new Error(error.error || 'Login failed');
       }
 
       const result = await response.json();
-      setToken(result.token);  // トークン設定
-      router.push('/top');      // トークン設定後に遷移
+      console.log("Login successful, received token:", result.token); // トークン確認
+      setToken(result.token);  // トークン保存
+      router.push('/top');      // トップページに遷移
 
       toast({
         title: 'Login successful',
@@ -46,6 +52,7 @@ const Login: React.FC = () => {
         isClosable: true,
       });
     } catch (error: any) {
+      console.error("Login error:", error);  // エラー内容を詳細に表示
       toast({
         title: 'Login failed',
         description: `An error occurred: ${error.message}. Please try again later.`,
