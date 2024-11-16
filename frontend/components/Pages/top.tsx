@@ -4,37 +4,37 @@ import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/ico
 import { useRouter } from 'next/router';
 import { URLS } from '../../constants/urls';
 import { generateCalendarDates } from '../../utils/calendarUtils';
+import supabase from '../../../backend/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 const Top: React.FC = () => {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [session, setSession] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        console.log("Attempting to retrieve token from localStorage...");
-        
-        // localStorageからトークンを直接取得
-        const token = localStorage.getItem('token');  // トークンのキー名を確認してください
-        console.log("Retrieved token from localStorage:", token);
+        console.log("Attempting to fetch session...");
 
-        if (!token) {
-          console.log("No token found, redirecting to login...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log("Fetched session:", session);
+        console.log("Session error:", sessionError);
+
+        if (!session || sessionError) {
+          console.log("Session is null or invalid. Redirecting to login...");
           router.push('/login');
           return;
         }
 
-        // トークンが取得できた場合、セッションとして設定
-        setSession(token);
-        console.log("Session set with token from localStorage");
+        setSession(session);
+        console.log("Session successfully set:", session);
 
       } catch (error) {
-        console.error("Error fetching user/session data:", error);
+        console.error("Error fetching session:", error);
       }
     };
 
-    console.log("Calling fetchUser...");
     fetchUser();
   }, [router]);
 
@@ -57,7 +57,7 @@ const Top: React.FC = () => {
 
   const handleLogout = async () => {
     console.log("Logging out...");
-    localStorage.removeItem('token'); // トークンをlocalStorageから削除
+    await supabase.auth.signOut();
     router.push('/login');
   };
 
