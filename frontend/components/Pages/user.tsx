@@ -28,47 +28,65 @@ const UserSettings: React.FC = () => {
 
     // ユーザーデータを取得する
     const fetchUserData = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.error("No token found. Redirecting to login.");
+        router.push("/login");
+        return;
+      }
+
       try {
         const { data } = await axios.get("http://localhost:3001/api/get-user", {
-          withCredentials: true, // 認証情報を含める
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        if (data.user) {
+        if (data) {
           setUserData({
-            username: data.user.user_metadata?.username || "No username set",
-            email: data.user.email || "",
+            username: data.name || "No username set",
+            email: data.email || "",
             password: "******", // パスワードはマスクする
           });
         }
       } catch (error: any) {
         console.error("Error fetching user data:", error.message);
-        toast({
-          title: "Error",
-          description: "Failed to load user data.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+        if (error.response?.status === 401) {
+          toast({
+            title: "Session expired",
+            description: "Please log in again.",
+            status: "warning",
+            duration: 3000,
+            isClosable: true,
+          });
+          router.push("/login");
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to load user data.",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
       }
     };
 
     fetchUserData();
-  }, [setUserData, toast]);
+  }, [setUserData, toast, router]);
 
   const saveUserData = async (updatedUserData: any) => {
     try {
-      const { data: sessionData } = await axios.get("http://localhost:3001/api/session", {
-        withCredentials: true, // 認証情報を含める
-      });
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No valid session found. Please log in again.");
+      }
 
-      const session = sessionData.session;
-
-      // Supabase APIにリクエストを送信し、ユーザーデータを更新
       const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData, {
         headers: {
-          Authorization: `Bearer ${session.access_token}`, // セッショントークンをヘッダーに含める
+          Authorization: `Bearer ${token}`,
         },
-        withCredentials: true,
       });
 
       if (response.status === 200) {
@@ -152,7 +170,6 @@ const UserSettings: React.FC = () => {
         <Divider mt={2} />
       </FormControl>
 
-      {/* Email */}
       <FormControl mb={8}>
         <Flex alignItems="center">
           <FormLabel fontSize="lg" w="40%">E-Mail</FormLabel>
@@ -183,7 +200,6 @@ const UserSettings: React.FC = () => {
         <Divider mt={2} />
       </FormControl>
 
-      {/* Password */}
       <FormControl mb={8}>
         <Flex alignItems="center">
           <FormLabel fontSize="lg" w="40%">Password</FormLabel>

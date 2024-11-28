@@ -3,6 +3,5 @@ export const URLS = {
   USER_PAGE: '/user',
   CONTACT_PAGE: '/contact',
   TOP_PAGE: '/top',
-  TIMER_PAGE: '/timer',
   FORGOT_PASSWORD_PAGE: '/forgot-password', 
 } as const;

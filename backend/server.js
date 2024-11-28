@@ -61,73 +61,58 @@ server.use((err, req, res, next) => {
   }
 });
 
-// セッション取得API（/api/auth/session）
+// セッション取得API
 server.get("/api/auth/session", async (req, res) => {
-  console.log("[GET /api/auth/session] Start");
   const authHeader = req.headers.authorization;
   const token = authHeader ? authHeader.split(" ")[1] : null;
 
   if (!token) {
-    console.error("Authorization token is missing or null: ", authHeader);
     return res.status(401).json({ error: "Authorization token missing" });
   }
 
   try {
-    // JWTトークンの検証
     const decoded = await verifyToken(token);
     if (!decoded) {
-      console.error("Invalid token: ", token);
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    console.log(
-      "[GET /api/auth/session] Token verified, fetching user from Supabase"
-    );
-
-    // Supabaseのユーザー情報取得を試行
-    const { data: userData, error: userError } = await supabase.auth.getUser(
-      token
-    );
-    if (userError || !userData) {
-      console.error("No valid user found or user error:", userError);
-      return res
-        .status(401)
-        .json({ error: "No valid user found, please log in again." });
+    const { data: user, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ error: "No valid user found" });
     }
 
-    res.status(200).json({ user: userData });
+    res.status(200).json({ user });
   } catch (error) {
-    console.error("Failed to get user:", error.stack);
-    res
-      .status(500)
-      .json({ error: "Failed to get user", details: error.message });
+    console.error("Session retrieval failed:", error.message);
+    res.status(500).json({ error: "Session retrieval failed" });
   }
 });
 
 // リフレッシュトークンのエンドポイント
 server.post("/api/auth/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
+
   if (!refreshToken) {
-    console.error("Refresh token missing");
     return res.status(401).json({ error: "Refresh token missing" });
   }
 
   try {
     const decoded = await verifyToken(refreshToken);
     if (!decoded) {
-      console.error("Invalid refresh token");
-      return res.status(401).json({ error: "Invalid refresh token" });
+      console.error("[POST /api/auth/refresh] Invalid refresh token");
+      return res.status(401).json({ error: "Invalid or expired refresh token" });
     }
 
     const newAccessToken = generateAccessToken({
       id: decoded.id,
       email: decoded.email,
     });
-    console.log("Access token refreshed successfully.");
+
+    console.log("[POST /api/auth/refresh] Token refreshed successfully");
     res.status(200).json({ access_token: newAccessToken });
   } catch (error) {
-    console.error("Failed to refresh access token:", error.message);
-    res.status(403).json({ error: "Invalid or expired refresh token" });
+    console.error("[POST /api/auth/refresh] Token refresh failed:", error.message);
+    res.status(500).json({ error: "Token refresh failed", details: error.message });
   }
 });
 
@@ -185,107 +170,118 @@ server.post("/api/signup", async (req, res) => {
 });
 
 // ユーザー情報更新API
-server.put("/api/update-user", async (req, res) => {
-  console.log("[PUT /api/update-user] Start");
-  const token = req.headers.authorization
-    ? req.headers.authorization.split(" ")[1]
-    : null;
+server.get("/api/get-user", async (req, res) => {
+  console.log("[GET /api/get-user] Start");
+
+  const authHeader = req.headers.authorization;
+  const token = authHeader ? authHeader.split(" ")[1] : null;
+
   if (!token) {
+    console.warn("[GET /api/get-user] No token provided.");
     return res.status(401).json({ error: "Authorization token missing" });
   }
 
   try {
-    const user = await verifyToken(token);
-    if (!user) {
-      console.error("Invalid token:", token);
+    const decoded = await verifyToken(token);
+    if (!decoded) {
+      console.warn("[GET /api/get-user] Invalid token. Attempting refresh...");
+      const refreshToken = req.cookies.refreshToken;
+
+      if (!refreshToken) {
+        return res.status(401).json({ error: "Refresh token missing" });
+      }
+
+      const refreshedToken = await handleTokenRefresh(refreshToken); // リフレッシュ処理
+      if (!refreshedToken) {
+        return res.status(401).json({ error: "Token refresh failed" });
+      }
+
+      return res.status(200).json({ token: refreshedToken });
+    }
+
+    const userId = decoded.id;
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .eq("id", userId)
+      .single();
+
+    if (error || !user) {
+      console.error("Error fetching user data or user not found:", error);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Failed to fetch user data:", error.message);
+    res.status(500).json({ error: "Failed to fetch user data", details: error.message });
+  }
+});
+
+
+
+
+// ユーザー情報更新API
+server.put("/api/update-user", async (req, res) => {
+  console.log("[PUT /api/update-user] Start");
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    console.error("Authorization token is missing");
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+
+  try {
+    const decoded = await verifyToken(token);
+    if (!decoded) {
+      console.error("Invalid token");
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    console.log("[PUT /api/update-user] Token verified, processing update");
     const { username, email, password } = req.body;
-    const userId = user.id;
-
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-    if (sessionError || !sessionData?.session) {
-      console.error("Session retrieval error:", sessionError);
-      return res
-        .status(401)
-        .json({ error: "No valid session found, please log in again." });
-    }
-
-    const session = sessionData.session;
+    const userId = decoded.id;
 
     if (email) {
-      const { error: emailError } = await supabase.auth.updateUser(
-        {
-          email,
-        },
-        {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
-      );
+      const { error: emailError } = await supabase.auth.updateUser({ email });
       if (emailError) {
-        console.error("[PUT /api/update-user] Email update error:", emailError);
+        console.error("Failed to update email:", emailError.message);
         throw emailError;
       }
-
-      await supabase.from("users").update({ email }).eq("uuid", userId);
     }
 
     if (password && password !== "******") {
-      const { error: passwordError } = await supabase.auth.updateUser(
-        {
-          password,
-        },
-        {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
-      );
+      const { error: passwordError } = await supabase.auth.updateUser({ password });
       if (passwordError) {
-        console.error(
-          "[PUT /api/update-user] Password update error:",
-          passwordError
-        );
+        console.error("Failed to update password:", passwordError.message);
         throw passwordError;
       }
-
-      await supabase.auth.signOut();
-      return res.status(200).json({
-        message: "Password updated successfully. Please log in again.",
-      });
     }
 
     if (username) {
-      const { error: updateError } = await supabase
+      const { error: usernameError } = await supabase
         .from("users")
         .update({ name: username })
         .eq("uuid", userId);
-      if (updateError) {
-        console.error(
-          "[PUT /api/update-user] Username update error:",
-          updateError
-        );
-        throw updateError;
+
+      if (usernameError) {
+        console.error("Failed to update username:", usernameError.message);
+        throw usernameError;
       }
     }
 
-    console.log("[PUT /api/update-user] User updated successfully");
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
-    console.error("Failed to update user:", error.stack);
-    res
-      .status(500)
-      .json({ error: "Failed to update user", details: error.message });
+    console.error("Failed to update user:", error.message);
+    res.status(500).json({ error: "Failed to update user", details: error.message });
   }
 });
+
+
 
 // ログインAPI
 server.post("/api/login", async (req, res) => {
   console.log("[POST /api/login] Start - Received login request");
   const { email, password } = req.body;
 
-  // 入力チェック
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
@@ -296,16 +292,9 @@ server.post("/api/login", async (req, res) => {
       password,
     });
 
-    if (error) {
-      console.error("[POST /api/login] Login error:", error.message);
-      return res.status(400).json({ error: "Invalid email or password." });
-    }
-
-    if (!data || !data.session || !data.user) {
-      console.error("[POST /api/login] No session or user data in response");
-      return res.status(500).json({
-        error: "Failed to retrieve session data. Please try again.",
-      });
+    if (error || !data.user) {
+      console.error("[POST /api/login] Login failed:", error.message);
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     const token = generateAccessToken(data.user);
@@ -313,18 +302,19 @@ server.post("/api/login", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "Strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    console.log("[POST /api/login] Tokens generated and response sent");
+    console.log("[POST /api/login] Login successful");
     res.status(200).json({ token, user: data.user });
   } catch (error) {
-    console.error("Login failed:", error.stack);
+    console.error("[POST /api/login] Unexpected error:", error.message);
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
+
 
 // ノート保存API
 server.post("/api/notes/:date", async (req, res) => {
