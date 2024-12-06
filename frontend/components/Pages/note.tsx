@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Table, Text, Spinner, Center } from "@chakra-ui/react";
+import { Box, Table, Text, Spinner, Center, Button } from "@chakra-ui/react";
 import useSWR from "swr";
 import Header from "../note/header";
 import DateInput from "../note/dateInput";
@@ -14,7 +14,7 @@ import { apiRequestWithAuth } from "../../utils/apiClient"; // APIクライア�
 // ノートデータをAPIから取得
 const fetchNoteData = async (url: string): Promise<NoteData[]> => {
   try {
-    const data = await apiRequestWithAuth<NoteData[]>(url, 'get'); // ジェネリクスを使用して型定義
+    const data = await apiRequestWithAuth<NoteData[]>(url, "get"); // ジェネリクスを使用して型定義
     return data;
   } catch (error) {
     console.error("Failed to fetch note data:", error);
@@ -26,8 +26,7 @@ const Note: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
   const [noteData, setNoteData] = useState<NoteData | null>(null);
-
-  const { data, error, isValidating } = useSWR<NoteData[]>(
+  const { data, error, isValidating, mutate } = useSWR<NoteData[]>(
     date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
     fetchNoteData,
     { revalidateOnFocus: false, shouldRetryOnError: false }
@@ -35,11 +34,10 @@ const Note: React.FC = () => {
 
   useEffect(() => {
     if (data && data.length > 0) {
-      const exercises = typeof data[0].exercises === 'string'
+      const exercises = typeof data[0].exercises === "string"
         ? JSON.parse(data[0].exercises)
         : data[0].exercises;
 
-      // 必ず30個のexercisesがあり、各exerciseには5つのセットがあるようにする
       const filledExercises = Array.from({ length: 30 }).map((_, exerciseIndex) => {
         const existingExercise = exercises[exerciseIndex] || { exercise: "", sets: [] };
         return {
@@ -48,7 +46,7 @@ const Note: React.FC = () => {
             weight: "",
             reps: "",
             rest: "",
-          })
+          }),
         };
       });
 
@@ -57,7 +55,6 @@ const Note: React.FC = () => {
         exercises: filledExercises,
       });
     } else if (!data || data.length === 0 || error) {
-      // データがない、もしくはエラーの場合でもフォームを表示
       setNoteData({
         date: date as string,
         note: "",
@@ -73,9 +70,28 @@ const Note: React.FC = () => {
     }
   }, [data, error, date]);
 
-  const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
+  const {
+    handleInputChange,
+    handleNoteChange,
+    handleExerciseChange,
+    handleDateChange,
+  } = useNoteHandlers(noteData, setNoteData);
 
-  // ローディング中でもnoteDataが生成されていれば、フォームを表示
+  // ノートを保存
+  const saveNoteData = async () => {
+    if (!noteData) return;
+
+    try {
+      await apiRequestWithAuth(`/api/notes/${noteData.date}`, "post", noteData);
+      console.log("Note saved successfully");
+
+      // 保存後にデータを再取得
+      mutate(); // SWRを利用してデータをリフレッシュ
+    } catch (error) {
+      console.error("Failed to save note data:", error);
+    }
+  };
+
   if (!noteData) {
     return (
       <Center height="100vh">
@@ -108,6 +124,9 @@ const Note: React.FC = () => {
           onInputChange={handleInputChange}
         />
       </Table>
+      <Button colorScheme="blue" onClick={saveNoteData} mt={4}>
+        Save
+      </Button>
     </Box>
   );
 };

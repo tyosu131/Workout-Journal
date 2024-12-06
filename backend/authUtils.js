@@ -44,9 +44,27 @@ const verifyToken = async (token) => {
   }
 };
 
+// リフレッシュトークンを使用してアクセストークンを更新する関数
+const refreshAccessToken = async (refreshToken) => {
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+
+    if (decoded.aud !== "your-audience") {
+      throw new Error("Audience mismatch");
+    }
+
+    // 新しいアクセストークンを発行
+    return generateAccessToken({ id: decoded.id, email: decoded.email });
+  } catch (error) {
+    console.error("アクセストークンのリフレッシュに失敗しました:", error.message);
+    throw new Error("Invalid or expired refresh token");
+  }
+};
+
 module.exports = {
   validateEmail,
   generateAccessToken,
   generateRefreshToken,
   verifyToken,
+  refreshAccessToken, // 新たにエクスポート
 };

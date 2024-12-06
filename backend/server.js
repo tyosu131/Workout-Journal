@@ -92,27 +92,27 @@ server.get("/api/auth/session", async (req, res) => {
 server.post("/api/auth/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
 
+  console.log("[POST /api/auth/refresh] Refresh token received:", refreshToken); // デバッグログ
+
   if (!refreshToken) {
+    console.error("[POST /api/auth/refresh] Refresh token missing");
     return res.status(401).json({ error: "Refresh token missing" });
   }
 
+  // 以下は既存コード
   try {
     const decoded = await verifyToken(refreshToken);
     if (!decoded) {
-      console.error("[POST /api/auth/refresh] Invalid refresh token");
       return res.status(401).json({ error: "Invalid or expired refresh token" });
     }
-
     const newAccessToken = generateAccessToken({
       id: decoded.id,
       email: decoded.email,
     });
-
-    console.log("[POST /api/auth/refresh] Token refreshed successfully");
     res.status(200).json({ access_token: newAccessToken });
   } catch (error) {
     console.error("[POST /api/auth/refresh] Token refresh failed:", error.message);
-    res.status(500).json({ error: "Token refresh failed", details: error.message });
+    res.status(500).json({ error: "Token refresh failed" });
   }
 });
 
@@ -169,34 +169,48 @@ server.post("/api/signup", async (req, res) => {
   }
 });
 
-// ユーザー情報更新API
+async function handleTokenRefresh(refreshToken) {
+  try {
+    const decoded = await verifyToken(refreshToken);
+    if (!decoded) {
+      console.error("[handleTokenRefresh] Invalid refresh token");
+      return null;
+    }
+    const newAccessToken = generateAccessToken({ id: decoded.id, email: decoded.email });
+    return newAccessToken;
+  } catch (error) {
+    console.error("[handleTokenRefresh] Token refresh failed:", error.message);
+    return null;
+  }
+}
+
+// /api/get-user 内でリフレッシュ処理を呼び出す
 server.get("/api/get-user", async (req, res) => {
   console.log("[GET /api/get-user] Start");
-
   const authHeader = req.headers.authorization;
   const token = authHeader ? authHeader.split(" ")[1] : null;
 
   if (!token) {
-    console.warn("[GET /api/get-user] No token provided.");
     return res.status(401).json({ error: "Authorization token missing" });
   }
 
   try {
     const decoded = await verifyToken(token);
     if (!decoded) {
-      console.warn("[GET /api/get-user] Invalid token. Attempting refresh...");
+      console.warn("[GET /api/get-user] Token expired, attempting refresh...");
       const refreshToken = req.cookies.refreshToken;
 
       if (!refreshToken) {
         return res.status(401).json({ error: "Refresh token missing" });
       }
 
-      const refreshedToken = await handleTokenRefresh(refreshToken); // リフレッシュ処理
-      if (!refreshedToken) {
+      const newToken = await handleTokenRefresh(refreshToken);
+      if (!newToken) {
         return res.status(401).json({ error: "Token refresh failed" });
       }
 
-      return res.status(200).json({ token: refreshedToken });
+      res.setHeader("Authorization", `Bearer ${newToken}`);
+      return res.status(200).json({ token: newToken });
     }
 
     const userId = decoded.id;
@@ -207,17 +221,16 @@ server.get("/api/get-user", async (req, res) => {
       .single();
 
     if (error || !user) {
-      console.error("Error fetching user data or user not found:", error);
+      console.error("[GET /api/get-user] User not found:", error);
       return res.status(404).json({ error: "User not found" });
     }
 
     res.status(200).json(user);
   } catch (error) {
-    console.error("Failed to fetch user data:", error.message);
-    res.status(500).json({ error: "Failed to fetch user data", details: error.message });
+    console.error("[GET /api/get-user] Failed to fetch user:", error.message);
+    res.status(500).json({ error: "Failed to fetch user", details: error.message });
   }
 });
-
 
 
 
@@ -317,51 +330,44 @@ server.post("/api/login", async (req, res) => {
 
 
 // ノート保存API
-server.post("/api/notes/:date", async (req, res) => {
-  console.log("[POST /api/notes/:date] Start");
+server.get("/api/notes/:date", async (req, res) => {
+  console.log("[GET /api/notes/:date] Start");
   const { date } = req.params;
-  const { note, exercises } = req.body;
-  const token =
-    req.headers.authorization && req.headers.authorization.split(" ")[1];
+  const token = req.headers.authorization?.split(" ")[1];
 
-  const user = await verifyToken(token);
-  if (!user) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
   }
 
   try {
-    const exercisesToSave = exercises.map((exercise) => ({
-      exercise: exercise.exercise || "",
-      sets: exercise.sets.map((set) => ({
-        weight: set.weight || "",
-        reps: set.reps || "",
-        rest: set.rest || "",
-      })),
-    }));
+    const user = await verifyToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
 
-    const { error } = await supabase.from("notes").upsert([
-      {
-        date,
-        note,
-        exercises: JSON.stringify(exercisesToSave),
-        userid: user.id,
-      },
-    ]);
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("date", date)
+      .eq("userid", user.id);
 
     if (error) {
-      console.error("[POST /api/notes/:date] Note save error:", error.message);
+      console.error("[GET /api/notes/:date] Database error:", error.message);
       throw error;
     }
 
-    console.log("[POST /api/notes/:date] Note saved successfully");
-    res.status(200).json({ message: "Note saved successfully" });
+    if (!data || data.length === 0) {
+      console.warn(`[GET /api/notes/:date] No data found for date: ${date}`);
+      return res.status(404).json({ error: "No notes found for the given date" });
+    }
+
+    res.status(200).json(data);
   } catch (error) {
-    console.error("Failed to save note:", error.stack);
-    res
-      .status(500)
-      .json({ error: "Failed to save note", details: error.message });
+    console.error("Failed to fetch notes:", error.stack);
+    res.status(500).json({ error: "Failed to fetch notes", details: error.message });
   }
 });
+
 
 // サーバー起動
 const port = process.env.PORT || 3001;
