@@ -91,28 +91,31 @@ server.get("/api/auth/session", async (req, res) => {
 // リフレッシュトークンのエンドポイント
 server.post("/api/auth/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-
-  console.log("[POST /api/auth/refresh] Refresh token received:", refreshToken); // デバッグログ
+  console.log("Refresh Token from Cookies:", refreshToken);
 
   if (!refreshToken) {
-    console.error("[POST /api/auth/refresh] Refresh token missing");
-    return res.status(401).json({ error: "Refresh token missing" });
+    console.error("[POST /api/auth/refresh] Missing Refresh Token");
+    return res.status(401).json({ error: "Refresh token is missing" });
   }
 
   // 以下は既存コード
   try {
     const decoded = await verifyToken(refreshToken);
     if (!decoded) {
-      return res.status(401).json({ error: "Invalid or expired refresh token" });
+      console.warn("Invalid or expired refresh token.");
+      return res
+        .status(401)
+        .json({ error: "Invalid or expired refresh token" });
     }
+
     const newAccessToken = generateAccessToken({
       id: decoded.id,
       email: decoded.email,
     });
     res.status(200).json({ access_token: newAccessToken });
   } catch (error) {
-    console.error("[POST /api/auth/refresh] Token refresh failed:", error.message);
-    res.status(500).json({ error: "Token refresh failed" });
+    console.error("Failed to refresh token:", error.message);
+    res.status(500).json({ error: "Failed to refresh token" });
   }
 });
 
@@ -154,10 +157,11 @@ server.post("/api/signup", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // 本番環境のみtrue
-      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax", // 開発環境はLax
+      secure: process.env.NODE_ENV === "production" ? true : false, // ローカル環境ではfalse
+      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax", // ローカル環境ではLax
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7日間
-   });
+    });
+    console.log("[POST /api/login] Set-Cookie header sent:", refreshToken);
 
     console.log("[POST /api/signup] User created and tokens generated");
     res.status(201).json({ token, user: user.user });
@@ -176,7 +180,10 @@ async function handleTokenRefresh(refreshToken) {
       console.error("[handleTokenRefresh] Invalid refresh token");
       return null;
     }
-    const newAccessToken = generateAccessToken({ id: decoded.id, email: decoded.email });
+    const newAccessToken = generateAccessToken({
+      id: decoded.id,
+      email: decoded.email,
+    });
     return newAccessToken;
   } catch (error) {
     console.error("[handleTokenRefresh] Token refresh failed:", error.message);
@@ -188,9 +195,11 @@ async function handleTokenRefresh(refreshToken) {
 server.get("/api/get-user", async (req, res) => {
   console.log("[GET /api/get-user] Start");
   const authHeader = req.headers.authorization;
-  const token = authHeader ? authHeader.split(" ")[1] : null;
+  const token = req.headers.authorization?.split(" ")[1];
+  console.log("Authorization Token:", token);
 
   if (!token) {
+    console.error("Missing Authorization Token");
     return res.status(401).json({ error: "Authorization token missing" });
   }
 
@@ -228,11 +237,11 @@ server.get("/api/get-user", async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("[GET /api/get-user] Failed to fetch user:", error.message);
-    res.status(500).json({ error: "Failed to fetch user", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch user", details: error.message });
   }
 });
-
-
 
 // ユーザー情報更新API
 server.put("/api/update-user", async (req, res) => {
@@ -262,7 +271,9 @@ server.put("/api/update-user", async (req, res) => {
     }
 
     if (password && password !== "******") {
-      const { error: passwordError } = await supabase.auth.updateUser({ password });
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password,
+      });
       if (passwordError) {
         console.error("Failed to update password:", passwordError.message);
         throw passwordError;
@@ -284,11 +295,11 @@ server.put("/api/update-user", async (req, res) => {
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
     console.error("Failed to update user:", error.message);
-    res.status(500).json({ error: "Failed to update user", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to update user", details: error.message });
   }
 });
-
-
 
 // ログインAPI
 server.post("/api/login", async (req, res) => {
@@ -328,7 +339,6 @@ server.post("/api/login", async (req, res) => {
   }
 });
 
-
 // ノート保存API
 server.get("/api/notes/:date", async (req, res) => {
   console.log("[GET /api/notes/:date] Start");
@@ -358,16 +368,19 @@ server.get("/api/notes/:date", async (req, res) => {
 
     if (!data || data.length === 0) {
       console.warn(`[GET /api/notes/:date] No data found for date: ${date}`);
-      return res.status(404).json({ error: "No notes found for the given date" });
+      return res
+        .status(404)
+        .json({ error: "No notes found for the given date" });
     }
 
     res.status(200).json(data);
   } catch (error) {
     console.error("Failed to fetch notes:", error.stack);
-    res.status(500).json({ error: "Failed to fetch notes", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch notes", details: error.message });
   }
 });
-
 
 // サーバー起動
 const port = process.env.PORT || 3001;
