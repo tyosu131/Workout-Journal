@@ -157,8 +157,8 @@ server.post("/api/signup", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production" ? true : false, // ローカル環境ではfalse
-      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax", // ローカル環境ではLax
+      secure: process.env.NODE_ENV === "production", // 本番環境でのみtrue
+      sameSite: "Strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7日間
     });
     console.log("[POST /api/login] Set-Cookie header sent:", refreshToken);
@@ -326,10 +326,11 @@ server.post("/api/login", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // 常に secure を有効化
       sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7日間
     });
+    
 
     console.log("[POST /api/login] Login successful");
     res.status(200).json({ token, user: data.user });
