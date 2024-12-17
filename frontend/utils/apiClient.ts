@@ -8,38 +8,31 @@ const apiClient = axios.create({
 
 // レスポンスインターセプターで401エラー時にリフレッシュ処理
 apiClient.interceptors.response.use(
-  (response) => response, // 成功時はそのまま返す
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    // 401エラーかつ再試行ではない場合
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // 再試行フラグを設定
+      originalRequest._retry = true;
 
       try {
-        // リフレッシュエンドポイントを呼び出し
         const { data } = await apiClient.post('/api/auth/refresh');
         const newAccessToken = data.access_token;
 
-        // 新しいトークンを保存
-        setToken(newAccessToken);
+        console.log("[apiClient] トークンリフレッシュ成功:", newAccessToken);
+        setToken(newAccessToken); // トークン保存
 
-        // 元のリクエストに新しいトークンを付与して再試行
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error('[apiClient] Token refresh failed:', refreshError);
-
-        // リフレッシュ失敗時はトークンを削除して再認証を促す
+        console.error("[apiClient] トークンリフレッシュ失敗:", refreshError);
         removeToken();
         return Promise.reject(refreshError);
       }
     }
-
-    // 他のエラーはそのまま返す
     return Promise.reject(error);
   }
 );
+
 
 export const apiRequestWithAuth = async <TResponse, TData = any>(
   url: string,

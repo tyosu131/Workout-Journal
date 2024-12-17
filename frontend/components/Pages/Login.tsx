@@ -43,6 +43,7 @@ const Login: React.FC = () => {
       const result = await response.json();
       console.log("Login successful, received token:", result.token); // トークン確認
       setToken(result.token);  // トークン保存
+      console.log("Token saved to localStorage:", localStorage.getItem("token"));
       router.push('/top');      // トップページに遷移
 
       toast({
