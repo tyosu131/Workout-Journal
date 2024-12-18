@@ -24,8 +24,6 @@ const TopPage: React.FC = () => {
   //     </Center>
   //   );
   // }
-
-  // console.log("Rendering Top component");
   return <Top />;
 };
 

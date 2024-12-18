@@ -3,6 +3,8 @@ import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/rea
 import { useRouter } from 'next/router';
 import { setToken } from "../../utils/tokenUtils";
 import { validateEmail } from "../../utils/validationUtils";
+import { URLS } from "../../constants/urls";
+import { apiRequest } from "../../utils/apiClient";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +13,7 @@ const Login: React.FC = () => {
   const router = useRouter();
 
   const handleLogin = async () => {
-    console.log("Attempting login with email:", email); // メールアドレス確認
+    console.log("Attempting login with email:", email);
 
     if (!validateEmail(email)) {
       toast({
@@ -25,26 +27,12 @@ const Login: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+      const result: { token: string } = await apiRequest('/api/login', 'post', { email, password });
 
-      console.log("Login response:", response); // レスポンス確認
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.log("Login failed with error:", error); // エラーレスポンス確認
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const result = await response.json();
-      console.log("Login successful, received token:", result.token); // トークン確認
-      setToken(result.token);  // トークン保存
+      console.log("Login successful, received token:", result.token);
+      setToken(result.token);
       console.log("Token saved to localStorage:", localStorage.getItem("token"));
-      router.push('/top');      // トップページに遷移
+      router.push(URLS.TOP_PAGE);
 
       toast({
         title: 'Login successful',
@@ -54,7 +42,7 @@ const Login: React.FC = () => {
         isClosable: true,
       });
     } catch (error: any) {
-      console.error("Login error:", error);  // エラー内容を詳細に表示
+      console.error("Login error:", error);
       toast({
         title: 'Login failed',
         description: `An error occurred: ${error.message}. Please try again later.`,
@@ -84,10 +72,10 @@ const Login: React.FC = () => {
         />
         <Button onClick={handleLogin} width="100%" colorScheme="blue" my={4}>Login</Button>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push('/signup')}>Do not have an account? Sign up</Link>
+          <Link color="blue.500" onClick={() => router.push(URLS.SIGNUP_PAGE)}>Do not have an account? Sign up</Link>
         </Text>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push('/forgot-password')}>Forgot your password?</Link>
+          <Link color="blue.500" onClick={() => router.push(URLS.FORGOT_PASSWORD_PAGE)}>Forgot your password?</Link>
         </Text>
       </Box>
     </Center>

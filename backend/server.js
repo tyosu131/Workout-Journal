@@ -342,7 +342,7 @@ server.post("/api/login", async (req, res) => {
   }
 });
 
-// ノート保存API
+// ノート取得API (GET /api/notes/:date)
 server.get("/api/notes/:date", async (req, res) => {
   console.log("[GET /api/notes/:date] Start");
   const { date } = req.params;
@@ -353,11 +353,15 @@ server.get("/api/notes/:date", async (req, res) => {
   }
 
   try {
+    // トークンからユーザーIDを取得
     const user = await verifyToken(token);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid token" });
+    if (!user || !user.id) {
+      return res.status(401).json({ error: "Invalid token or user not found" });
     }
 
+    console.log("Verified User ID:", user.id);
+
+    // Supabaseからデータ取得 (dateとuseridで絞り込む)
     const { data, error } = await supabase
       .from("notes")
       .select("*")
@@ -366,24 +370,53 @@ server.get("/api/notes/:date", async (req, res) => {
 
     if (error) {
       console.error("[GET /api/notes/:date] Database error:", error.message);
+      return res.status(500).json({ error: "Failed to fetch notes", details: error.message });
+    }
+
+    console.log("[GET /api/notes/:date] Retrieved notes:", data);
+    res.status(200).json({ notes: data });
+  } catch (error) {
+    console.error("[GET /api/notes/:date] Unexpected error:", error.message);
+    res.status(500).json({ error: "Failed to fetch notes", details: error.message });
+  }
+});
+
+
+// ノート保存API (POST /api/notes/:date)
+server.post("/api/notes/:date", async (req, res) => {
+  console.log("[POST /api/notes/:date] Start");
+  const { date } = req.params;
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+
+  try {
+    const user = await verifyToken(token);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const { note, exercises } = req.body;
+
+    const { error } = await supabase
+      .from("notes")
+      .upsert([{ date, note, exercises, userid: user.id }], { onConflict: ["date", "userid"] });
+
+    if (error) {
+      console.error("[POST /api/notes/:date] Database error:", error.message);
       throw error;
     }
 
-    if (!data || data.length === 0) {
-      console.warn(`[GET /api/notes/:date] No data found for date: ${date}`);
-      return res
-        .status(404)
-        .json({ error: "No notes found for the given date" });
-    }
-
-    res.status(200).json(data);
+    console.log(`[POST /api/notes/:date] Note saved successfully for user: ${user.id}`);
+    res.status(200).json({ message: "Note saved successfully!" });
   } catch (error) {
-    console.error("Failed to fetch notes:", error.stack);
-    res
-      .status(500)
-      .json({ error: "Failed to fetch notes", details: error.message });
+    console.error("[POST /api/notes/:date] Failed to save note:", error.message);
+    res.status(500).json({ error: "Failed to save note", details: error.message });
   }
 });
+
 
 // サーバー起動
 const port = process.env.PORT || 3001;

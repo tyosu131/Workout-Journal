@@ -1,12 +1,13 @@
+// apiClient.ts
 import axios from 'axios';
 import { getToken, setToken, removeToken } from '../utils/tokenUtils';
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true, // クッキーを含めたリクエスト送信
+  withCredentials: true,
 });
 
-// レスポンスインターセプターで401エラー時にリフレッシュ処理
+// 401エラー時のリフレッシュ処理
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -18,13 +19,13 @@ apiClient.interceptors.response.use(
         const { data } = await apiClient.post('/api/auth/refresh');
         const newAccessToken = data.access_token;
 
-        console.log("[apiClient] トークンリフレッシュ成功:", newAccessToken);
-        setToken(newAccessToken); // トークン保存
+        console.log('[apiClient] トークンリフレッシュ成功:', newAccessToken);
+        setToken(newAccessToken);
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error("[apiClient] トークンリフレッシュ失敗:", refreshError);
+        console.error('[apiClient] トークンリフレッシュ失敗:', refreshError);
         removeToken();
         return Promise.reject(refreshError);
       }
@@ -33,20 +34,18 @@ apiClient.interceptors.response.use(
   }
 );
 
-
+// トークン付きリクエスト (認証済み用)
 export const apiRequestWithAuth = async <TResponse, TData = any>(
   url: string,
   method: 'get' | 'post' | 'put' | 'delete',
   data?: TData
 ): Promise<TResponse> => {
-  try {
-    // 現在のトークンを取得
-    const token = getToken();
-    if (!token) {
-      throw new Error('アクセストークンが見つかりません');
-    }
+  const token = getToken();
+  if (!token) {
+    throw new Error('アクセストークンが見つかりません');
+  }
 
-    // APIリクエストを送信
+  try {
     const response = await apiClient.request<TResponse>({
       url,
       method,
@@ -54,6 +53,26 @@ export const apiRequestWithAuth = async <TResponse, TData = any>(
       headers: {
         Authorization: `Bearer ${token}`,
       },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('APIリクエストに失敗しました:', error);
+    throw error;
+  }
+};
+
+// トークンなしリクエスト (ログイン等用)
+export const apiRequest = async <TResponse, TData = any>(
+  url: string,
+  method: 'get' | 'post' | 'put' | 'delete',
+  data?: TData
+): Promise<TResponse> => {
+  try {
+    const response = await apiClient.request<TResponse>({
+      url,
+      method,
+      data,
     });
 
     return response.data;

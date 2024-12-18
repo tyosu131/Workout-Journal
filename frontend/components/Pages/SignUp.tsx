@@ -1,40 +1,39 @@
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
+import { useResendVerification } from '../../hooks/useResendVerification';
+import { apiRequestWithAuth } from '../../utils/apiClient';
+import { URLS } from '../../constants/urls';
 
 const SignUp: React.FC = () => {
-  const [name, setName] = useState(''); // 名前フィールドを追加
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isVerificationSent, setIsVerificationSent] = useState(false); // メール確認状態の管理
-  const [canResend, setCanResend] = useState(true); // 再送可能かを管理
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [canResend, setCanResend] = useState(true);
   const toast = useToast();
   const router = useRouter();
 
+  const { resendVerification } = useResendVerification(email, name, password);
+
   const handleSignUp = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
+      const result = await apiRequestWithAuth(
+        '/api/signup',
+        'post',
+        { email, name, password }
+      );
 
-      const result = await response.json();
-      if (response.ok) {
-        setIsVerificationSent(true);
-        setCanResend(false);
-        toast({
-          title: 'Signup successful!',
-          description: 'A verification email has been sent to your email address.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        throw new Error(result.error || 'Failed to sign up');
-      }
+      setIsVerificationSent(true);
+      setCanResend(false);
+      toast({
+        title: 'Signup successful!',
+        description: 'A verification email has been sent to your email address.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
     } catch (error: any) {
-      console.error("Signup error:", error.message);
       toast({
         title: 'Error',
         description: error.message || 'There was an error signing up. Please try again.',
@@ -45,41 +44,6 @@ const SignUp: React.FC = () => {
     }
   };
 
-  // メール確認の再送処理
-  const resendVerification = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setCanResend(false);
-        toast({
-          title: 'Verification email re-sent!',
-          description: 'A new verification email has been sent to your email address.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        throw new Error(result.error || 'Failed to resend verification email');
-      }
-    } catch (error: any) {
-      console.error("Resend verification error:", error.message);
-      toast({
-        title: 'Error',
-        description: error.message || 'There was an error resending the email. Please try again later.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
-  // メール確認が送信された場合の画面
   if (isVerificationSent) {
     return (
       <Center height="100vh">
