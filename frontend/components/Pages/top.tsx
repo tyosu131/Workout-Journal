@@ -14,9 +14,9 @@ import {
 } from "@chakra-ui/react";
 import { HamburgerIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { useRouter } from "next/router";
-import { URLS } from "../../constants/urls";
-import { generateCalendarDates } from "../../utils/calendarUtils";
-import supabase from "../../../backend/supabaseClient";
+import { URLS } from "../../../shared/constants/urls";
+import { generateCalendarDates } from "../../../shared/utils/calendarUtils";
+import supabase from "../../../backend/utils/supabaseClient";
 
 const Top: React.FC = () => {
   const router = useRouter();

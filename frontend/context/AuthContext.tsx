@@ -2,8 +2,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { User } from "@supabase/supabase-js";
-import { getToken, setToken, removeToken } from "../utils/tokenUtils";
+import { getToken, setToken, removeToken } from "../../shared/utils/tokenUtils";
 import { useRouter } from "next/router";
+import { API_ENDPOINTS } from "../../shared/constants/endpoints";
 
 type AuthContextProps = {
   user: User | null;
@@ -22,6 +23,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
+  console.log('Base URL for session:', process.env.NEXT_PUBLIC_API_URL);
   // セッションの取得処理
   const getSession = async () => {
     console.log("getSession called");
@@ -35,7 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const { data } = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`,
+        `${process.env.NEXT_PUBLIC_API_URL}${API_ENDPOINTS.SESSION}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
@@ -67,10 +69,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleTokenRefresh = async () => {
     try {
       const refreshResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh`,
+        `${process.env.NEXT_PUBLIC_API_URL}${API_ENDPOINTS.REFRESH}`,
         {},
         { withCredentials: true }
       );
+      
       setToken(refreshResponse.data.access_token); // 新しいアクセストークンを保存
       console.log("Token refreshed:", refreshResponse.data.access_token);
       await getSession(); // リフレッシュ後にセッションを更新
@@ -94,6 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       router.push("/login");
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // ログイン処理

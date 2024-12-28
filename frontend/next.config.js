@@ -1,5 +1,4 @@
-// next.config.js
-require('dotenv').config({ path: '../.env.local' }); // ルートの.env.localを読み込む
+require("dotenv").config();
 
 const nextConfig = {
   reactStrictMode: true,
@@ -10,13 +9,16 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
   webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.watchOptions = {
-        poll: 500,
-        aggregateTimeout: 300,
-        ignored: /node_modules/,
-      };
-    }
+    config.module.rules.push({
+      test: /\.(ts|tsx|js|jsx)$/,
+      exclude: /node_modules/,
+      use: {
+        loader: "babel-loader",
+        options: {
+          presets: ["next/babel"],
+        },
+      },
+    });
     return config;
   },
 };

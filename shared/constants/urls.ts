@@ -6,4 +6,4 @@ export const URLS = {
   FORGOT_PASSWORD_PAGE: '/forgot-password',
   LOGIN_PAGE: '/login',
   SIGNUP_PAGE: '/signup',
-} as const;
+};

@@ -9,7 +9,7 @@ import TableHeader from "../note/tableheader";
 import TableBody from "../note/tablebody";
 import useNoteHandlers from "../../hooks/useNoteHandlers";
 import { NoteData } from "../../types/types";
-import { apiRequestWithAuth } from "../../utils/apiClient";
+import { apiRequestWithAuth } from "../../../shared/utils/apiClient";
 
 // ノートデータをAPIから取得
 const fetchNoteData = async (url: string): Promise<NoteData[]> => {

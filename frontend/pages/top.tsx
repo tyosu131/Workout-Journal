@@ -17,13 +17,6 @@ const TopPage: React.FC = () => {
   //   }
   // }, [user, router]);
 
-  // if (!user) {
-  //   return (
-  //     <Center height="100vh">
-  //       <Spinner size="xl" />
-  //     </Center>
-  //   );
-  // }
   return <Top />;
 };
 

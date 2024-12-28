@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import { useResendVerification } from '../../hooks/useResendVerification';
-import { apiRequestWithAuth } from '../../utils/apiClient';
-import { URLS } from '../../constants/urls';
+import { apiRequestWithAuth } from '../../../shared/utils/apiClient';
+import { URLS } from '../../../shared/constants/urls';
+import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 
 const SignUp: React.FC = () => {
   const [name, setName] = useState('');
@@ -19,7 +20,7 @@ const SignUp: React.FC = () => {
   const handleSignUp = async () => {
     try {
       const result = await apiRequestWithAuth(
-        '/api/signup',
+        API_ENDPOINTS.SIGNUP,
         'post',
         { email, name, password }
       );

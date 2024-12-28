@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { setToken } from "../../utils/tokenUtils";
-import { validateEmail } from "../../utils/validationUtils";
-import { URLS } from "../../constants/urls";
-import { apiRequest } from "../../utils/apiClient";
+import { setToken } from "../../../shared/utils/tokenUtils";
+import { validateEmail } from "../../../shared/utils/validationUtils";
+import { URLS } from "../../../shared/constants/urls";
+import { apiRequest } from "../../../shared/utils/apiClient";
+import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ const Login: React.FC = () => {
     }
 
     try {
-      const result: { token: string } = await apiRequest('/api/login', 'post', { email, password });
+      const result: { token: string } = await apiRequest(API_ENDPOINTS.LOGIN, 'post', { email, password });
 
       console.log("Login successful, received token:", result.token);
       setToken(result.token);

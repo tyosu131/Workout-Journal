@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import supabase from '../../backend/supabaseClient';
+import supabase from '../../backend/utils/supabaseClient';
 
 export const useAuthCheck = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
