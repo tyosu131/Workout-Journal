@@ -4,8 +4,7 @@ import { API_ENDPOINTS } from '../constants/endpoints';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 console.log('API Base URL:', baseURL);
-console.log("API Base URL:", process.env.NEXT_PUBLIC_API_URL);
-
+console.log('API Base URL:', process.env.NEXT_PUBLIC_API_URL);
 
 const apiClient = axios.create({
   baseURL,
@@ -16,14 +15,14 @@ const apiClient = axios.create({
 });
 
 // 型ガードを追加
-function isAxiosError(error: unknown): error is import("axios").AxiosError {
+function isAxiosError(error: unknown): error is import('axios').AxiosError {
   return typeof error === 'object' && error !== null && 'isAxiosError' in error;
 }
 
 // 型ガードで originalRequest を確認
 function isAxiosRequestConfig(
   config: unknown
-): config is import("axios").InternalAxiosRequestConfig<any> {
+): config is import('axios').InternalAxiosRequestConfig<any> {
   return typeof config === 'object' && config !== null && 'headers' in config;
 }
 

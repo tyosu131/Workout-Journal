@@ -23,7 +23,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
-  console.log('Base URL for session:', process.env.NEXT_PUBLIC_API_URL);
+  console.log("Base URL for session:", process.env.NEXT_PUBLIC_API_URL);
+
   // セッションの取得処理
   const getSession = async () => {
     console.log("getSession called");
@@ -73,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         {},
         { withCredentials: true }
       );
-      
+
       setToken(refreshResponse.data.access_token); // 新しいアクセストークンを保存
       console.log("Token refreshed:", refreshResponse.data.access_token);
       await getSession(); // リフレッシュ後にセッションを更新

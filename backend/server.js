@@ -1,4 +1,3 @@
-require("dotenv").config({ path: "../.env.local" });
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -21,6 +20,17 @@ server.use(cookieParser());
 
 // APIルート
 server.use("/api/auth", authRoutes);
+
+// 404エラーハンドリング
+server.use((req, res, next) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
+// エラーハンドリング
+server.use((err, req, res, next) => {
+  console.error("Server error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
+});
 
 // サーバー起動
 const port = process.env.PORT || 3001;
