@@ -3,6 +3,20 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 
+require("dotenv").config({ path: "C:\\Users\\User\\Desktop\\web Development Projects\\portfolio real\\backend\\.env.local" });
+
+// 環境変数の確認ログ
+console.log("Environment Variables Check:");
+console.log("PORT:", process.env.PORT);
+console.log("ACCESS_TOKEN_EXPIRES:", process.env.ACCESS_TOKEN_EXPIRES);
+console.log("REFRESH_TOKEN_EXPIRES:", process.env.REFRESH_TOKEN_EXPIRES);
+console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE_KEY:", process.env.SUPABASE_KEY);
+
+// Supabase関連の初期化部分を一時的にコメントアウト
+// const supabaseClient = require("./utils/supabaseClient");
+// console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
+
 const server = express();
 
 // CORS設定
