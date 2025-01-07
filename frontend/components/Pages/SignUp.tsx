@@ -1,56 +1,40 @@
 import React, { useState } from 'react';
-import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
+import { Box, Input, Button, useToast, Center, Text } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import supabase from '../../../backend/supabaseClient';
+import { useResendVerification } from '../../hooks/useResendVerification';
+import { apiRequestWithAuth } from '../../../shared/utils/apiClient';
+import { URLS } from '../../../shared/constants/urls';
+import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 
 const SignUp: React.FC = () => {
-  const [name, setName] = useState(''); // 名前フィールドを追加
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [canResend, setCanResend] = useState(true);
   const toast = useToast();
   const router = useRouter();
 
+  const { resendVerification } = useResendVerification(email, name, password);
+
   const handleSignUp = async () => {
     try {
-      console.log("Signing up with", { email, password, name });
+      const result = await apiRequestWithAuth(
+        API_ENDPOINTS.SIGNUP,
+        'post',
+        { email, name, password }
+      );
 
-      // Supabaseのauth.signUpを使用してユーザーを登録
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+      setIsVerificationSent(true);
+      setCanResend(false);
+      toast({
+        title: 'Signup successful!',
+        description: 'A verification email has been sent to your email address.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      // 新規ユーザーをカスタムのusersテーブルに追加
-      const user = data.user;
-
-      if (user) {
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([{ name, email, password }]); // nameフィールドを挿入
-
-        if (insertError) {
-          throw insertError;
-        }
-
-        toast({
-          title: 'Signup successful!',
-          description: 'You have been registered successfully.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-
-        // メール確認後にトップページへリダイレクト
-        router.push('/login');
-      } else {
-        throw new Error('User data is missing in the response');
-      }
     } catch (error: any) {
-      console.error("Signup error:", error.message);
       toast({
         title: 'Error',
         description: error.message || 'There was an error signing up. Please try again.',
@@ -61,10 +45,25 @@ const SignUp: React.FC = () => {
     }
   };
 
+  if (isVerificationSent) {
+    return (
+      <Center height="100vh">
+        <Box width="400px" textAlign="center">
+          <Text fontSize="2xl" fontWeight="bold">Email Verification Required</Text>
+          <Text mt={4}>
+            A verification email has been sent to your email address. Please check your inbox and verify your account.
+          </Text>
+          <Button mt={4} onClick={() => setIsVerificationSent(false)}>Back to Sign Up</Button>
+          <Button mt={4} onClick={resendVerification} isDisabled={!canResend}>Resend Verification Email</Button>
+        </Box>
+      </Center>
+    );
+  }
+
   return (
     <Center height="100vh">
       <Box width="400px" textAlign="center">
-        <Text fontSize="2xl" fontWeight="bold">Welcome!</Text>
+        <Text fontSize="2xl" fontWeight="bold" pb={4}>Welcome</Text>
         <Input
           placeholder="Please enter your name"
           value={name}
@@ -85,9 +84,6 @@ const SignUp: React.FC = () => {
           mb={4}
         />
         <Button onClick={handleSignUp} width="100%" colorScheme="blue">Sign Up</Button>
-        <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push('/login')}>Already have an account? Log in</Link>
-        </Text>
       </Box>
     </Center>
   );

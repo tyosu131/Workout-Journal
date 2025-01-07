@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { createClient } from '@supabase/supabase-js';
-
-// 環境変数を使用してSupabaseクライアントを作成
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
-);
+import { setToken } from "../../../shared/utils/tokenUtils";
+import { validateEmail } from "../../../shared/utils/validationUtils";
+import { URLS } from "../../../shared/constants/urls";
+import { apiRequest } from "../../../shared/utils/apiClient";
+import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +14,8 @@ const Login: React.FC = () => {
   const router = useRouter();
 
   const handleLogin = async () => {
+    console.log("Attempting login with email:", email);
+
     if (!validateEmail(email)) {
       toast({
         title: 'Invalid email format',
@@ -28,21 +28,12 @@ const Login: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      });
+      const result: { token: string } = await apiRequest(API_ENDPOINTS.LOGIN, 'post', { email, password });
 
-      if (error) {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
+      console.log("Login successful, received token:", result.token);
+      setToken(result.token);
+      console.log("Token saved to localStorage:", localStorage.getItem("token"));
+      router.push(URLS.TOP_PAGE);
 
       toast({
         title: 'Login successful',
@@ -51,29 +42,16 @@ const Login: React.FC = () => {
         duration: 5000,
         isClosable: true,
       });
-
-      setTimeout(() => {
-        router.push('/top').then(() => {
-          console.log("Redirected to TOP_PAGE successfully.");
-        }).catch((err) => {
-          console.error("Redirect failed:", err);
-        });
-      }, 1000);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: 'Login failed',
-        description: 'An error occurred during login. Please try again later.',
+        description: `An error occurred: ${error.message}. Please try again later.`,
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
     }
-  };
-
-  // メールアドレスの形式を検証する関数
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
   };
 
   return (
@@ -95,10 +73,10 @@ const Login: React.FC = () => {
         />
         <Button onClick={handleLogin} width="100%" colorScheme="blue" my={4}>Login</Button>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push('/signup')}>Do not have an account? Sign up</Link>
+          <Link color="blue.500" onClick={() => router.push(URLS.SIGNUP_PAGE)}>Do not have an account? Sign up</Link>
         </Text>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push('/forgot-password')}>Forgot your password?</Link>
+          <Link color="blue.500" onClick={() => router.push(URLS.FORGOT_PASSWORD_PAGE)}>Forgot your password?</Link>
         </Text>
       </Box>
     </Center>

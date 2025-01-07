@@ -1,0 +1,56 @@
+@startuml mydiagram
+actor User
+participant Frontend
+participant Backend
+participant Middleware
+participant Supabase
+
+== ログイン (POST /api/login) ==
+User -> Frontend : ログイン情報入力
+Frontend -> Backend : POST /api/login (email, password)
+Backend -> Supabase : supabase.auth.signInWithPassword()
+Supabase --> Backend : 認証成功 (session, user data)
+Backend -> Frontend : トークンを返す (accessToken, refreshToken)
+Frontend -> Frontend : トークンを保存 (localStorage or setToken)
+
+== ユーザー登録 (POST /api/signup) ==
+User -> Frontend : サインアップ情報入力
+Frontend -> Backend : POST /api/signup (name, email, password)
+Backend -> Supabase : supabase.auth.signUp()
+Supabase --> Backend : 登録成功 (user data)
+Backend -> Supabase : 新しいユーザー情報をDBに保存
+Backend -> Frontend : メール確認案内 or トークンを返す (accessToken, refreshToken)
+
+== 認証付きリクエストの流れ ==
+Frontend -> Frontend : 保存したトークンを取得
+Frontend -> Backend : 認証APIリクエスト (Authorization: Bearer <access_token>)
+Backend -> Middleware : リクエストを受信
+Middleware -> Middleware : Authorizationヘッダーからトークンを取得
+Middleware -> Middleware : verifyTokenでトークン検証
+Middleware -> Backend : トークンが有効なら次の処理へ進む
+
+== セッション取得 (GET /api/auth/session) ==
+User -> Frontend : サイトにアクセス
+Frontend -> Backend : GET /api/auth/session (Authorizationヘッダー)
+Backend -> Middleware : Middlewareでトークンを検証
+Middleware -> Supabase : supabase.auth.getSession()
+Supabase --> Middleware : セッション情報 (session data)
+Middleware -> Backend : セッション情報を返す
+Backend -> Frontend : セッションデータを返す
+
+== ユーザー情報更新 (PUT /api/update-user) ==
+User -> Frontend : ユーザー情報変更
+Frontend -> Backend : PUT /api/update-user (Authorizationヘッダー, 更新データ)
+Backend -> Middleware : Middlewareでトークンを検証
+Middleware -> Supabase : 更新データをDBに保存
+Middleware -> Backend : トークン検証後更新処理
+Backend -> Frontend : 更新完了メッセージを返す
+
+== ノート保存 (POST /api/notes/:date) ==
+User -> Frontend : ノート情報入力
+Frontend -> Backend : POST /api/notes/:date (Authorizationヘッダー, note, exercises)
+Backend -> Middleware : Middlewareでトークンを検証
+Middleware -> Supabase : ノートデータをDBに保存
+Middleware -> Backend : トークン検証後保存処理
+Backend -> Frontend : 保存完了メッセージを返す
+@enduml
