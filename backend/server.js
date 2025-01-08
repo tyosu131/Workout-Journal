@@ -1,9 +1,11 @@
+require("dotenv").config({ path: "C:\\Users\\User\\Desktop\\web Development Projects\\portfolio real\\backend\\.env.local" });
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 
-require("dotenv").config({ path: "C:\\Users\\User\\Desktop\\web Development Projects\\portfolio real\\backend\\.env.local" });
+const app = express(); // `server` を `app` に変更して重複を回避
 
 // 環境変数の確認ログ
 console.log("Environment Variables Check:");
@@ -13,11 +15,9 @@ console.log("REFRESH_TOKEN_EXPIRES:", process.env.REFRESH_TOKEN_EXPIRES);
 console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
 console.log("SUPABASE_KEY:", process.env.SUPABASE_KEY);
 
-// Supabase関連の初期化部分を一時的にコメントアウト
-// const supabaseClient = require("./utils/supabaseClient");
-// console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
-
-const server = express();
+// Supabase関連の初期化部分
+const supabaseClient = require("./utils/supabaseClient");
+console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
 
 // CORS設定
 const corsOptions = {
@@ -26,28 +26,28 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 };
-server.use(cors(corsOptions));
+app.use(cors(corsOptions));
 
 // ミドルウェア
-server.use(express.json());
-server.use(cookieParser());
+app.use(express.json());
+app.use(cookieParser());
 
 // APIルート
-server.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 
 // 404エラーハンドリング
-server.use((req, res, next) => {
+app.use((req, res, next) => {
   res.status(404).json({ error: "Not Found" });
 });
 
 // エラーハンドリング
-server.use((err, req, res, next) => {
+app.use((err, req, res, next) => {
   console.error("Server error:", err);
   res.status(500).json({ error: "Internal Server Error" });
 });
 
 // サーバー起動
 const port = process.env.PORT || 3001;
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
