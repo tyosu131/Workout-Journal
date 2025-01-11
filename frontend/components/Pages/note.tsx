@@ -14,8 +14,10 @@ import { apiRequestWithAuth } from "../../../shared/utils/apiClient";
 // ノートデータをAPIから取得
 const fetchNoteData = async (url: string): Promise<NoteData[]> => {
   try {
-    const data = await apiRequestWithAuth<NoteData[]>(url, "get");
-    return data;
+    // const data = await apiRequestWithAuth<NoteData[]>(url, "get");
+    // return data;
+    const response = await apiRequestWithAuth<{ notes: NoteData[] }>(url, "get");
+    return response.notes || [];
   } catch (error) {
     console.error("Failed to fetch note data:", error);
     throw error;

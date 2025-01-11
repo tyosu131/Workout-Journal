@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
+const notesRoutes = require("./routes/noteRoutes");
 
 const app = express(); // `server` を `app` に変更して重複を回避
 
@@ -34,6 +35,8 @@ app.use(cookieParser());
 
 // APIルート
 app.use("/api/auth", authRoutes);
+
+app.use("/api/notes", notesRoutes);
 
 // 404エラーハンドリング
 app.use((req, res, next) => {

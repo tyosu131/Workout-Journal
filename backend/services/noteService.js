@@ -19,6 +19,8 @@ async function getNotes(req, res) {
 
     if (error) throw error;
 
+    // ★ 404 を返さず、常に 200 で返す
+    //    data が空配列でもそのまま返す => フロントで空として扱う
     res.status(200).json({ notes: data });
   } catch (error) {
     console.error("Failed to fetch notes:", error.message);
