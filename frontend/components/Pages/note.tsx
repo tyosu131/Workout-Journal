@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Table, Text, Spinner, Center } from "@chakra-ui/react";
+import { Box, Table, Text, Spinner, Center, Button } from "@chakra-ui/react";
 import useSWR from "swr";
 import Header from "../note/header";
 import DateInput from "../note/dateInput";
@@ -9,13 +9,15 @@ import TableHeader from "../note/tableheader";
 import TableBody from "../note/tablebody";
 import useNoteHandlers from "../../hooks/useNoteHandlers";
 import { NoteData } from "../../types/types";
-import { apiRequestWithAuth } from "../../utils/apiClient"; // APIクライアントのインポート
+import { apiRequestWithAuth } from "../../../shared/utils/apiClient";
 
 // ノートデータをAPIから取得
 const fetchNoteData = async (url: string): Promise<NoteData[]> => {
   try {
-    const data = await apiRequestWithAuth<NoteData[]>(url, 'get'); // ジェネリクスを使用して型定義
-    return data;
+    // const data = await apiRequestWithAuth<NoteData[]>(url, "get");
+    // return data;
+    const response = await apiRequestWithAuth<{ notes: NoteData[] }>(url, "get");
+    return response.notes || [];
   } catch (error) {
     console.error("Failed to fetch note data:", error);
     throw error;
@@ -27,37 +29,22 @@ const Note: React.FC = () => {
   const { date } = router.query;
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
-  const { data, error, isValidating } = useSWR<NoteData[]>(
+  // SWRによるデータ取得
+  const { data, error, mutate } = useSWR<NoteData[]>(
     date ? `${process.env.NEXT_PUBLIC_API_URL}/api/notes/${date}` : null,
     fetchNoteData,
     { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
+  const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } =
+    useNoteHandlers(noteData, setNoteData);
+
+  // データ取得後にnoteDataをセット
   useEffect(() => {
     if (data && data.length > 0) {
-      const exercises = typeof data[0].exercises === 'string'
-        ? JSON.parse(data[0].exercises)
-        : data[0].exercises;
-
-      // 必ず30個のexercisesがあり、各exerciseには5つのセットがあるようにする
-      const filledExercises = Array.from({ length: 30 }).map((_, exerciseIndex) => {
-        const existingExercise = exercises[exerciseIndex] || { exercise: "", sets: [] };
-        return {
-          exercise: existingExercise.exercise || "",
-          sets: Array.from({ length: 5 }).map((_, setIndex) => existingExercise.sets[setIndex] || {
-            weight: "",
-            reps: "",
-            rest: "",
-          })
-        };
-      });
-
-      setNoteData({
-        ...data[0],
-        exercises: filledExercises,
-      });
-    } else if (!data || data.length === 0 || error) {
-      // データがない、もしくはエラーの場合でもフォームを表示
+      setNoteData(data[0]); // 取得したデータをセット
+    } else if (date) {
+      // 空データの初期化
       setNoteData({
         date: date as string,
         note: "",
@@ -71,11 +58,8 @@ const Note: React.FC = () => {
         })),
       });
     }
-  }, [data, error, date]);
+  }, [data, date]);
 
-  const { handleInputChange, handleNoteChange, handleExerciseChange, handleDateChange } = useNoteHandlers(noteData, setNoteData);
-
-  // ローディング中でもnoteDataが生成されていれば、フォームを表示
   if (!noteData) {
     return (
       <Center height="100vh">
@@ -85,20 +69,13 @@ const Note: React.FC = () => {
     );
   }
 
-  const selectedDate = new Date(noteData.date);
-  const isValidDate = !isNaN(selectedDate.getTime());
-
   return (
     <Box p={4}>
       <Header />
       <Text fontSize="2xl" mb={4} textAlign="center">
         Note
       </Text>
-      {isValidDate ? (
-        <DateInput date={noteData.date} onDateChange={handleDateChange} />
-      ) : (
-        <div>Invalid Date</div>
-      )}
+      <DateInput date={noteData.date} onDateChange={handleDateChange} />
       <NoteInput note={noteData.note} onNoteChange={handleNoteChange} />
       <Table variant="simple" size="sm">
         <TableHeader />

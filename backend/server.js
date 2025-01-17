@@ -1,235 +1,56 @@
-require("dotenv").config({ path: "./.env.local" });
+require("dotenv").config({ path: "C:\\Users\\User\\Desktop\\web Development Projects\\portfolio real\\backend\\.env.local" });
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const supabase = require("./supabaseClient");
-const { validateEmail, generateAccessToken, generateRefreshToken } = require('./authUtils'); // 切り出した関数をインポート
-const authenticate = require('./authMiddleware'); // 認証ミドルウェアをインポート
+const authRoutes = require("./routes/authRoutes");
+const notesRoutes = require("./routes/noteRoutes");
 
-const server = express();
+const app = express(); // `server` を `app` に変更して重複を回避
+
+// 環境変数の確認ログ
+console.log("Environment Variables Check:");
+console.log("PORT:", process.env.PORT);
+console.log("ACCESS_TOKEN_EXPIRES:", process.env.ACCESS_TOKEN_EXPIRES);
+console.log("REFRESH_TOKEN_EXPIRES:", process.env.REFRESH_TOKEN_EXPIRES);
+console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE_KEY:", process.env.SUPABASE_KEY);
+
+// Supabase関連の初期化部分
+const supabaseClient = require("./utils/supabaseClient");
+console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
 
 // CORS設定
 const corsOptions = {
-  origin: "*", // 必要に応じてオリジンを限定する
+  origin: "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 };
+app.use(cors(corsOptions));
 
-server.use(cors(corsOptions));
-server.use(express.json());
-server.use(cookieParser());
+// ミドルウェア
+app.use(express.json());
+app.use(cookieParser());
 
-// JWT_SECRETの確認
-if (!process.env.JWT_SECRET) {
-  console.error("JWT_SECRET is not set. Please set it in your .env.local file.");
-  process.exit(1);
-}
+// APIルート
+app.use("/api/auth", authRoutes);
 
-// ユーザー登録API
-server.post("/api/signup", async (req, res) => {
-  const { name, email, password } = req.body;
+app.use("/api/notes", notesRoutes);
 
-  if (!validateEmail(email)) {
-    return res.status(400).json({ error: "Invalid email format" });
-  }
-
-  try {
-    const { data: existingUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (existingUser) {
-      return res.status(409).json({ error: "Email already exists" });
-    }
-
-    const { data, error } = await supabase
-      .from("users")
-      .insert([{ name, email, password }])
-      .select();
-
-    if (error) throw error;
-
-    if (!data || !data[0]) {
-      return res.status(500).json({ error: "Failed to create user" });
-    }
-
-    const token = generateAccessToken(data[0]);
-    const refreshToken = generateRefreshToken(data[0]);
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.status(201).json({ token });
-  } catch (error) {
-    console.error("Failed to create user:", error);
-    res.status(500).json({ error: "Failed to create user" });
-  }
+// 404エラーハンドリング
+app.use((req, res, next) => {
+  res.status(404).json({ error: "Not Found" });
 });
 
-// ログインAPI
-server.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!validateEmail(email)) {
-    return res.status(400).json({ error: "Invalid email format" });
-  }
-
-  try {
-    const { session, error } = await supabase.auth.signIn({
-      email,
-      password,
-    });
-
-    if (error || !session || !session.user) {
-      return res.status(500).json({
-        error: "Failed to login: " + (error?.message || "Unknown error"),
-      });
-    }
-
-    const token = generateAccessToken(session.user);
-    const refreshToken = generateRefreshToken(session.user);
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.status(200).json({ token, user: session.user });
-  } catch (error) {
-    console.error("Login failed:", error);
-    res.status(500).json({ error: "Login failed" });
-  }
+// エラーハンドリング
+app.use((err, req, res, next) => {
+  console.error("Server error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
 });
 
-// トークンリフレッシュAPI
-server.post("/api/refresh-token", (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken) {
-    return res.status(403).json({ error: "Refresh token not provided" });
-  }
-
-  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: "Invalid refresh token" });
-    }
-
-    const newToken = generateAccessToken(user);
-    res.status(200).json({ token: newToken });
-  });
-});
-
-// ノート取得API
-server.get("/api/notes/:date", authenticate, async (req, res) => {
-  const { date } = req.params;
-
-  try {
-    // UUIDからint4のIDを取得
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("id") // int4型のIDを取得
-      .eq("uuid", req.user.id) // UUIDから整数IDを取得
-      .single();
-
-    if (userError || !userRecord) {
-      throw new Error(`Failed to find user with UUID: ${req.user.id}`);
-    }
-
-    const userId = userRecord.id;
-
-    if (!isValidDate(date)) {
-      return res.status(400).json({ error: "Invalid date format" });
-    }
-
-    const { data, error } = await supabase
-      .from("notes")
-      .select("*")
-      .eq("date", date)
-      .eq("userid", userId); // int4のuseridを利用
-
-    if (error) throw new Error(`Supabase error: ${error.message}`);
-
-    if (!data || data.length === 0) {
-      return res.json([]);
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error("Failed to fetch note:", error);
-    res.status(500).json({ error: "Failed to fetch note" });
-  }
-});
-
-// ノート保存API
-server.post("/api/notes/:date", authenticate, async (req, res) => {
-  const { date } = req.params;
-  const { note, exercises } = req.body;
-
-  // 日付フォーマットの確認
-  if (!isValidDate(date)) {
-    return res.status(400).json({ error: "Invalid date format" });
-  }
-
-  try {
-    // UUIDからint4のIDを取得
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("id") // int4型のIDを取得
-      .eq("uuid", req.user.id) // UUIDから整数IDを取得
-      .single();
-
-    if (userError || !userRecord) {
-      throw new Error(`Failed to find user with UUID: ${req.user.id}`);
-    }
-
-    const userId = userRecord.id;
-
-    // exercisesデータの中から空のexerciseとセットをフィルタリングする
-    const exercisesToSave = exercises
-      .map(exercise => ({
-        exercise: exercise.exercise || "",
-        sets: exercise.sets.map(set => ({
-          weight: set.weight || "",
-          reps: set.reps || "",
-          rest: set.rest || ""
-        }))
-      }));
-
-    // notesテーブルに保存
-    const { error } = await supabase
-      .from("notes")
-      .upsert([{
-        date,
-        note,
-        exercises: JSON.stringify(exercisesToSave), // JSONBとして保存
-        userid: userId, // int4のuseridを利用
-      }]);
-
-    if (error) throw new Error(`Supabase error: ${error.message}`);
-
-    res.status(200).json({ message: "Note saved successfully" });
-  } catch (error) {
-    console.error("Failed to save note:", error);
-    res.status(500).json({ error: "Failed to save note" });
-  }
-});
-
-// 日付の検証関数
-const isValidDate = (date) => {
-  const re = /^\d{4}-\d{2}-\d{2}$/;
-  return re.test(date);
-};
-
+// サーバー起動
 const port = process.env.PORT || 3001;
-server.listen(port, (err) => {
-  if (err) throw err;
-  console.log(`> Ready on http://localhost:${port}`);
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
