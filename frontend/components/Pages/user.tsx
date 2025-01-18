@@ -1,3 +1,4 @@
+// user.tsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -37,13 +38,15 @@ const UserSettings: React.FC = () => {
       }
 
       try {
-        const { data } = await axios.get("http://localhost:3001/api/get-user", {
+        // ★ 変更点：/api/auth/get-user に修正
+        const { data } = await axios.get("http://localhost:3001/api/auth/get-user", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         if (data) {
+          // data.name, data.email があればそれをセット
           setUserData({
             username: data.name || "No username set",
             email: data.email || "",
@@ -76,6 +79,7 @@ const UserSettings: React.FC = () => {
     fetchUserData();
   }, [setUserData, toast, router]);
 
+  // ユーザーデータを更新
   const saveUserData = async (updatedUserData: any) => {
     try {
       const token = localStorage.getItem("token");
@@ -83,11 +87,16 @@ const UserSettings: React.FC = () => {
         throw new Error("No valid session found. Please log in again.");
       }
 
-      const response = await axios.put("http://localhost:3001/api/update-user", updatedUserData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // ★ 変更点：/api/auth/update-user に修正
+      const response = await axios.put(
+        "http://localhost:3001/api/auth/update-user",
+        updatedUserData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.status === 200) {
         toast({

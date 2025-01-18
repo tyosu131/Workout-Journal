@@ -25,18 +25,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   console.log("Base URL for session:", process.env.NEXT_PUBLIC_API_URL);
 
-  // セッションの取得処理
+  // ================================
+  //  ログアウト処理
+  // ================================
+  const logout = async () => {
+    try {
+      // もしサーバー側に /api/auth/logout があるなら呼び出す（存在しないなら削除でOK）
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`);
+    } catch (error: any) {
+      console.error("Logout request failed (non-critical):", error?.message);
+    } finally {
+      // ログアウト時はフロント側トークン・ユーザー情報をクリア
+      setUser(null);
+      removeToken();
+      router.push("/login");
+    }
+  };
+
+  // ================================
+  //  セッションの取得処理
+  // ================================
   const getSession = async () => {
     console.log("getSession called");
     setLoading(true);
+
     try {
       const token = getToken();
       console.log("Token in getSession:", token);
+
+      // トークンが無ければログイン画面へ
       if (!token) {
         router.push("/login");
         return;
       }
 
+      // /api/auth/session を呼び、ユーザー情報を取得
       const { data } = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}${API_ENDPOINTS.SESSION}`,
         {
@@ -45,18 +68,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       );
 
+      // ユーザー情報をステートに保存
       setUser(data?.user ?? null);
-      setToken(data?.access_token ?? token); // 更新されたトークンを保存
+
+      // もしサーバーがアクセストークンを更新して返すなら、それを保存
+      setToken(data?.access_token ?? token);
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        console.warn("Access token expired. Attempting to refresh...");
-        try {
-          await handleTokenRefresh(); // トークンのリフレッシュを試みる
-        } catch (refreshError) {
-          console.error("Failed to refresh access token:", refreshError);
-          removeToken();
-          setUser(null);
-          router.push("/login");
+      // ================================
+      //  401 or 403 のとき
+      // ================================
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 401 || status === 403) {
+          console.warn("Access token expired or invalid. Attempting to refresh...");
+
+          try {
+            await handleTokenRefresh(); // トークンのリフレッシュを試みる
+          } catch (refreshError) {
+            // リフレッシュ自体が失敗した場合 -> 即ログアウト & /login へ
+            console.error("Failed to refresh access token:", refreshError);
+            logout(); // removeToken + setUser(null) + router.push("/login")
+          }
+        } else {
+          console.error(`Failed to get session (status: ${status})`, error);
         }
       } else {
         console.error("Failed to get session:", error);
@@ -66,7 +100,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // トークンのリフレッシュ処理
+  // ================================
+  //  トークンのリフレッシュ処理
+  // ================================
   const handleTokenRefresh = async () => {
     try {
       const refreshResponse = await axios.post(
@@ -74,22 +110,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         {},
         { withCredentials: true }
       );
-
-      setToken(refreshResponse.data.access_token); // 新しいアクセストークンを保存
+      // リフレッシュで新しいアクセストークンが返る想定
+      setToken(refreshResponse.data.access_token);
       console.log("Token refreshed:", refreshResponse.data.access_token);
-      await getSession(); // リフレッシュ後にセッションを更新
+
+      // リフレッシュ後にセッションを再取得
+      await getSession();
     } catch (error) {
-      removeToken();
-      setUser(null);
-      router.push("/login");
+      // リフレッシュ失敗 -> ここで例外を投げる (呼び出し元が catch して logout)
       console.error("Token refresh failed:", error);
+      throw error;
     }
   };
 
-  // 初期化処理
+  // ================================
+  //  初期化処理 (コンポーネントマウント時)
+  // ================================
   useEffect(() => {
     const token = getToken();
     console.log("Token in useEffect:", token);
+
+    // トークンがある & userが未取得ならセッション取得
     if (token && !user) {
       console.log("Valid token found, fetching session...");
       getSession();
@@ -101,40 +142,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // ログイン処理
+  // ================================
+  //  ログイン処理
+  // ================================
   const login = async (email: string, password: string) => {
     try {
       const { data } = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/login`,
         { email, password }
       );
+      // サーバーから返ってきたユーザー情報 & トークンを保存
       setUser(data.user);
       setToken(data.token);
       console.log("Token set in login:", data.token);
       console.log("Login successful.");
+
+      // ログイン後トップページへ
       router.push("/top");
+
+      // 再度セッションを取って最新情報を反映
       await getSession();
     } catch (error: any) {
       console.error("Login failed:", error);
     }
   };
 
-  // ログアウト処理
-  const logout = async () => {
-    try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`);
-      setUser(null);
-      removeToken();
-      router.push("/login");
-    } catch (error: any) {
-      console.error("Logout failed:", error);
-    }
-  };
-
+  // ローディング中は簡易表示
   if (loading) {
     return <div>Loading...</div>;
   }
 
+  // ================================
+  //  Contextに値を提供
+  // ================================
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       {children}
