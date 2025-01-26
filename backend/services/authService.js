@@ -107,7 +107,8 @@ const handleSignUp = async (req, res) => {
     // usersテーブルにもユーザー情報を保存 (例: uuid, name, email)
     const { error: dbError } = await supabase
       .from("users")
-      .insert([{ uuid: user.user.id, name: username, email }]);
+      .upsert([{ uuid: user.user.id, name: username, email }],
+        { onConflict: 'uuid' }); 
     console.log("dbError:", dbError);
 
     if (dbError) throw dbError;
