@@ -1,4 +1,4 @@
-**[日本語版 README はこちら](./readme_Japanese.md)**
+**[日本語版 README はこちら](./readme_Japanese)**
 
 # Workout Journal
 
