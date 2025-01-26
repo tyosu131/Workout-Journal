@@ -26,23 +26,23 @@ For a detailed list of features, please see [this GitHub repository](https://git
    git clone https://github.com/<your_repo>/Workout-Journal.git
    cd Workout-Journal
 
-Install dependencies:
+## Install dependencies:
 npm install
-# or
+or
 yarn install
 
 Configure environment variables (e.g., .env):
 Provide your Supabase project credentials (URL, anon/public keys).
 Configure any other environment variables (JWT secrets, etc.) as needed.
 
-Run the app:
+## Run the app:
 npm run dev
-# or
+or
 yarn dev
 
 Access the application in your browser at http://
 
-Usage
+## Usage
 Sign up for a new account.
 Log in with your credentials.
 Select a date on the calendar for which you want to record workouts.
