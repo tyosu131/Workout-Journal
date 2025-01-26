@@ -1,3 +1,5 @@
+**[日本語版 README はこちら](./README_ja.md)**
+
 # Workout Journal
 
 A web application to track daily workout logs, visualize progress, and manage training sessions more effectively.
