@@ -69,17 +69,14 @@ const handleSignUp = async (req, res) => {
   const { username, email, password } = req.body;
 
   // 必須項目の存在確認
-  if (!username || !email || !password) {
-    return res
-      .status(400)
-      .json({ error: "Username, email, and password are required" });
+  if (!username) {
+    return res.status(400).json({ error: "Username is required" });
   }
-
-  // usernameの長さチェック(例: 3文字以上)
-  if (username.trim().length < 3) {
-    return res
-      .status(400)
-      .json({ error: "Username must be at least 3 characters long" });
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+  if (!password) {
+    return res.status(400).json({ error: "Password is required" });
   }
 
   // メール形式チェック
@@ -107,8 +104,9 @@ const handleSignUp = async (req, res) => {
     // usersテーブルにもユーザー情報を保存 (例: uuid, name, email)
     const { error: dbError } = await supabase
       .from("users")
-      .upsert([{ uuid: user.user.id, name: username, email }],
-        { onConflict: 'uuid' }); 
+      .upsert([{ uuid: user.user.id, name: username, email }], {
+        onConflict: "uuid",
+      });
     console.log("dbError:", dbError);
 
     if (dbError) throw dbError;
@@ -127,7 +125,7 @@ const handleSignUp = async (req, res) => {
 
     res.status(201).json({ token, user: user.user });
   } catch (error) {
-    console.error("Error detail:", error); 
+    console.error("Error detail:", error);
     console.error("Failed to sign up user:", error.message);
     // res.status(500).json({ error: "Failed to sign up user" });
     res.status(500).json({ error: error.message });
@@ -240,19 +238,13 @@ const handleUpdateUser = async (req, res) => {
     const userId = decoded.id;
 
     // username が送られた場合
-    if (username !== undefined) {
-      if (username.trim().length < 3) {
-        return res
-          .status(400)
-          .json({ error: "Username must be at least 3 characters long" });
-      }
+    if (!username) {
+      return res.status(400).json({ error: "Invalid username format" });
     }
 
     // email が送られた場合
-    if (email !== undefined) {
-      if (!validator.isEmail(email)) {
-        return res.status(400).json({ error: "Invalid email format" });
-      }
+    if (!email) {
+      return res.status(400).json({ error: "Invalid email format" });
     }
 
     // password が送られた場合 (既存の "******" は未変更扱いと想定)
