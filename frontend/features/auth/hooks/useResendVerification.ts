@@ -1,5 +1,5 @@
 import { useToast } from '@chakra-ui/react';
-import { apiRequestWithAuth } from '../../shared/utils/apiClient';
+import { apiRequestWithAuth } from '../../../../shared/utils/apiClient';
 
 export const useResendVerification = (email: string, name: string, password: string) => {
   const toast = useToast();

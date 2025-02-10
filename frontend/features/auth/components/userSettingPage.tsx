@@ -16,7 +16,7 @@ import {
 import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/router";
 import axios from "axios";
-import { useUserEdit } from "../../hooks/useUserEdit";
+import { useUserEdit } from "../../../features/auth/hooks/useUserEdit";
 
 const UserSettings: React.FC = () => {
   const { isEditing, handleEdit, handleSave, userData, setUserData, resetEditing } = useUserEdit();

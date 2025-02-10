@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { setToken } from "../../../shared/utils/tokenUtils";
-import { validateEmail } from "../../../shared/utils/validationUtils";
-import { URLS } from "../../../shared/constants/urls";
-import { apiRequest } from "../../../shared/utils/apiClient";
-import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
+import { setToken } from "../../../../shared/utils/tokenUtils";
+import { validateEmail } from "../../../../shared/utils/validationUtils";
+import { URLS } from "../../../../shared/constants/urls";
+import { apiRequest } from "../../../../shared/utils/apiClient";
+import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');

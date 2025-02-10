@@ -1,6 +1,6 @@
 // frontend/pages/index.tsx
 import React from 'react';
-import Login from '../components/pages/Login';
+import Login from '../../frontend/features/auth/components/LoginPage';
 
 const LoginPage: React.FC = () => {
   return <Login />;

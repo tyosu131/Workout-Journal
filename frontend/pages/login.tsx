@@ -1,8 +1,9 @@
-import React from 'react';
-import Login from '../components/pages/Login';
+// frontend/pages/login.tsx
+import React from "react";
+import LoginPage from "../features/auth/components/LoginPage"; 
 
-const LoginPage: React.FC = () => {
-  return <Login />;
+const LoginNextPage: React.FC = () => {
+  return <LoginPage />;
 };
 
-export default LoginPage;
+export default LoginNextPage;

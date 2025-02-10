@@ -1,5 +1,5 @@
 import React from 'react';
-import Contact from '../components/pages/contact';
+import Contact from '../features/contact/components/ContactPage';
 import { useRouter } from 'next/router';
 
 const ContactPage: React.FC = () => {

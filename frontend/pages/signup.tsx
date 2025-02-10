@@ -1,6 +1,6 @@
 // frontend/pages/signup.tsx
 import React from 'react';
-import SignUp from '../components/pages/SignUp';
+import SignUp from '../features/auth/components/SignUpPage';
 
 const SignUpPage: React.FC = () => {
   return <SignUp />;

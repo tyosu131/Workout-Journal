@@ -1,9 +1,9 @@
 // frontend/pages/note/[date].tsx
 import React from "react";
-import Note from "../../components/pages/note";
+import NotePage from "../../features/notes/components/NotePage";
 
-const NotePage: React.FC = () => {
-  return <Note />;
+const NotePageRoute: React.FC = () => {
+  return <NotePage />;
 };
 
-export default NotePage;
+export default NotePageRoute;

@@ -10,10 +10,13 @@ const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../utils/authUtils");
-
-// validatorを使ってバリデーション
 const validator = require("validator");
 
+/**
+ * セッション取得 (REST)
+ * フロントの /api/auth/session から GET される。
+ * トークンの有効性をチェックし、ユーザ情報を返す。
+ */
 const handleSession = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
@@ -26,18 +29,31 @@ const handleSession = async (req, res) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const { data: user, error } = await supabase.auth.getUser(token);
-    if (error || !user) {
-      return res.status(401).json({ error: "No valid user found" });
+    // DB: "public.users" からユーザーを取得
+    const { data: dbUser, error } = await supabase
+      .from("users")
+      .select("uuid, name, email")
+      .eq("uuid", decoded.id)
+      .single();
+
+    if (error) {
+      console.error("Failed to fetch user from DB:", error);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (!dbUser) {
+      return res.status(404).json({ error: "No valid user found" });
     }
 
-    res.status(200).json({ user });
+    return res.status(200).json({ user: dbUser });
   } catch (error) {
     console.error("Session retrieval failed:", error.message);
-    res.status(500).json({ error: "Session retrieval failed" });
+    return res.status(500).json({ error: "Session retrieval failed" });
   }
 };
 
+/**
+ * リフレッシュトークンでアクセストークン再発行
+ */
 const handleRefresh = async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) {
@@ -47,28 +63,25 @@ const handleRefresh = async (req, res) => {
   try {
     const decoded = verifyToken(refreshToken);
     if (!decoded) {
-      return res
-        .status(401)
-        .json({ error: "Invalid or expired refresh token" });
+      return res.status(401).json({ error: "Invalid or expired refresh token" });
     }
 
     const newAccessToken = generateAccessToken(decoded);
-    res.status(200).json({ access_token: newAccessToken });
+    return res.status(200).json({ access_token: newAccessToken });
   } catch (error) {
     console.error("Failed to refresh token:", error.message);
-    res.status(500).json({ error: "Failed to refresh token" });
+    return res.status(500).json({ error: "Failed to refresh token" });
   }
 };
 
 /**
  * サインアップ
- * - username, email, password の必須チェック
- * - username の長さ/メール形式/パスワード長等を validatorでチェック
+ * フロント: /api/auth/signup
  */
 const handleSignUp = async (req, res) => {
   const { username, email, password } = req.body;
 
-  // 必須項目の存在確認
+  // 1つずつバリデーション
   if (!username) {
     return res.status(400).json({ error: "Username is required" });
   }
@@ -79,99 +92,34 @@ const handleSignUp = async (req, res) => {
     return res.status(400).json({ error: "Password is required" });
   }
 
-  // メール形式チェック
+  // メール形式とパスワード長
   if (!validator.isEmail(email)) {
     return res.status(400).json({ error: "Invalid email format" });
   }
-
-  // パスワード長さチェック(例: 6文字以上)
   if (!validator.isLength(password, { min: 6 })) {
-    return res
-      .status(400)
-      .json({ error: "Password must be at least 6 characters long" });
+    return res.status(400).json({ error: "Password must be at least 6 characters long" });
   }
 
   try {
+    // Supabase Auth でユーザー作成
     const { data: user, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { username } },
     });
-
-    console.log("signUpError:", signUpError);
     if (signUpError) throw signUpError;
 
-    // usersテーブルにもユーザー情報を保存 (例: uuid, name, email)
+    // DB (public.users) へ insert/upsert
     const { error: dbError } = await supabase
       .from("users")
-      .upsert([{ uuid: user.user.id, name: username, email }], {
-        onConflict: "uuid",
-      });
-    console.log("dbError:", dbError);
-
+      .upsert([{ uuid: user.user.id, name: username, email }], { onConflict: "uuid" });
     if (dbError) throw dbError;
 
-    // アクセストークン等を生成
+    // トークン発行
     const token = generateAccessToken(user.user);
     const refreshToken = generateRefreshToken(user.user);
 
-    // CookieにrefreshTokenをセット
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7日
-    });
-
-    res.status(201).json({ token, user: user.user });
-  } catch (error) {
-    console.error("Error detail:", error);
-    console.error("Failed to sign up user:", error.message);
-    // res.status(500).json({ error: "Failed to sign up user" });
-    res.status(500).json({ error: error.message });
-  }
-};
-
-/**
- * ログイン
- * - email, password の必須チェック
- * - メール形式/パスワード最小文字数チェック
- */
-const handleLogin = async (req, res) => {
-  const { email, password } = req.body;
-
-  // 必須項目
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required" });
-  }
-
-  // メール形式チェック
-  if (!validator.isEmail(email)) {
-    return res.status(400).json({ error: "Invalid email format" });
-  }
-
-  // パスワード長さチェック
-  if (!validator.isLength(password, { min: 6 })) {
-    return res
-      .status(400)
-      .json({ error: "Password must be at least 6 characters long" });
-  }
-
-  try {
-    // Supabase: Eメール・パスワードでログイン
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error || !data.user) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    // トークン生成
-    const token = generateAccessToken(data.user);
-    const refreshToken = generateRefreshToken(data.user);
-
-    // CookieにrefreshTokenをセット
+    // Cookie に refreshToken
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Lax",
@@ -179,15 +127,64 @@ const handleLogin = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ token, user: data.user });
+    return res.status(201).json({ token, user: user.user });
+  } catch (error) {
+    console.error("Failed to sign up user:", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * ログイン
+ * フロント: /api/auth/login
+ */
+const handleLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  // 必須チェック (分割)
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+  if (!password) {
+    return res.status(400).json({ error: "Password is required" });
+  }
+
+  if (!validator.isEmail(email)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
+  if (!validator.isLength(password, { min: 6 })) {
+    return res.status(400).json({ error: "Password must be at least 6 characters long" });
+  }
+
+  try {
+    // Supabase Auth ログイン
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // トークン
+    const token = generateAccessToken(data.user);
+    const refreshToken = generateRefreshToken(data.user);
+
+    // Cookie に refreshToken
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({ token, user: data.user });
   } catch (error) {
     console.error("Login error:", error.message);
-    res.status(500).json({ error: "Login failed" });
+    return res.status(500).json({ error: "Login failed" });
   }
 };
 
 /**
  * ユーザー情報の取得
+ * フロント: /api/auth/get-user
  */
 const handleGetUser = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -201,26 +198,31 @@ const handleGetUser = async (req, res) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const { data: user, error } = await supabase
+    // DBからユーザーを取得
+    const { data: dbUser, error } = await supabase
       .from("users")
       .select("uuid, name, email")
       .eq("uuid", decoded.id)
       .single();
 
-    if (error || !user) {
+    if (error) {
+      console.error("Failed to fetch user from DB:", error);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (!dbUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.status(200).json(user);
+    return res.status(200).json(dbUser);
   } catch (error) {
     console.error("Failed to fetch user:", error.message);
-    res.status(500).json({ error: "Failed to fetch user" });
+    return res.status(500).json({ error: "Failed to fetch user" });
   }
 };
 
 /**
  * ユーザー情報の更新
- * - username, email, password いずれかの値が来た場合のみ検証・アップデート
+ * - username, email, password
  */
 const handleUpdateUser = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -237,26 +239,29 @@ const handleUpdateUser = async (req, res) => {
     const { username, email, password } = req.body;
     const userId = decoded.id;
 
-    // username が送られた場合
+    // username
+    // !username で空文字や null を弾く
     if (!username) {
-      return res.status(400).json({ error: "Invalid username format" });
+      return res.status(400).json({ error: "Username is required" });
     }
 
-    // email が送られた場合
+    // email
     if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    if (!validator.isEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // password が送られた場合 (既存の "******" は未変更扱いと想定)
+    // password が "******" の場合は変更しない
     if (password !== undefined && password !== "******") {
       if (!validator.isLength(password, { min: 6 })) {
-        return res
-          .status(400)
-          .json({ error: "Password must be at least 6 characters long" });
+        return res.status(400).json({ error: "Password must be at least 6 characters long" });
       }
     }
 
-    // ========== Supabaseへの更新処理 ==========
+    // ========== Supabase への更新処理 ==========
+    // Auth のメール変更
     if (email) {
       await supabase.auth.updateUser({
         email,
@@ -266,21 +271,21 @@ const handleUpdateUser = async (req, res) => {
       });
     }
 
+    // パスワード更新
     if (password && password !== "******") {
       await supabase.auth.updateUser({ password });
     }
 
-    if (username) {
-      await supabase
-        .from("users")
-        .update({ name: username })
-        .eq("uuid", userId);
-    }
+    // DB テーブルの username & email 更新
+    await supabase
+      .from("users")
+      .update({ name: username, email })
+      .eq("uuid", userId);
 
-    res.status(200).json({ message: "User updated successfully" });
+    return res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
     console.error("Failed to update user:", error.message);
-    res.status(500).json({ error: "Failed to update user" });
+    return res.status(500).json({ error: "Failed to update user" });
   }
 };
 

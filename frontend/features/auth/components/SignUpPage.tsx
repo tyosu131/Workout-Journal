@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { Box, Input, Button, useToast, Center, Text } from "@chakra-ui/react";
 import { useRouter } from "next/router";
-import { useResendVerification } from "../../hooks/useResendVerification";
+import { useResendVerification } from "../hooks/useResendVerification";
 
-import { apiRequest } from "../../../shared/utils/apiClient";
+import { apiRequest } from "../../../../shared/utils/apiClient";
 
-import { setToken } from "../../../shared/utils/tokenUtils";
+import { setToken } from "../../../../shared/utils/tokenUtils";
 
-import { URLS } from "../../../shared/constants/urls";
-import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
+import { URLS } from "../../../../shared/constants/urls";
+import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 
 // サーバーが返す JSON の型を定義（token, user など）
 type SignupResponse = {
