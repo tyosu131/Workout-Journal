@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Table, Text, Spinner, Center, Button } from "@chakra-ui/react";
 import useSWR from "swr";
-import Header from "../../../features/notes/components/header";
-import DateInput from "../../../features/notes/components/dateInput";
-import NoteInput from "../../../features/notes/components/noteInput";
-import TableHeader from "../../../features/notes/components/tableheader";
-import TableBody from "../../../features/notes/components/tablebody";
-import useNoteHandlers from "../../../features/notes/hooks/useNoteHandlers";
+import Header from "./header";
+import DateInput from "./date-input";
+import NoteInput from "./note-input";
+import TableHeader from "./table-header";
+import TableBody from "./table-body";
+import useNoteHandlers from "../hooks/useNoteHandlers";
 import { NoteData } from "../../../types/types";
 import { apiRequestWithAuth } from "../../../../shared/utils/apiClient";
 
