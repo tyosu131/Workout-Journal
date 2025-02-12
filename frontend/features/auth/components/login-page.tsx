@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { setToken } from "../../../../shared/utils/tokenUtils";
 import { validateEmail } from "../../../../shared/utils/validationUtils";
 import { URLS } from "../../../../shared/constants/urls";
-import { apiRequest } from "../../../../shared/utils/apiClient";
+import { apiRequest } from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 
 const Login: React.FC = () => {

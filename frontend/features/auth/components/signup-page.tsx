@@ -3,7 +3,7 @@ import { Box, Input, Button, useToast, Center, Text } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { useResendVerification } from "../hooks/useResendVerification";
 
-import { apiRequest } from "../../../../shared/utils/apiClient";
+import { apiRequest } from "../../../lib/apiClient";
 
 import { setToken } from "../../../../shared/utils/tokenUtils";
 

@@ -1,5 +1,5 @@
 // frontend/features/notes/api.ts
-import { apiRequestWithAuth } from "../../../shared/utils/apiClient";
+import { apiRequestWithAuth } from "../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 import { NoteData } from "../../../frontend/types/types";
 
