@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { getToken, setToken, removeToken } from '../utils/tokenUtils';
-import { API_ENDPOINTS } from '../constants/endpoints';
+import { getToken, setToken, removeToken } from '../../shared/utils/tokenUtils';
+import { API_ENDPOINTS } from '../../shared/constants/endpoints';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 console.log('API Base URL:', baseURL);

@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestWithAuth } from "../../../shared/utils/apiClient";
+import { apiRequest, apiRequestWithAuth } from "../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 
 interface LoginResponse {

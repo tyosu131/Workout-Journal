@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { apiRequestWithAuth } from "../../../../shared/utils/apiClient";
+import { apiRequestWithAuth } from "../../../lib/apiClient";
 
 export const useAuthCheck = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
