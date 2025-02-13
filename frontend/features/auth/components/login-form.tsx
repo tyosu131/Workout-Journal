@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import { Box, Input, Button, useToast } from "@chakra-ui/react";
 import axios from "axios";
 import { useRouter } from "next/router"; // next/routerを使用
-import { setToken } from "../../utils/tokenUtils"; // トークン保存の関数をインポート
-import { validateEmail } from "../../utils/validationUtils";
+import { setToken } from "../../../../shared/utils/tokenUtils"; // トークン保存の関数をインポート
+import { validateEmail } from "../../../../shared/utils/validationUtils";
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");

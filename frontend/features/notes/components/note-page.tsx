@@ -2,20 +2,18 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Table, Text, Spinner, Center, Button } from "@chakra-ui/react";
 import useSWR from "swr";
-import Header from "../note/header";
-import DateInput from "../note/dateInput";
-import NoteInput from "../note/noteInput";
-import TableHeader from "../note/tableheader";
-import TableBody from "../note/tablebody";
-import useNoteHandlers from "../../hooks/useNoteHandlers";
-import { NoteData } from "../../types/types";
-import { apiRequestWithAuth } from "../../../shared/utils/apiClient";
+import Header from "./header";
+import DateInput from "./date-input";
+import NoteInput from "./note-input";
+import TableHeader from "./table-header";
+import TableBody from "./table-body";
+import useNoteHandlers from "../hooks/useNoteHandlers";
+import { NoteData } from "../../../types/types";
+import { apiRequestWithAuth } from "../../../lib/apiClient";
 
 // ノートデータをAPIから取得
 const fetchNoteData = async (url: string): Promise<NoteData[]> => {
   try {
-    // const data = await apiRequestWithAuth<NoteData[]>(url, "get");
-    // return data;
     const response = await apiRequestWithAuth<{ notes: NoteData[] }>(url, "get");
     return response.notes || [];
   } catch (error) {

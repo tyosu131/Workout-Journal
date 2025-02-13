@@ -24,7 +24,7 @@ console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
 const corsOptions = {
   origin: "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "_retry"],
   credentials: true,
 };
 app.use(cors(corsOptions));

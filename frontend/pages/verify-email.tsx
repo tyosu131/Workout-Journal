@@ -1,5 +1,5 @@
 import React from 'react';
-import VerifyEmail from '../components/pages/verify-email';
+import VerifyEmail from '../features/auth/components/verify-email-page';
 
 const VerifyEmailPage: React.FC = () => {
   return <VerifyEmail />;

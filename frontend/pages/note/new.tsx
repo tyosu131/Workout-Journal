@@ -1,8 +1,8 @@
 import React from "react";
-import Note from "../../components/pages/note";
+import NotePage from "../../features/notes/components/note-page";
 
 const NewNotePage: React.FC = () => {
-  return <Note />;
+  return <NotePage />;
 };
 
 export default NewNotePage;
