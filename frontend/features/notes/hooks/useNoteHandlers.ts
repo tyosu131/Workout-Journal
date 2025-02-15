@@ -3,11 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set, Exercise } from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
-import { fetchNotesAPI, saveNoteAPI } from "../api"; // ← 新規 import
-import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
+import { fetchNotesAPI, saveNoteAPI } from "../api";
 
 /**
- * ノート関連のカスタムフック
+ * ノート関連の操作（入力変更、日付変更、自動保存、+Add set/Exercise）
  */
 const useNoteHandlers = (
   noteData: NoteData | null,
@@ -21,73 +20,16 @@ const useNoteHandlers = (
     if (savedToken) setTokenState(savedToken);
   }, []);
 
-  // ========================
-  // ノートデータ取得
-  // ========================
-  const fetchNoteData = useCallback(
-    async (date: string) => {
-      try {
-        const response = await fetchNotesAPI(date);
-        if (response && response.length > 0) {
-          const { note, exercises } = response[0];
-          const parsedExercises: Exercise[] =
-            typeof exercises === "string" ? JSON.parse(exercises) : exercises;
+  // ノート保存（自動保存用）
+  const saveNote = useCallback(async (data: NoteData) => {
+    try {
+      await saveNoteAPI(data);
+    } catch (error) {
+      console.error("Failed to save note", error);
+    }
+  }, []);
 
-          const filledExercises = Array.from({ length: 30 }).map((_, exerciseIndex) => {
-            const existingExercise = parsedExercises[exerciseIndex] || { exercise: "", sets: [] };
-            return {
-              exercise: existingExercise.exercise || "",
-              sets: Array.from({ length: 5 }).map(
-                (_, setIndex) =>
-                  existingExercise.sets[setIndex] || {
-                    weight: "",
-                    reps: "",
-                    rest: "",
-                  }
-              ),
-            };
-          });
-
-          setNoteData({ date, note, exercises: filledExercises });
-        } else {
-          // 空データの初期化
-          setNoteData({
-            date,
-            note: "",
-            exercises: Array.from({ length: 30 }).map(() => ({
-              exercise: "",
-              sets: Array.from({ length: 5 }).map(() => ({
-                weight: "",
-                reps: "",
-                rest: "",
-              })),
-            })),
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch note data:", error);
-      }
-    },
-    [setNoteData]
-  );
-
-  // ========================
-  // ノート保存
-  // ========================
-  const saveNote = useCallback(
-    async (data: NoteData) => {
-      try {
-        await saveNoteAPI(data);
-      } catch (error) {
-        console.error("Failed to save note", error);
-      }
-    },
-    []
-  );
-
-  // ========================
-  // フィールド更新ハンドラ
-  // ========================
+  // 各入力欄更新
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<HTMLInputElement>,
@@ -127,29 +69,62 @@ const useNoteHandlers = (
     [noteData, saveNote, setNoteData]
   );
 
+  // 日付変更
   const handleDateChange = useCallback(
     (newDate: string) => {
-      fetchNoteData(newDate);
       router.push(`/note/${newDate}`);
     },
-    [fetchNoteData, router]
+    [router]
   );
 
-  // ========================
-  // 初回読み込み
-  // ========================
+  // +Add set（モバイル/タブレット用）
+  const handleAddSet = useCallback(
+    (exerciseIndex: number) => {
+      if (!noteData) return;
+      const newNote = { ...noteData };
+      newNote.exercises[exerciseIndex].sets.push({
+        weight: "",
+        reps: "",
+        rest: "",
+      });
+      setNoteData(newNote);
+      saveNote(newNote);
+    },
+    [noteData, setNoteData, saveNote]
+  );
+
+  // +Add exercise（モバイル/タブレット用）
+  const handleAddExercise = useCallback(() => {
+    if (!noteData) return;
+    const newNote = { ...noteData };
+    newNote.exercises.push({
+      exercise: "",
+      sets: [
+        {
+          weight: "",
+          reps: "",
+          rest: "",
+        },
+      ],
+    });
+    setNoteData(newNote);
+    saveNote(newNote);
+  }, [noteData, setNoteData, saveNote]);
+
+  // 初回読み込み（任意）
   useEffect(() => {
     if (noteData?.date) {
-      fetchNoteData(noteData.date);
+      // 必要なら再取得処理
     }
-  }, [noteData?.date, fetchNoteData]);
+  }, [noteData?.date]);
 
   return {
-    fetchNoteData,
     handleInputChange,
     handleNoteChange,
     handleExerciseChange,
     handleDateChange,
+    handleAddSet,
+    handleAddExercise,
   };
 };
 
