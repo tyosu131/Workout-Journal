@@ -17,54 +17,71 @@ import Header from "./header";
 import DateInput from "./date-input";
 import NoteInput from "./note-input";
 import { NoteData } from "../../../types/types";
-import { fetchNotesAPI, saveNoteAPI } from "../api";
+import { fetchNotesAPI } from "../api";
+import useNoteHandlers from "../hooks/useNoteHandlers";
 
-/**
- * ポイント:
- * - ホバー時だけ '...' アイコンを表示
- * - アイコンは少し左に寄せる (left="-8px" など) → 数字が見やすい
- * - "Exercise:" や行全体は動かさず (padding-left=24px はそのまま)
- * - メニュー外クリックで閉じる, PC幅75%, border-collapse, etc.
- */
+// handleDocClick を useEffect の外に定義
+function handleDocClick(
+  e: MouseEvent,
+  openExerciseMenu: number | null,
+  exerciseMenuRef: React.RefObject<HTMLDivElement>,
+  setOpenExerciseMenu: React.Dispatch<React.SetStateAction<number | null>>,
+  openRowMenu: { exIndex: number; setIndex: number } | null,
+  rowMenuRef: React.RefObject<HTMLDivElement>,
+  setOpenRowMenu: React.Dispatch<React.SetStateAction<{ exIndex: number; setIndex: number } | null>>
+) {
+  if (openExerciseMenu !== null && exerciseMenuRef.current) {
+    if (!exerciseMenuRef.current.contains(e.target as Node)) {
+      setOpenExerciseMenu(null);
+    }
+  }
+  if (openRowMenu !== null && rowMenuRef.current) {
+    if (!rowMenuRef.current.contains(e.target as Node)) {
+      setOpenRowMenu(null);
+    }
+  }
+}
+
 const NotePage: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
-
-  // PC => 75%, モバイル => 100%
   const containerWidth = useBreakpointValue({ base: "100%", lg: "75%" });
 
   const [noteData, setNoteData] = useState<NoteData | null>(null);
 
-  // 行(#列)ホバー状態
-  const [hoveredRow, setHoveredRow] = useState<{
-    exIndex: number;
-    setIndex: number;
-  } | null>(null);
+  // 「#」セルのホバー状態
+  const [hoveredRow, setHoveredRow] = useState<{ exIndex: number; setIndex: number } | null>(null);
 
-  // 行(#列)メニューオープン
-  const [openRowMenu, setOpenRowMenu] = useState<{
-    exIndex: number;
-    setIndex: number;
-  } | null>(null);
-
-  // Exercise枠ホバー状態
+  // Exercise枠のホバー状態
   const [hoveredExercise, setHoveredExercise] = useState<number | null>(null);
 
-  // Exerciseメニューオープン
+  // メニューオープン状態
+  const [openRowMenu, setOpenRowMenu] = useState<{ exIndex: number; setIndex: number } | null>(null);
   const [openExerciseMenu, setOpenExerciseMenu] = useState<number | null>(null);
 
-  // 参照 (メニュー外クリックで閉じる)
   const exerciseMenuRef = useRef<HTMLDivElement | null>(null);
   const rowMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // SWR
+  // SWR でノートを取得
   const { data } = useSWR<NoteData[]>(
     date ? String(date) : null,
     (d: string) => fetchNotesAPI(d),
     { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
-  // データ初期化
+  // ハンドラ類（自動保存, 入力変更, 削除等）
+  const {
+    handleInputChange,
+    handleNoteChange,
+    handleExerciseChange,
+    handleDateChange,
+    handleAddSet,
+    handleAddExercise,
+    handleDeleteRow,
+    handleDeleteExercise,
+  } = useNoteHandlers(noteData, setNoteData, setOpenRowMenu, setOpenExerciseMenu);
+
+  // ノート初期化
   useEffect(() => {
     if (!date) return;
     if (data && data.length > 0) {
@@ -85,22 +102,19 @@ const NotePage: React.FC = () => {
 
   // メニュー外クリックで閉じる
   useEffect(() => {
-    function handleDocClick(e: MouseEvent) {
-      // exercise menu
-      if (openExerciseMenu !== null && exerciseMenuRef.current) {
-        if (!exerciseMenuRef.current.contains(e.target as Node)) {
-          setOpenExerciseMenu(null);
-        }
-      }
-      // row menu
-      if (openRowMenu !== null && rowMenuRef.current) {
-        if (!rowMenuRef.current.contains(e.target as Node)) {
-          setOpenRowMenu(null);
-        }
-      }
+    function onDocClick(e: MouseEvent) {
+      handleDocClick(
+        e,
+        openExerciseMenu,
+        exerciseMenuRef,
+        setOpenExerciseMenu,
+        openRowMenu,
+        rowMenuRef,
+        setOpenRowMenu
+      );
     }
-    document.addEventListener("mousedown", handleDocClick);
-    return () => document.removeEventListener("mousedown", handleDocClick);
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
   }, [openExerciseMenu, openRowMenu]);
 
   if (!noteData) {
@@ -111,86 +125,6 @@ const NotePage: React.FC = () => {
       </Center>
     );
   }
-
-  // ====== 自動保存 ======
-  const autoSave = async (updatedData: NoteData) => {
-    try {
-      await saveNoteAPI(updatedData);
-    } catch (error) {
-      console.error("Failed to save note", error);
-    }
-  };
-
-  // ====== 入力ハンドラ ======
-  const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newData = { ...noteData, note: e.target.value };
-    setNoteData(newData);
-    autoSave(newData);
-  };
-  const handleDateChange = (newDate: string) => {
-    router.push(`/note/${newDate}`);
-  };
-  const handleExerciseChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    exIndex: number
-  ) => {
-    if (!noteData) return;
-    const newExercises = [...noteData.exercises];
-    newExercises[exIndex].exercise = e.target.value;
-    const newData = { ...noteData, exercises: newExercises };
-    setNoteData(newData);
-    autoSave(newData);
-  };
-  const handleSetChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    exIndex: number,
-    setIndex: number,
-    field: "weight" | "reps" | "rest"
-  ) => {
-    if (!noteData) return;
-    const newExercises = [...noteData.exercises];
-    newExercises[exIndex].sets[setIndex][field] = e.target.value;
-    const updated = { ...noteData, exercises: newExercises };
-    setNoteData(updated);
-    autoSave(updated);
-  };
-
-  // ====== +Add ======
-  const handleAddSet = (exIndex: number) => {
-    if (!noteData) return;
-    const newNote = { ...noteData };
-    newNote.exercises[exIndex].sets.push({ weight: "", reps: "", rest: "" });
-    setNoteData(newNote);
-    autoSave(newNote);
-  };
-  const handleAddExercise = () => {
-    if (!noteData) return;
-    const newNote = { ...noteData };
-    newNote.exercises.push({
-      exercise: "",
-      sets: [{ weight: "", reps: "", rest: "" }],
-    });
-    setNoteData(newNote);
-    autoSave(newNote);
-  };
-
-  // ====== 削除 ======
-  const handleDeleteRow = (exIndex: number, setIndex: number) => {
-    if (!noteData) return;
-    const newNote = { ...noteData };
-    newNote.exercises[exIndex].sets.splice(setIndex, 1);
-    setNoteData(newNote);
-    autoSave(newNote);
-    setOpenRowMenu(null);
-  };
-  const handleDeleteExercise = (exIndex: number) => {
-    if (!noteData) return;
-    const newNote = { ...noteData };
-    newNote.exercises.splice(exIndex, 1);
-    setNoteData(newNote);
-    autoSave(newNote);
-    setOpenExerciseMenu(null);
-  };
 
   return (
     <Box p={4}>
@@ -209,13 +143,7 @@ const NotePage: React.FC = () => {
       {/* Exercises */}
       <Box mt={6} width={containerWidth} margin="0 auto">
         {noteData.exercises.map((exercise, eIndex) => (
-          <Box
-            key={eIndex}
-            border="1px solid #000"
-            borderRadius="4px"
-            p={3}
-            mb={4}
-          >
+          <Box key={eIndex} border="1px solid #000" borderRadius="4px" p={3} mb={4}>
             {/* "Exercise:" 行 */}
             <Box
               position="relative"
@@ -234,15 +162,9 @@ const NotePage: React.FC = () => {
                 />
               </Box>
 
-              {/* アイコン: hoveredExercise===eIndex && openExerciseMenu!== eIndex */}
+              {/* Exercise削除アイコン */}
               {hoveredExercise === eIndex && openExerciseMenu !== eIndex && (
-                <Box
-                  position="absolute"
-                  // ★ leftを-8px程度にする → 少しだけ左へ寄せる
-                  left="-8px"
-                  top="50%"
-                  transform="translateY(-50%)"
-                >
+                <Box position="absolute" left="-8px" top="50%" transform="translateY(-50%)">
                   <IconButton
                     aria-label="Options"
                     icon={<HamburgerIcon />}
@@ -252,8 +174,6 @@ const NotePage: React.FC = () => {
                   />
                 </Box>
               )}
-
-              {/* メニュー: openExerciseMenu=== eIndex */}
               {openExerciseMenu === eIndex && (
                 <Box
                   position="absolute"
@@ -279,7 +199,7 @@ const NotePage: React.FC = () => {
               )}
             </Box>
 
-            {/* テーブル */}
+            {/* セットのテーブル */}
             <Box
               as="table"
               border="1px solid #000"
@@ -295,16 +215,14 @@ const NotePage: React.FC = () => {
               </thead>
               <tbody>
                 {exercise.sets.map((set, sIndex) => (
-                  <tr
-                    key={sIndex}
-                    style={{ position: "relative" }}
-                    onMouseEnter={() =>
-                      setHoveredRow({ exIndex: eIndex, setIndex: sIndex })
-                    }
-                    onMouseLeave={() => setHoveredRow(null)}
-                  >
-                    <td style={tdStyle}>
-                      {/* アイコン: hoveredRow===..., openRowMenu!==... */}
+                  <tr key={sIndex}>
+                    {/* # のセルだけホバー判定を行う */}
+                    <td
+                      style={{ ...tdStyle, position: "relative" }}
+                      onMouseEnter={() => setHoveredRow({ exIndex: eIndex, setIndex: sIndex })}
+                      onMouseLeave={() => setHoveredRow(null)}
+                    >
+                      {/* ホバー時だけアイコン */}
                       {hoveredRow &&
                         hoveredRow.exIndex === eIndex &&
                         hoveredRow.setIndex === sIndex &&
@@ -313,7 +231,6 @@ const NotePage: React.FC = () => {
                           openRowMenu.setIndex === sIndex) && (
                           <Box
                             position="absolute"
-                            // ★ leftを-8px程度にする → 少しだけ左へ寄せる
                             left="-8px"
                             top="50%"
                             transform="translateY(-50%)"
@@ -323,14 +240,11 @@ const NotePage: React.FC = () => {
                               icon={<HamburgerIcon />}
                               size="xs"
                               variant="ghost"
-                              onClick={() =>
-                                setOpenRowMenu({ exIndex: eIndex, setIndex: sIndex })
-                              }
+                              onClick={() => setOpenRowMenu({ exIndex: eIndex, setIndex: sIndex })}
                             />
                           </Box>
                         )}
-
-                      {/* メニュー: openRowMenu===... */}
+                      {/* メニュー */}
                       {openRowMenu &&
                         openRowMenu.exIndex === eIndex &&
                         openRowMenu.setIndex === sIndex && (
@@ -356,17 +270,15 @@ const NotePage: React.FC = () => {
                             </Button>
                           </Box>
                         )}
-
                       {sIndex + 1}
                     </td>
+
                     {/* Weight */}
                     <td style={tdStyle}>
                       <input
                         style={inputStyle}
                         value={set.weight}
-                        onChange={(ev) =>
-                          handleSetChange(ev, eIndex, sIndex, "weight")
-                        }
+                        onChange={(ev) => handleInputChange(ev, eIndex, sIndex, "weight")}
                       />
                     </td>
                     {/* Reps */}
@@ -374,9 +286,7 @@ const NotePage: React.FC = () => {
                       <input
                         style={inputStyle}
                         value={set.reps}
-                        onChange={(ev) =>
-                          handleSetChange(ev, eIndex, sIndex, "reps")
-                        }
+                        onChange={(ev) => handleInputChange(ev, eIndex, sIndex, "reps")}
                       />
                     </td>
                     {/* Rest */}
@@ -384,9 +294,7 @@ const NotePage: React.FC = () => {
                       <input
                         style={inputStyle}
                         value={set.rest}
-                        onChange={(ev) =>
-                          handleSetChange(ev, eIndex, sIndex, "rest")
-                        }
+                        onChange={(ev) => handleInputChange(ev, eIndex, sIndex, "rest")}
                       />
                     </td>
                   </tr>
@@ -404,8 +312,6 @@ const NotePage: React.FC = () => {
             </Box>
           </Box>
         ))}
-
-        {/* +Add exercise */}
         <Box textAlign="center">
           <Button onClick={handleAddExercise}>+Add Exercise</Button>
         </Box>
