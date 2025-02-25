@@ -1,27 +1,51 @@
 // frontend/features/notes/hooks/useNoteHandlers.ts
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set } from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
 import { saveNoteAPI } from "../api";
 
 /**
- * ノート関連の操作（入力変更、日付変更、自動保存、+Add set/Exercise、削除機能）
+ * ノート関連の操作（入力変更、日付変更、自動保存、+Add set/Exercise、削除機能、メニュー外クリック検知）
  */
 const useNoteHandlers = (
   noteData: NoteData | null,
   setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>,
-  // 削除時にメニューを閉じるための関数（必要に応じて）
+  // 削除時にメニューを閉じるための関数（オプション）
   setOpenRowMenu?: React.Dispatch<React.SetStateAction<{ exIndex: number; setIndex: number } | null>>,
   setOpenExerciseMenu?: React.Dispatch<React.SetStateAction<number | null>>
 ) => {
   const router = useRouter();
   const [token, setTokenState] = useState<string | null>(null);
 
+  // メニュー外クリック検知用の ref を内部で生成
+  const exerciseMenuRef = useRef<HTMLDivElement | null>(null);
+  const rowMenuRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const savedToken = getToken();
     if (savedToken) setTokenState(savedToken);
   }, []);
+
+  // --- handleDocClick を内部に統合 ---
+  useEffect(() => {
+    function handleDocClick(e: MouseEvent) {
+      if (setOpenExerciseMenu && exerciseMenuRef.current) {
+        if (!exerciseMenuRef.current.contains(e.target as Node)) {
+          setOpenExerciseMenu(null);
+        }
+      }
+      if (setOpenRowMenu && rowMenuRef.current) {
+        if (!rowMenuRef.current.contains(e.target as Node)) {
+          setOpenRowMenu(null);
+        }
+      }
+    }
+    document.addEventListener("mousedown", handleDocClick);
+    return () => {
+      document.removeEventListener("mousedown", handleDocClick);
+    };
+  }, [setOpenExerciseMenu, setOpenRowMenu]);
 
   // 自動保存
   const saveNote = useCallback(async (data: NoteData) => {
@@ -32,7 +56,7 @@ const useNoteHandlers = (
     }
   }, []);
 
-  // 入力欄更新
+  // 各入力欄更新
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<HTMLInputElement>,
@@ -134,6 +158,8 @@ const useNoteHandlers = (
   );
 
   return {
+    exerciseMenuRef,
+    rowMenuRef,
     handleInputChange,
     handleNoteChange,
     handleExerciseChange,

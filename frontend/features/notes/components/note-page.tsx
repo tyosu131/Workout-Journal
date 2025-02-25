@@ -1,6 +1,6 @@
 // frontend/features/notes/components/note-page.tsx
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -20,28 +20,6 @@ import { NoteData } from "../../../types/types";
 import { fetchNotesAPI } from "../api";
 import useNoteHandlers from "../hooks/useNoteHandlers";
 
-// handleDocClick を useEffect の外に定義
-function handleDocClick(
-  e: MouseEvent,
-  openExerciseMenu: number | null,
-  exerciseMenuRef: React.RefObject<HTMLDivElement>,
-  setOpenExerciseMenu: React.Dispatch<React.SetStateAction<number | null>>,
-  openRowMenu: { exIndex: number; setIndex: number } | null,
-  rowMenuRef: React.RefObject<HTMLDivElement>,
-  setOpenRowMenu: React.Dispatch<React.SetStateAction<{ exIndex: number; setIndex: number } | null>>
-) {
-  if (openExerciseMenu !== null && exerciseMenuRef.current) {
-    if (!exerciseMenuRef.current.contains(e.target as Node)) {
-      setOpenExerciseMenu(null);
-    }
-  }
-  if (openRowMenu !== null && rowMenuRef.current) {
-    if (!rowMenuRef.current.contains(e.target as Node)) {
-      setOpenRowMenu(null);
-    }
-  }
-}
-
 const NotePage: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
@@ -51,16 +29,11 @@ const NotePage: React.FC = () => {
 
   // 「#」セルのホバー状態
   const [hoveredRow, setHoveredRow] = useState<{ exIndex: number; setIndex: number } | null>(null);
-
   // Exercise枠のホバー状態
   const [hoveredExercise, setHoveredExercise] = useState<number | null>(null);
-
   // メニューオープン状態
   const [openRowMenu, setOpenRowMenu] = useState<{ exIndex: number; setIndex: number } | null>(null);
   const [openExerciseMenu, setOpenExerciseMenu] = useState<number | null>(null);
-
-  const exerciseMenuRef = useRef<HTMLDivElement | null>(null);
-  const rowMenuRef = useRef<HTMLDivElement | null>(null);
 
   // SWR でノートを取得
   const { data } = useSWR<NoteData[]>(
@@ -69,8 +42,10 @@ const NotePage: React.FC = () => {
     { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
-  // ハンドラ類（自動保存, 入力変更, 削除等）
+  // useNoteHandlers から各ハンドラを取得（削除機能も含む）
   const {
+    exerciseMenuRef,
+    rowMenuRef,
     handleInputChange,
     handleNoteChange,
     handleExerciseChange,
@@ -100,23 +75,6 @@ const NotePage: React.FC = () => {
     }
   }, [date, data]);
 
-  // メニュー外クリックで閉じる
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      handleDocClick(
-        e,
-        openExerciseMenu,
-        exerciseMenuRef,
-        setOpenExerciseMenu,
-        openRowMenu,
-        rowMenuRef,
-        setOpenRowMenu
-      );
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [openExerciseMenu, openRowMenu]);
-
   if (!noteData) {
     return (
       <Center height="100vh">
@@ -129,18 +87,11 @@ const NotePage: React.FC = () => {
   return (
     <Box p={4}>
       <Header />
-
-      <Text fontSize="2xl" mb={4} textAlign="center">
-        Note
-      </Text>
-
-      {/* Date & Note */}
+      <Text fontSize="2xl" mb={4} textAlign="center">Note</Text>
       <Box width={containerWidth} margin="0 auto">
         <DateInput date={noteData.date} onDateChange={handleDateChange} />
         <NoteInput note={noteData.note} onNoteChange={handleNoteChange} />
       </Box>
-
-      {/* Exercises */}
       <Box mt={6} width={containerWidth} margin="0 auto">
         {noteData.exercises.map((exercise, eIndex) => (
           <Box key={eIndex} border="1px solid #000" borderRadius="4px" p={3} mb={4}>
@@ -152,17 +103,13 @@ const NotePage: React.FC = () => {
               onMouseLeave={() => setHoveredExercise(null)}
             >
               <Box display="flex" alignItems="center" mb={2}>
-                <Box fontWeight="bold" mr={2}>
-                  Exercise:
-                </Box>
+                <Box fontWeight="bold" mr={2}>Exercise:</Box>
                 <input
                   style={{ width: "100%", border: "none", outline: "none" }}
                   value={exercise.exercise}
                   onChange={(ev) => handleExerciseChange(ev, eIndex)}
                 />
               </Box>
-
-              {/* Exercise削除アイコン */}
               {hoveredExercise === eIndex && openExerciseMenu !== eIndex && (
                 <Box position="absolute" left="-8px" top="50%" transform="translateY(-50%)">
                   <IconButton
@@ -216,13 +163,12 @@ const NotePage: React.FC = () => {
               <tbody>
                 {exercise.sets.map((set, sIndex) => (
                   <tr key={sIndex}>
-                    {/* # のセルだけホバー判定を行う */}
+                    {/* "#"セルのみホバー判定 */}
                     <td
                       style={{ ...tdStyle, position: "relative" }}
                       onMouseEnter={() => setHoveredRow({ exIndex: eIndex, setIndex: sIndex })}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      {/* ホバー時だけアイコン */}
                       {hoveredRow &&
                         hoveredRow.exIndex === eIndex &&
                         hoveredRow.setIndex === sIndex &&
@@ -244,7 +190,6 @@ const NotePage: React.FC = () => {
                             />
                           </Box>
                         )}
-                      {/* メニュー */}
                       {openRowMenu &&
                         openRowMenu.exIndex === eIndex &&
                         openRowMenu.setIndex === sIndex && (
@@ -272,8 +217,6 @@ const NotePage: React.FC = () => {
                         )}
                       {sIndex + 1}
                     </td>
-
-                    {/* Weight */}
                     <td style={tdStyle}>
                       <input
                         style={inputStyle}
@@ -281,7 +224,6 @@ const NotePage: React.FC = () => {
                         onChange={(ev) => handleInputChange(ev, eIndex, sIndex, "weight")}
                       />
                     </td>
-                    {/* Reps */}
                     <td style={tdStyle}>
                       <input
                         style={inputStyle}
@@ -289,7 +231,6 @@ const NotePage: React.FC = () => {
                         onChange={(ev) => handleInputChange(ev, eIndex, sIndex, "reps")}
                       />
                     </td>
-                    {/* Rest */}
                     <td style={tdStyle}>
                       <input
                         style={inputStyle}
