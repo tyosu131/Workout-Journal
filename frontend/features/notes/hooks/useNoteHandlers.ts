@@ -1,53 +1,27 @@
-// frontend/features/notes/hooks/useNoteHandlers.ts
+// portfolio real\frontend\features\notes\hooks\useNoteHandlers.ts
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { NoteData, Set } from "../../../types/types";
+import { NoteData, Set, Exercise } from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
 import { saveNoteAPI } from "../api";
 
 /**
- * ノート関連の操作（入力変更、日付変更、自動保存、+Add set/Exercise、削除機能、メニュー外クリック検知）
+ * ノート関連の操作をまとめたフック
  */
 const useNoteHandlers = (
   noteData: NoteData | null,
-  setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>,
-  // 削除時にメニューを閉じるための関数（オプション）
-  setOpenRowMenu?: React.Dispatch<React.SetStateAction<{ exIndex: number; setIndex: number } | null>>,
-  setOpenExerciseMenu?: React.Dispatch<React.SetStateAction<number | null>>
+  setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>
 ) => {
   const router = useRouter();
   const [token, setTokenState] = useState<string | null>(null);
-
-  // メニュー外クリック検知用の ref を内部で生成
-  const exerciseMenuRef = useRef<HTMLDivElement | null>(null);
-  const rowMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const savedToken = getToken();
     if (savedToken) setTokenState(savedToken);
   }, []);
 
-  // --- handleDocClick を内部に統合 ---
-  useEffect(() => {
-    function handleDocClick(e: MouseEvent) {
-      if (setOpenExerciseMenu && exerciseMenuRef.current) {
-        if (!exerciseMenuRef.current.contains(e.target as Node)) {
-          setOpenExerciseMenu(null);
-        }
-      }
-      if (setOpenRowMenu && rowMenuRef.current) {
-        if (!rowMenuRef.current.contains(e.target as Node)) {
-          setOpenRowMenu(null);
-        }
-      }
-    }
-    document.addEventListener("mousedown", handleDocClick);
-    return () => {
-      document.removeEventListener("mousedown", handleDocClick);
-    };
-  }, [setOpenExerciseMenu, setOpenRowMenu]);
-
-  // 自動保存
+  // ノート保存
   const saveNote = useCallback(async (data: NoteData) => {
     try {
       await saveNoteAPI(data);
@@ -56,7 +30,7 @@ const useNoteHandlers = (
     }
   }, []);
 
-  // 各入力欄更新
+  // Set 入力変更
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<HTMLInputElement>,
@@ -74,21 +48,25 @@ const useNoteHandlers = (
     [noteData, saveNote, setNoteData]
   );
 
-  const handleNoteChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Exercise名変更
+  const handleExerciseChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
       if (!noteData) return;
-      const newData = { ...noteData, note: e.target.value };
+      const newExercises = [...noteData.exercises];
+      newExercises[index].exercise = e.target.value;
+      const newData = { ...noteData, exercises: newExercises };
       setNoteData(newData);
       saveNote(newData);
     },
     [noteData, saveNote, setNoteData]
   );
 
-  const handleExerciseChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  // Exerciseメモ変更
+  const handleExerciseNoteChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
       if (!noteData) return;
       const newExercises = [...noteData.exercises];
-      newExercises[index].exercise = e.target.value;
+      newExercises[index].note = e.target.value;
       const newData = { ...noteData, exercises: newExercises };
       setNoteData(newData);
       saveNote(newData);
@@ -126,13 +104,48 @@ const useNoteHandlers = (
     const newNote = { ...noteData };
     newNote.exercises.push({
       exercise: "",
+      note: "",
       sets: [{ weight: "", reps: "", rest: "" }],
     });
     setNoteData(newNote);
     saveNote(newNote);
   }, [noteData, setNoteData, saveNote]);
 
-  // 削除機能
+  // ★ 行(セット)の複製
+  const handleDuplicateRow = useCallback(
+    (exIndex: number, setIndex: number) => {
+      if (!noteData) return;
+      const newNote = { ...noteData };
+      const originalSet = { ...newNote.exercises[exIndex].sets[setIndex] };
+      // 複製を次の行に挿入
+      newNote.exercises[exIndex].sets.splice(setIndex + 1, 0, originalSet);
+      setNoteData(newNote);
+      saveNote(newNote);
+    },
+    [noteData, setNoteData, saveNote]
+  );
+
+  // ★ Exercise全体の複製
+  const handleDuplicateExercise = useCallback(
+    (exIndex: number) => {
+      if (!noteData) return;
+      const newNote = { ...noteData };
+      const originalEx = { ...newNote.exercises[exIndex] } as Exercise;
+      // 深いコピーが必要なら sets もコピー
+      const copiedEx: Exercise = {
+        exercise: originalEx.exercise,
+        note: originalEx.note || "",
+        sets: originalEx.sets.map((s) => ({ ...s })),
+      };
+      // 挿入
+      newNote.exercises.splice(exIndex + 1, 0, copiedEx);
+      setNoteData(newNote);
+      saveNote(newNote);
+    },
+    [noteData, setNoteData, saveNote]
+  );
+
+  // 行(セット)の削除
   const handleDeleteRow = useCallback(
     (exIndex: number, setIndex: number) => {
       if (!noteData) return;
@@ -140,11 +153,11 @@ const useNoteHandlers = (
       newNote.exercises[exIndex].sets.splice(setIndex, 1);
       setNoteData(newNote);
       saveNote(newNote);
-      if (setOpenRowMenu) setOpenRowMenu(null);
     },
-    [noteData, setNoteData, saveNote, setOpenRowMenu]
+    [noteData, setNoteData, saveNote]
   );
 
+  // Exercise削除
   const handleDeleteExercise = useCallback(
     (exIndex: number) => {
       if (!noteData) return;
@@ -152,22 +165,51 @@ const useNoteHandlers = (
       newNote.exercises.splice(exIndex, 1);
       setNoteData(newNote);
       saveNote(newNote);
-      if (setOpenExerciseMenu) setOpenExerciseMenu(null);
     },
-    [noteData, setNoteData, saveNote, setOpenExerciseMenu]
+    [noteData, setNoteData, saveNote]
+  );
+
+  // タグ追加
+  const handleAddTag = useCallback(
+    (newTag: string) => {
+      if (!noteData) return;
+      const tags = noteData.tags ? [...noteData.tags] : [];
+      if (!tags.includes(newTag)) {
+        tags.push(newTag);
+      }
+      const newData = { ...noteData, tags };
+      setNoteData(newData);
+      saveNote(newData);
+    },
+    [noteData, setNoteData, saveNote]
+  );
+
+  // タグ削除
+  const handleRemoveTag = useCallback(
+    (tagIndex: number) => {
+      if (!noteData?.tags) return;
+      const tags = [...noteData.tags];
+      tags.splice(tagIndex, 1);
+      const newData = { ...noteData, tags };
+      setNoteData(newData);
+      saveNote(newData);
+    },
+    [noteData, setNoteData, saveNote]
   );
 
   return {
-    exerciseMenuRef,
-    rowMenuRef,
     handleInputChange,
-    handleNoteChange,
     handleExerciseChange,
+    handleExerciseNoteChange,
     handleDateChange,
     handleAddSet,
     handleAddExercise,
+    handleDuplicateRow,       // ★ 行(セット)複製
+    handleDuplicateExercise,  // ★ Exercise複製
     handleDeleteRow,
     handleDeleteExercise,
+    handleAddTag,
+    handleRemoveTag,
   };
 };
 

@@ -13,7 +13,7 @@ import {
   InputLeftElement,
 } from "@chakra-ui/react";
 import { FaUser, FaEnvelope } from "react-icons/fa";
-import { useRouter } from "next/router"; // useRouterのインポート
+import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,7 +40,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
     resolver: zodResolver(contactSchema),
   });
   const toast = useToast();
-  const router = useRouter(); // useRouterを追加して使用
+  const router = useRouter();
 
   const onSubmit = (data: ContactFormInputs) => {
     toast({
@@ -70,7 +70,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
       <IconButton
         aria-label="Close"
         icon={<CloseButton />}
-        onClick={handleClose} // onCloseをhandleCloseに変更
+        onClick={handleClose}
         position="absolute"
         top={2}
         right={2}
@@ -81,12 +81,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
         <FormControl id="name" mb={8} isInvalid={!!errors.name}>
           <FormLabel fontSize="lg">Name</FormLabel>
           <InputGroup>
-            <InputLeftElement
-              pointerEvents="none"
-              display="flex"
-              alignItems="center"
-              height="100%"
-            >
+            <InputLeftElement pointerEvents="none" display="flex" alignItems="center" height="100%">
               <FaUser color="gray.300" />
             </InputLeftElement>
             <Input
@@ -107,12 +102,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
         <FormControl id="email" mb={8} isInvalid={!!errors.email}>
           <FormLabel fontSize="lg">Email</FormLabel>
           <InputGroup>
-            <InputLeftElement
-              pointerEvents="none"
-              display="flex"
-              alignItems="center"
-              height="100%"
-            >
+            <InputLeftElement pointerEvents="none" display="flex" alignItems="center" height="100%">
               <FaEnvelope color="gray.300" />
             </InputLeftElement>
             <Input
@@ -150,10 +140,12 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
           <Button
             type="submit"
             colorScheme="blue"
-            width="calc(25% - 20px)" // ボタン幅を調整
-            borderRadius="full" // ボタンの角を丸く
-            height="50px" // ボタンの高さを指定
+            width="calc(25% - 20px)"
+            borderRadius="full"
+            height="50px"
             fontSize="lg"
+            transition="all 0.2s"
+            _hover={{ transform: "scale(1.02)" }} // ★ ここでトランジション
           >
             Submit
           </Button>
