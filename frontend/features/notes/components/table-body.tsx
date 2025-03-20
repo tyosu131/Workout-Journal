@@ -47,9 +47,6 @@ const TableBody: React.FC<TableBodyProps> = ({
     return (
       <tbody>
         {exercises.map((exercise, exerciseIndex) => (
-          // 1つのExerciseを2行で構成:
-          //   行1: Exercise + 5セット分(Weight,Reps,Rest)
-          //   行2: +Add setボタン（列を結合して置く）
           <React.Fragment key={exerciseIndex}>
             <Tr>
               {/* Exerciseセル */}
@@ -57,16 +54,13 @@ const TableBody: React.FC<TableBodyProps> = ({
                 <Input
                   value={exercise.exercise}
                   onChange={(e) => onExerciseChange(e, exerciseIndex)}
-                  // 要望: 枠手前まで => width="100%"
                   width="100%"
                 />
               </Td>
 
-              {/* 5セット分を表示 (なければ空セル) */}
               {[...Array(5)].map((_, setIndex) => {
                 const currentSet = exercise.sets[setIndex];
                 if (!currentSet) {
-                  // まだ存在しないセット => 空セル3つ
                   return (
                     <React.Fragment key={setIndex}>
                       <Td border="1px solid #000" />
@@ -109,7 +103,6 @@ const TableBody: React.FC<TableBodyProps> = ({
               })}
             </Tr>
 
-            {/* +Add set ボタンを置く行 (PCでもセット追加したい場合) */}
             <Tr>
               <Td
                 border="1px solid #000"

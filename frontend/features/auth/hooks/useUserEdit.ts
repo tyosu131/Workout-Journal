@@ -14,7 +14,7 @@ export const useUserEdit = () => {
   const [userData, setUserData] = useState({
     username: "",
     email: "",
-    password: "******", // 初期状態ではマスク
+    password: "******",
   });
 
   const toast = useToast();
@@ -65,7 +65,6 @@ export const useUserEdit = () => {
 
       const result = response.data;
 
-      // 例: サーバー側が「パスワード変更後は再ログインして」と指示するケース
       if (result.message === "Password updated successfully. Please log in again.") {
         toast({
           title: "Password Updated",
@@ -86,16 +85,14 @@ export const useUserEdit = () => {
     } catch (error) {
       let errorMsg = "An unexpected error occurred.";
 
-      // "axios.isAxiosError" を使ってサーバーの返す error メッセージを最優先で表示
       if (axios.isAxiosError(error)) {
         const serverError = error.response?.data?.error;
         if (serverError) {
-          errorMsg = serverError; // 例: "Invalid email format"
+          errorMsg = serverError;
         } else if (error.message) {
           errorMsg = error.message;
         }
       } else if (error instanceof Error) {
-        // AxiosError でなく普通の Error の場合
         errorMsg = error.message;
       }
 

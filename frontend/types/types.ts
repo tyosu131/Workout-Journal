@@ -8,7 +8,7 @@ export interface Set {
 
 export interface Exercise {
   exercise: string;
-  note?: string; // ★ 追加: Exerciseごとにメモを持たせる
+  note?: string;
   sets: Set[];
 }
 

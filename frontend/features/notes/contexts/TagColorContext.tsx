@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+// portfolio real\frontend\features\notes\contexts\TagColorContext.tsx
 
-/**
- * Chakra UI の Tag に指定できる colorScheme の候補
- */
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+
 const TAG_COLOR_SCHEMES = [
   "blue",
   "green",
@@ -27,20 +26,58 @@ type TagColorContextType = {
 const TagColorContext = createContext<TagColorContextType | undefined>(undefined);
 
 export const TagColorProvider = ({ children }: { children: ReactNode }) => {
-  // グローバルなタグ名 → colorScheme のマップ
   const [tagColorMap, setTagColorMap] = useState<{ [tag: string]: string }>({});
+  const [usedColors, setUsedColors] = useState<Set<string>>(new Set());
 
-  /**
-   * 同じタグなら同じ色を返す。未登録ならランダムに割り当ててマップに保存する。
-   */
-  const getTagColor = (tag: string): string => {
-    if (!tagColorMap[tag]) {
-      const randomIndex = Math.floor(Math.random() * TAG_COLOR_SCHEMES.length);
-      const color = TAG_COLOR_SCHEMES[randomIndex];
-      setTagColorMap((prev) => ({ ...prev, [tag]: color }));
-      return color;
+  useEffect(() => {
+    try {
+      const savedMap = localStorage.getItem("tagColorMap");
+      if (savedMap) {
+        const parsed = JSON.parse(savedMap) as { [tag: string]: string };
+        setTagColorMap(parsed);
+        setUsedColors(new Set(Object.values(parsed)));
+      }
+    } catch (err) {
+      console.error("Failed to parse tagColorMap from localStorage:", err);
     }
-    return tagColorMap[tag];
+  }, []);
+
+  const getTagColor = (tag: string): string => {
+    // すでに割り当てがある場合はそれを返す
+    if (tagColorMap[tag]) {
+      return tagColorMap[tag];
+    }
+
+    // まだ使われていない色を探す
+    let chosenColor = "";
+    setUsedColors((prevUsedColors) => {
+      const updatedUsed = new Set(prevUsedColors);
+
+      // 未使用色を順番に探す
+      for (const color of TAG_COLOR_SCHEMES) {
+        if (!updatedUsed.has(color)) {
+          chosenColor = color;
+          updatedUsed.add(color);
+          return updatedUsed;
+        }
+      }
+
+      // すべて使われていた場合はランダムに再利用
+      const randomColor =
+        TAG_COLOR_SCHEMES[Math.floor(Math.random() * TAG_COLOR_SCHEMES.length)];
+      chosenColor = randomColor;
+      updatedUsed.add(randomColor);
+      return updatedUsed;
+    });
+
+    // chosenColorがセットされた後、マップを更新してlocalStorageに反映
+    setTagColorMap((prevMap) => {
+      const updatedMap = { ...prevMap, [tag]: chosenColor };
+      localStorage.setItem("tagColorMap", JSON.stringify(updatedMap));
+      return updatedMap;
+    });
+
+    return chosenColor;
   };
 
   return (

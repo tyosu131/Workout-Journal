@@ -1,10 +1,10 @@
 // portfolio real\frontend\features\notes\hooks\useNoteHandlers.ts
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { NoteData, Set, Exercise } from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
-import { saveNoteAPI } from "../api";
+import { saveNoteAPI, createTagAPI, fetchAllTagsAPI } from "../api";
 
 /**
  * ノート関連の操作をまとめたフック
@@ -18,7 +18,9 @@ const useNoteHandlers = (
 
   useEffect(() => {
     const savedToken = getToken();
-    if (savedToken) setTokenState(savedToken);
+    if (savedToken) {
+      setTokenState(savedToken);
+    }
   }, []);
 
   // ノート保存
@@ -30,7 +32,7 @@ const useNoteHandlers = (
     }
   }, []);
 
-  // Set 入力変更
+  // --- Exercises/Set 操作 ---
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<HTMLInputElement>,
@@ -48,7 +50,6 @@ const useNoteHandlers = (
     [noteData, saveNote, setNoteData]
   );
 
-  // Exercise名変更
   const handleExerciseChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
       if (!noteData) return;
@@ -61,7 +62,6 @@ const useNoteHandlers = (
     [noteData, saveNote, setNoteData]
   );
 
-  // Exerciseメモ変更
   const handleExerciseNoteChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
       if (!noteData) return;
@@ -74,7 +74,6 @@ const useNoteHandlers = (
     [noteData, saveNote, setNoteData]
   );
 
-  // 日付変更
   const handleDateChange = useCallback(
     (newDate: string) => {
       router.push(`/note/${newDate}`);
@@ -82,7 +81,6 @@ const useNoteHandlers = (
     [router]
   );
 
-  // +Add set
   const handleAddSet = useCallback(
     (exerciseIndex: number) => {
       if (!noteData) return;
@@ -98,7 +96,6 @@ const useNoteHandlers = (
     [noteData, setNoteData, saveNote]
   );
 
-  // +Add exercise
   const handleAddExercise = useCallback(() => {
     if (!noteData) return;
     const newNote = { ...noteData };
@@ -111,13 +108,11 @@ const useNoteHandlers = (
     saveNote(newNote);
   }, [noteData, setNoteData, saveNote]);
 
-  // ★ 行(セット)の複製
   const handleDuplicateRow = useCallback(
     (exIndex: number, setIndex: number) => {
       if (!noteData) return;
       const newNote = { ...noteData };
       const originalSet = { ...newNote.exercises[exIndex].sets[setIndex] };
-      // 複製を次の行に挿入
       newNote.exercises[exIndex].sets.splice(setIndex + 1, 0, originalSet);
       setNoteData(newNote);
       saveNote(newNote);
@@ -125,19 +120,16 @@ const useNoteHandlers = (
     [noteData, setNoteData, saveNote]
   );
 
-  // ★ Exercise全体の複製
   const handleDuplicateExercise = useCallback(
     (exIndex: number) => {
       if (!noteData) return;
       const newNote = { ...noteData };
       const originalEx = { ...newNote.exercises[exIndex] } as Exercise;
-      // 深いコピーが必要なら sets もコピー
       const copiedEx: Exercise = {
         exercise: originalEx.exercise,
         note: originalEx.note || "",
         sets: originalEx.sets.map((s) => ({ ...s })),
       };
-      // 挿入
       newNote.exercises.splice(exIndex + 1, 0, copiedEx);
       setNoteData(newNote);
       saveNote(newNote);
@@ -145,7 +137,6 @@ const useNoteHandlers = (
     [noteData, setNoteData, saveNote]
   );
 
-  // 行(セット)の削除
   const handleDeleteRow = useCallback(
     (exIndex: number, setIndex: number) => {
       if (!noteData) return;
@@ -157,7 +148,6 @@ const useNoteHandlers = (
     [noteData, setNoteData, saveNote]
   );
 
-  // Exercise削除
   const handleDeleteExercise = useCallback(
     (exIndex: number) => {
       if (!noteData) return;
@@ -169,32 +159,65 @@ const useNoteHandlers = (
     [noteData, setNoteData, saveNote]
   );
 
-  // タグ追加
+  // --- タグ操作 ---
   const handleAddTag = useCallback(
     (newTag: string) => {
       if (!noteData) return;
-      const tags = noteData.tags ? [...noteData.tags] : [];
-      if (!tags.includes(newTag)) {
-        tags.push(newTag);
+      const currentTags = noteData.tags ? [...noteData.tags] : [];
+      if (!currentTags.includes(newTag)) {
+        currentTags.push(newTag);
       }
-      const newData = { ...noteData, tags };
+      const newData = { ...noteData, tags: currentTags };
       setNoteData(newData);
       saveNote(newData);
     },
     [noteData, setNoteData, saveNote]
   );
 
-  // タグ削除
+  // タグ削除（ローカル更新）
   const handleRemoveTag = useCallback(
     (tagIndex: number) => {
       if (!noteData?.tags) return;
-      const tags = [...noteData.tags];
-      tags.splice(tagIndex, 1);
-      const newData = { ...noteData, tags };
+      const currentTags = [...noteData.tags];
+      currentTags.splice(tagIndex, 1);
+      const newData = { ...noteData, tags: currentTags };
       setNoteData(newData);
       saveNote(newData);
     },
     [noteData, setNoteData, saveNote]
+  );
+
+  // タグ追加（DB保存も含む）
+  const handleAddTagAndSave = useCallback(
+    async (tag: string) => {
+      if (!noteData) return;
+      try {
+        await createTagAPI(tag); // user_tags への保存
+      } catch (err: any) {
+        if (err?.response?.status !== 409) {
+          console.error("Failed to create tag in user_tags:", err);
+        }
+      }
+      handleAddTag(tag);
+      const updated = { ...noteData, tags: noteData.tags ? [...noteData.tags, tag] : [tag] };
+      setNoteData(updated);
+      await saveNoteAPI(updated).catch(console.error);
+    },
+    [noteData, handleAddTag]
+  );
+
+  // タグ削除（DB保存も含む）
+  const handleRemoveTagAndSave = useCallback(
+    async (tagIndex: number) => {
+      if (!noteData || !noteData.tags) return;
+      // ここでは user_tags からの削除処理はルート側で行っているため、ローカル更新のみ
+      handleRemoveTag(tagIndex);
+      const updatedTags = noteData.tags.filter((_, i) => i !== tagIndex);
+      const updated = { ...noteData, tags: updatedTags };
+      setNoteData(updated);
+      await saveNoteAPI(updated).catch(console.error);
+    },
+    [noteData, handleRemoveTag]
   );
 
   return {
@@ -204,12 +227,14 @@ const useNoteHandlers = (
     handleDateChange,
     handleAddSet,
     handleAddExercise,
-    handleDuplicateRow,       // ★ 行(セット)複製
-    handleDuplicateExercise,  // ★ Exercise複製
+    handleDuplicateRow,
+    handleDuplicateExercise,
     handleDeleteRow,
     handleDeleteExercise,
     handleAddTag,
     handleRemoveTag,
+    handleAddTagAndSave,
+    handleRemoveTagAndSave,
   };
 };
 

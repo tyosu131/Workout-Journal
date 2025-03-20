@@ -54,7 +54,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
 
   const handleClose = () => {
     onClose();
-    router.push("/top"); // Topページに遷移
+    router.push("/top");
   };
 
   return (
@@ -145,7 +145,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
             height="50px"
             fontSize="lg"
             transition="all 0.2s"
-            _hover={{ transform: "scale(1.02)" }} // ★ ここでトランジション
+            _hover={{ transform: "scale(1.02)" }}
           >
             Submit
           </Button>

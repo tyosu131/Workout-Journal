@@ -7,4 +7,5 @@ export const API_ENDPOINTS = {
   NOTES: (date: string) => `/api/notes/${date}`,
   NOTES_ALL_TAGS: '/api/notes/all-tags',
   NOTES_BY_TAGS: '/api/notes/by-tags',
+  NOTES_TAG: '/api/notes/tag',
 };

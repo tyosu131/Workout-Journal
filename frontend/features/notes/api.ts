@@ -23,16 +23,13 @@ export async function fetchNotesAPI(date: string): Promise<NoteData[]> {
 
 /**
  * ノートを保存（作成/更新）API
- * DB の tags カラムを text[] にした場合、
- * tags は配列としてそのまま送る。
+ * DB の tags カラムを text[] にした場合、tags は配列のまま送る
  */
 export async function saveNoteAPI(noteData: NoteData): Promise<void> {
-  // exercises は JSON 文字列で送るなら従来どおり
-  // tags は配列のまま
   const saveData = {
     ...noteData,
     exercises: JSON.stringify(noteData.exercises),
-    tags: noteData.tags || [], // ★ ここで配列をそのまま送る
+    tags: noteData.tags || []
   };
 
   await apiRequestWithAuth(API_ENDPOINTS.NOTES(noteData.date), "post", saveData);
@@ -66,9 +63,25 @@ export async function fetchNotesByTagsAPI(tags: string[]): Promise<NoteData[]> {
   return notes;
 }
 
+/**
+ * タグを新規作成（DBに保存）API
+ * POST /api/notes/tag
+ */
+export async function createTagAPI(tag: string): Promise<void> {
+  await apiRequestWithAuth(API_ENDPOINTS.NOTES_TAG, "post", { tag });
+}
+
+/**
+ * タグを削除（DBから削除）API
+ * DELETE /api/notes/tag/:tagName
+ */
+export async function deleteTagAPI(tag: string): Promise<void> {
+  const encodedTag = encodeURIComponent(tag);
+  await apiRequestWithAuth(`${API_ENDPOINTS.NOTES_TAG}/${encodedTag}`, "delete");
+}
+
 /** exercises / tags が文字列の場合にパースする共通関数 */
 function parseNoteFields(note: NoteData) {
-  // exercises は JSON文字列ならパース
   if (typeof note.exercises === "string") {
     try {
       note.exercises = JSON.parse(note.exercises);
@@ -80,9 +93,6 @@ function parseNoteFields(note: NoteData) {
   if (!Array.isArray(note.exercises)) {
     note.exercises = [];
   }
-
-  // tags は text[] → row.tags が配列 or null
-  // 文字列パースは不要
   if (!note.tags) {
     note.tags = [];
   }

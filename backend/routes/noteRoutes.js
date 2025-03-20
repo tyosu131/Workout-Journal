@@ -7,8 +7,12 @@ const {
   saveNote,
   getAllTags,
   getNotesByTags,
+  createTag,
+  deleteTag,
 } = require("../services/noteService");
 
+router.post("/tag", createTag);
+router.delete("/tag/:tagName", deleteTag);
 
 router.get("/all-tags", getAllTags);
 router.get("/by-tags", getNotesByTags);

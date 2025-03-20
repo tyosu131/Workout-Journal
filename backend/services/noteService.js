@@ -1,5 +1,4 @@
 // portfolio real\backend\services\noteService.js
-
 const supabase = require("../utils/supabaseClient");
 const { verifyToken } = require("../utils/authUtils");
 
@@ -10,27 +9,20 @@ const { verifyToken } = require("../utils/authUtils");
 async function getNotes(req, res) {
   const { date } = req.params;
   const token = req.headers.authorization?.split(" ")[1];
-
   if (!token) {
     return res.status(401).json({ error: "Authorization token missing" });
   }
-
   try {
     const user = await verifyToken(token);
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
-    // date & userid で検索
     const { data, error } = await supabase
       .from("notes")
       .select("*")
       .eq("date", date)
       .eq("userid", user.id);
-
     if (error) throw error;
-
-    // 取得した notes を返す
     res.status(200).json({ notes: data });
   } catch (error) {
     console.error("Failed to fetch notes:", error.message);
@@ -40,27 +32,20 @@ async function getNotes(req, res) {
 
 /**
  * POST /api/notes/:date
- * ノートをアップサート (作成/更新)
- * → DB の `tags` カラムが `text[]` の場合、フロントから `tags` は配列で送信される想定
+ * ノートをアップサート（作成/更新）
  */
 async function saveNote(req, res) {
   const { date } = req.params;
   const token = req.headers.authorization?.split(" ")[1];
-
   if (!token) {
     return res.status(401).json({ error: "Authorization token missing" });
   }
-
   try {
     const user = await verifyToken(token);
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
-    // フロントから受け取るリクエストボディ
     const { note, exercises, tags } = req.body;
-    // ここで tags は string[] (配列) を想定
-
     const { error } = await supabase
       .from("notes")
       .upsert(
@@ -68,16 +53,14 @@ async function saveNote(req, res) {
           {
             date,
             note,
-            exercises, // exercises も配列として保存したい場合はフロントエンドでそのまま送信
-            tags,      // text[] カラムにそのまま保存
+            exercises,
+            tags,
             userid: user.id,
           },
         ],
         { onConflict: ["date", "userid"] }
       );
-
     if (error) throw error;
-
     res.status(200).json({ message: "Note saved successfully!" });
   } catch (error) {
     console.error("Failed to save note:", error.message);
@@ -87,56 +70,26 @@ async function saveNote(req, res) {
 
 /**
  * GET /api/notes/all-tags
- * ユーザーが持っているすべてのタグを返す
- * DB の `tags` カラムが `text[]` だが、要素が JSON文字列の場合にも対応
+ * ユーザーが持つすべてのタグを返す
  */
 async function getAllTags(req, res) {
   const token = req.headers.authorization?.split(" ")[1];
-
   if (!token) {
     return res.status(401).json({ error: "Authorization token missing" });
   }
-
   try {
     const user = await verifyToken(token);
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
+    // user_tagsテーブルから取得
     const { data, error } = await supabase
-      .from("notes")
-      .select("tags")
-      .eq("userid", user.id);
-
+      .from("user_tags")
+      .select("tag")
+      .eq("user_id", user.id);
     if (error) throw error;
-
-    const allTagsSet = new Set();
-
-    data.forEach((row) => {
-      console.log("row.tags raw =>", row.tags); 
-      if (row.tags) {
-        row.tags.forEach((tagItem) => {
-          if (typeof tagItem === "string") {
-            try {
-              const parsed = JSON.parse(tagItem);
-              if (Array.isArray(parsed)) {
-                parsed.forEach((p) => allTagsSet.add(p));
-              } else {
-                allTagsSet.add(tagItem);
-              }
-            } catch (err) {
-              allTagsSet.add(tagItem);
-            }
-          } else {
-            // 文字列でなければそのまま追加
-            allTagsSet.add(tagItem);
-          }
-        });
-      }
-    });
-
-    // 重複を除いたタグ一覧
-    const allTags = Array.from(allTagsSet);
+    // user_tags テーブルの "tag" カラムを配列化
+    const allTags = data.map((row) => row.tag);
     res.status(200).json({ tags: allTags });
   } catch (error) {
     console.error("Failed to fetch all tags:", error.message);
@@ -144,40 +97,121 @@ async function getAllTags(req, res) {
   }
 }
 
-
+/**
+ * GET /api/notes/by-tags?tags=tag1,tag2
+ * 指定したタグを含むノート一覧を取得
+ */
 async function getNotesByTags(req, res) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
     return res.status(401).json({ error: "Authorization token missing" });
   }
-
   try {
     const user = await verifyToken(token);
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
     const { tags } = req.query;
     if (!tags) {
       return res.status(200).json({ notes: [] });
     }
-
-    // カンマ区切りを配列に
     const tagArray = tags.split(",").map((t) => t.trim());
-
-    // text[] カラムなら overlaps でフィルタできる
     const { data, error } = await supabase
       .from("notes")
       .select("*")
       .eq("userid", user.id)
       .overlaps("tags", tagArray);
-
     if (error) throw error;
-
     res.status(200).json({ notes: data });
   } catch (error) {
     console.error("Failed to fetch notes by tags:", error.message);
     res.status(500).json({ error: "Failed to fetch notes by tags", details: error.message });
+  }
+}
+
+/**
+ * POST /api/notes/tag
+ * タグを新規作成（DBに保存）
+ */
+async function createTag(req, res) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+  try {
+    const user = await verifyToken(token);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    const { tag } = req.body;
+    if (!tag) {
+      return res.status(400).json({ error: "Tag is required" });
+    }
+    const { error } = await supabase
+      .from("user_tags")
+      .insert({ user_id: user.id, tag });
+    if (error) {
+      if (error.code === "23505") {
+        return res.status(409).json({ error: "Tag already exists" });
+      }
+      throw error;
+    }
+    res.status(201).json({ message: "Tag created" });
+  } catch (err) {
+    console.error("Failed to create tag:", err.message);
+    res.status(500).json({ error: "Failed to create tag", details: err.message });
+  }
+}
+
+/**
+ * DELETE /api/notes/tag/:tagName
+ * タグを削除（user_tagsテーブルから削除）し、notesテーブルのtags配列からも除去する
+ */
+async function deleteTag(req, res) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+  try {
+    const user = await verifyToken(token);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    const { tagName } = req.params;
+    if (!tagName) {
+      return res.status(400).json({ error: "Tag name is required" });
+    }
+    const decodedTag = decodeURIComponent(tagName);
+
+    const { error } = await supabase
+      .from("user_tags")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("tag", decodedTag);
+    if (error) throw error;
+
+    const { data: notesData, error: selectError } = await supabase
+      .from("notes")
+      .select("date, tags")
+      .eq("userid", user.id)
+      .contains("tags", [decodedTag]);
+    if (selectError) throw selectError;
+    if (notesData && notesData.length > 0) {
+      for (const noteRow of notesData) {
+        const updatedTags = (noteRow.tags || []).filter((t) => t !== decodedTag);
+        const { error: updateError } = await supabase
+          .from("notes")
+          .update({ tags: updatedTags })
+          .eq("date", noteRow.date)
+          .eq("userid", user.id);
+        if (updateError) throw updateError;
+      }
+    }
+
+    res.status(200).json({ message: "Tag deleted" });
+  } catch (err) {
+    console.error("Failed to delete tag:", err.message);
+    res.status(500).json({ error: "Failed to delete tag", details: err.message });
   }
 }
 
@@ -186,4 +220,6 @@ module.exports = {
   saveNote,
   getAllTags,
   getNotesByTags,
+  createTag,
+  deleteTag,
 };

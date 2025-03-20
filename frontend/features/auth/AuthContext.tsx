@@ -28,7 +28,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ================================
   const logout = async () => {
     try {
-      // もしサーバー側に /api/auth/logout があるなら呼び出す（存在しないならコメントアウト）
       // await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`);
     } catch (error: any) {
       console.error("Logout request failed (non-critical):", error?.message);
@@ -56,11 +55,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // fetchSession(token) で /api/auth/session を呼ぶ
       const sessionRes = await fetchSession(token);
-      // sessionRes.user があればログイン中
       if (sessionRes.user) {
         setUser(sessionRes.user);
       }
-      // もしサーバーがアクセストークンを更新して返すなら setToken(sessionRes.access_token)
 
     } catch (error: any) {
       if (error.response) {
@@ -113,7 +110,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    // トークンがあり、まだ user が無いならセッションを取得
     if (!user) {
       getSession();
     } else {
@@ -136,7 +132,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await getSession();
     } catch (error: any) {
       console.error("Login failed:", error);
-      // ここで toast など出すなら追加
     }
   };
 

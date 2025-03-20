@@ -1,10 +1,10 @@
+// portfolio real\frontend\pages\_app.tsx
+
 import React from "react";
 import type { AppProps } from "next/app";
 import { ChakraProvider, extendTheme } from "@chakra-ui/react";
 import { AuthProvider } from "../../frontend/features/auth/AuthContext";
 import Head from "next/head";
-
-// features/notes/contexts からインポート
 import { TagColorProvider } from "../../frontend/features/notes/contexts/TagColorContext";
 
 const theme = extendTheme({
