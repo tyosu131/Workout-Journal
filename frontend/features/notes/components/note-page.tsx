@@ -1,5 +1,3 @@
-// portfolio real\frontend\features\notes\pages\note-page.tsx
-
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
@@ -37,12 +35,11 @@ import DateInput from "./date-input";
 import { NoteData } from "../../../types/types";
 import {
   fetchNotesAPI,
-  saveNoteAPI,
   fetchAllTagsAPI,
   fetchNotesByTagsAPI,
-  createTagAPI,
 } from "../api";
 import useNoteHandlers from "../hooks/useNoteHandlers";
+import useTagHandlers from "../hooks/useTagHandlers";
 import { useTagColor } from "../contexts/TagColorContext";
 
 const NotePage: React.FC = () => {
@@ -59,7 +56,6 @@ const NotePage: React.FC = () => {
   const previousPopupRef = useRef<HTMLDivElement | null>(null);
   const [previousNote, setPreviousNote] = useState<NoteData | null>(null);
 
-  // タグの色を取得するフック
   const { getTagColor } = useTagColor();
 
   const [token, setToken] = useState<string | null>(null);
@@ -72,21 +68,18 @@ const NotePage: React.FC = () => {
     setToken(storedToken);
   }, [router]);
 
-  // 指定日付のノートを SWR で取得
   const { data } = useSWR<NoteData[]>(
     date ? String(date) : null,
     (d: string) => fetchNotesAPI(d),
     { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
-  // 全タグを取得
   useEffect(() => {
     fetchAllTagsAPI()
       .then((tags) => setAllTags(tags))
       .catch((err) => console.error("Failed to fetch all tags:", err));
   }, []);
 
-  // ノートデータを初期化
   useEffect(() => {
     if (!date) return;
     if (data && data.length > 0) {
@@ -116,7 +109,6 @@ const NotePage: React.FC = () => {
     }
   }, [noteData, router]);
 
-  // Previous ポップアップの外側クリックで閉じる
   useEffect(() => {
     if (!showPrevious) return;
     function handleClickOutside(e: MouseEvent) {
@@ -133,7 +125,6 @@ const NotePage: React.FC = () => {
     };
   }, [showPrevious]);
 
-  // useNoteHandlers からハンドラ取得
   const {
     handleInputChange,
     handleExerciseChange,
@@ -145,11 +136,10 @@ const NotePage: React.FC = () => {
     handleDuplicateExercise,
     handleDeleteRow,
     handleDeleteExercise,
-    handleAddTagAndSave,
-    handleRemoveTagAndSave,
   } = useNoteHandlers(noteData, setNoteData);
 
-  // タグ入力欄: Enterキー押下時
+  const { handleAddTagAndSave, handleRemoveTagAndSave } = useTagHandlers(noteData, setNoteData);
+
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTag.trim()) {
       handleAddTagAndSave(newTag.trim());
@@ -158,22 +148,20 @@ const NotePage: React.FC = () => {
     }
   };
 
-  // タグ入力欄: フォーカス時 → ポップオーバー表示 & 全タグ再取得
-  const handleTagInputFocus = () => {
+  // onClickでポップオーバー表示することで、再フォーカスで閉じる現象を防止
+  const handleTagInputClick = () => {
     setIsTagPopoverOpen(true);
     fetchAllTagsAPI()
       .then((tags) => setAllTags(tags))
       .catch(console.error);
   };
 
-  // タグ候補クリック
   const handleTagOptionClick = (tag: string) => {
     handleAddTagAndSave(tag);
     setNewTag("");
     setIsTagPopoverOpen(false);
   };
 
-  // Previous ボタン → 過去ノートポップアップ
   const handleShowPreviousNotes = async () => {
     if (!noteData?.tags || noteData.tags.length === 0) {
       setPreviousNote(null);
@@ -196,7 +184,6 @@ const NotePage: React.FC = () => {
     setShowPrevious(true);
   };
 
-  // Exercise の折りたたみ切り替え
   const toggleFold = (exIndex: number) => {
     setFolded((prev) => {
       const newState = [...prev];
@@ -205,7 +192,6 @@ const NotePage: React.FC = () => {
     });
   };
 
-  // ローディング表示
   if (!noteData) {
     return (
       <Center height="100vh">
@@ -218,42 +204,28 @@ const NotePage: React.FC = () => {
   return (
     <Box p={4}>
       <Header />
-
       <Text fontSize="2xl" mb={4} textAlign="center">
         Note
       </Text>
-
-      {/* 日付入力 */}
       <Box width={containerWidth} margin="0 auto" mb={4}>
         <DateInput date={noteData.date} onDateChange={handleDateChange} />
       </Box>
-
-      {/* タグ一覧 & 入力欄 */}
       <Box width={containerWidth} margin="0 auto" mb={6}>
         <Text fontWeight="bold" mb={2}>
           Tags:
         </Text>
-
         <Box display="flex" gap={4} alignItems="center" flexWrap="wrap" mb={2}>
-          {/* 既存タグ表示 */}
           <Box display="flex" gap={2} flexWrap="wrap">
             {noteData.tags?.map((tag: string, idx: number) => {
               const colorScheme = getTagColor(tag);
               return (
-                <Tag
-                  key={idx}
-                  size="md"
-                  colorScheme={colorScheme}
-                  borderRadius="full"
-                >
+                <Tag key={idx} size="md" colorScheme={colorScheme} borderRadius="full">
                   <TagLabel>{tag}</TagLabel>
                   <TagCloseButton onClick={() => handleRemoveTagAndSave(idx)} />
                 </Tag>
               );
             })}
           </Box>
-
-          {/* タグ入力欄 → ポップオーバー */}
           <Popover
             isOpen={isTagPopoverOpen}
             onClose={() => setIsTagPopoverOpen(false)}
@@ -267,10 +239,9 @@ const NotePage: React.FC = () => {
                 onChange={(e) => setNewTag(e.target.value)}
                 width="30%"
                 onKeyDown={handleTagInputKeyDown}
-                onFocus={handleTagInputFocus}
+                onClick={handleTagInputClick}
               />
             </PopoverTrigger>
-
             <PopoverContent w="320px">
               <PopoverArrow />
               <PopoverCloseButton />
@@ -278,7 +249,6 @@ const NotePage: React.FC = () => {
                 <Text fontSize="sm" color="gray.500" mb={2}>
                   Select an option or create one
                 </Text>
-                {/* タグ候補を色付きで表示 */}
                 {allTags.map((tagOption) => {
                   const colorScheme = getTagColor(tagOption);
                   return (
@@ -299,8 +269,6 @@ const NotePage: React.FC = () => {
               </PopoverBody>
             </PopoverContent>
           </Popover>
-
-          {/* Previous ボタン */}
           <Button
             variant="outline"
             onClick={handleShowPreviousNotes}
@@ -310,8 +278,6 @@ const NotePage: React.FC = () => {
             Previous
           </Button>
         </Box>
-
-        {/* 過去ノートポップアップ */}
         {showPrevious && (
           <Box
             ref={previousPopupRef}
@@ -331,17 +297,10 @@ const NotePage: React.FC = () => {
             {previousNote ? (
               <Box>
                 <Text fontWeight="bold" mb={2}>
-                  {previousNote.date} / Tags:{" "}
-                  {previousNote.tags?.join(", ")}
+                  {previousNote.date} / Tags: {previousNote.tags?.join(", ")}
                 </Text>
                 {previousNote.exercises.map((ex, i) => (
-                  <Box
-                    key={i}
-                    mb={4}
-                    p={2}
-                    border="1px solid #ccc"
-                    borderRadius="md"
-                  >
+                  <Box key={i} mb={4} p={2} border="1px solid #ccc" borderRadius="md">
                     <Text fontWeight="bold">Exercise: {ex.exercise}</Text>
                     <Text>Memo: {ex.note || "N/A"}</Text>
                     <Box
@@ -375,7 +334,6 @@ const NotePage: React.FC = () => {
             ) : (
               <Text>(No older note found)</Text>
             )}
-
             <Button
               size="sm"
               onClick={() => setShowPrevious(false)}
@@ -388,8 +346,6 @@ const NotePage: React.FC = () => {
           </Box>
         )}
       </Box>
-
-      {/* Exercises 一覧 */}
       <Box width={containerWidth} margin="0 auto">
         {noteData.exercises.map((exercise, eIndex) => (
           <Box
@@ -400,15 +356,9 @@ const NotePage: React.FC = () => {
             mb={4}
             position="relative"
           >
-            {/* 右上メニュー */}
             <Box position="absolute" top="4px" right="4px">
               <Menu isLazy={false}>
-                <MenuButton
-                  as={Button}
-                  variant="ghost"
-                  size="xs"
-                  _hover={{ bg: "gray.100" }}
-                >
+                <MenuButton as={Button} variant="ghost" size="xs" _hover={{ bg: "gray.100" }}>
                   ...
                 </MenuButton>
                 <MenuList>
@@ -421,25 +371,13 @@ const NotePage: React.FC = () => {
                 </MenuList>
               </Menu>
             </Box>
-
-            {/* Exercise タイトル行 */}
             <Box ml={1} mb={2} display="flex" alignItems="center">
               {folded[eIndex] ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  mr={2}
-                  onClick={() => toggleFold(eIndex)}
-                >
+                <Button variant="ghost" size="sm" mr={2} onClick={() => toggleFold(eIndex)}>
                   <ChevronRightIcon />
                 </Button>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  mr={2}
-                  onClick={() => toggleFold(eIndex)}
-                >
+                <Button variant="ghost" size="sm" mr={2} onClick={() => toggleFold(eIndex)}>
                   <ChevronDownIcon />
                 </Button>
               )}
@@ -452,8 +390,6 @@ const NotePage: React.FC = () => {
                 onChange={(ev) => handleExerciseChange(ev, eIndex)}
               />
             </Box>
-
-            {/* メモ欄 */}
             <Box ml={1} mb={4}>
               <Text mb={1}>Memo:</Text>
               <Input
@@ -463,8 +399,6 @@ const NotePage: React.FC = () => {
                 size="sm"
               />
             </Box>
-
-            {/* セットのテーブル */}
             {!folded[eIndex] && (
               <Box
                 as="table"
@@ -525,14 +459,10 @@ const NotePage: React.FC = () => {
                             ...
                           </MenuButton>
                           <MenuList>
-                            <MenuItem
-                              onClick={() => handleDuplicateRow(eIndex, sIndex)}
-                            >
+                            <MenuItem onClick={() => handleDuplicateRow(eIndex, sIndex)}>
                               Duplicate
                             </MenuItem>
-                            <MenuItem
-                              onClick={() => handleDeleteRow(eIndex, sIndex)}
-                            >
+                            <MenuItem onClick={() => handleDeleteRow(eIndex, sIndex)}>
                               Delete
                             </MenuItem>
                           </MenuList>
@@ -560,8 +490,6 @@ const NotePage: React.FC = () => {
             )}
           </Box>
         ))}
-
-        {/* +Add Exercise ボタン */}
         <Box textAlign="center">
           <Button
             leftIcon={<AddIcon />}
@@ -577,7 +505,6 @@ const NotePage: React.FC = () => {
   );
 };
 
-// スタイル
 const thStyle: React.CSSProperties = {
   border: "1px solid #000",
   padding: "8px",

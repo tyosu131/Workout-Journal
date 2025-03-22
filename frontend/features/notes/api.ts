@@ -21,15 +21,26 @@ export async function fetchNotesAPI(date: string): Promise<NoteData[]> {
   return notes;
 }
 
+export async function fetchNotesInRangeAPI(
+  start: string,
+  end: string
+): Promise<NoteData[]> {
+  // フロントからは `/api/notes/range?start=...&end=...` を呼ぶ
+  const url = `/api/notes/range?start=${start}&end=${end}`;
+  const response = await apiRequestWithAuth<{ notes: NoteData[] }>(url, "get");
+  const notes = response.notes || [];
+  notes.forEach((note) => parseNoteFields(note));
+  return notes;
+}
+
 /**
  * ノートを保存（作成/更新）API
- * DB の tags カラムを text[] にした場合、tags は配列のまま送る
  */
 export async function saveNoteAPI(noteData: NoteData): Promise<void> {
   const saveData = {
     ...noteData,
     exercises: JSON.stringify(noteData.exercises),
-    tags: noteData.tags || []
+    tags: noteData.tags || [],
   };
 
   await apiRequestWithAuth(API_ENDPOINTS.NOTES(noteData.date), "post", saveData);

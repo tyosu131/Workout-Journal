@@ -25,7 +25,7 @@ import {
 import { useRouter } from "next/router";
 import { URLS } from "../../../../shared/constants/urls";
 import { generateCalendarDates } from "../../../../shared/utils/calendarUtils";
-import { fetchNotesAPI } from "../../../features/notes/api";
+import { fetchNotesInRangeAPI } from "../../../features/notes/api";
 import { useTagColor } from "../../../features/notes/contexts/TagColorContext";
 
 const Top: React.FC = () => {
@@ -56,29 +56,42 @@ const Top: React.FC = () => {
   const month = currentDate.getMonth() + 1;
   const daysInMonth = new Date(year, month, 0).getDate();
 
-  // 月内の日付ごとにノートを取得し、tags & hasContent を記録
   useEffect(() => {
     async function fetchNotesForMonth() {
-      const newNotesByDate: { [date: string]: { tags: string[]; hasContent: boolean } } = {};
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${month.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
-        try {
-          const notes = await fetchNotesAPI(dateStr);
-          if (notes && notes.length > 0) {
-            newNotesByDate[dateStr] = {
-              tags: notes[0].tags || [],
-              hasContent: !!(notes[0].note && notes[0].note.trim().length > 0),
-            };
-          } else {
+      // 月初・月末
+      const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
+      const endDateStr = `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`;
+
+      try {
+        // 1回のAPI呼び出しで月内すべてのノートを取得
+        const notes = await fetchNotesInRangeAPI(startDateStr, endDateStr);
+
+        // 日付をキーとしたオブジェクトを作る
+        const newNotesByDate: {
+          [date: string]: { tags: string[]; hasContent: boolean };
+        } = {};
+
+        notes.forEach((note) => {
+          newNotesByDate[note.date] = {
+            tags: note.tags || [],
+            hasContent: !!(note.note && note.note.trim().length > 0),
+          };
+        });
+
+        // 月内の日付でノートが無い場合は空を入れておく
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          if (!newNotesByDate[dateStr]) {
             newNotesByDate[dateStr] = { tags: [], hasContent: false };
           }
-        } catch (error) {
-          console.error("Error fetching note for date", dateStr, error);
-          newNotesByDate[dateStr] = { tags: [], hasContent: false };
         }
+
+        setNotesByDate(newNotesByDate);
+      } catch (error) {
+        console.error("Error fetching notes for month:", error);
       }
-      setNotesByDate(newNotesByDate);
     }
+
     fetchNotesForMonth();
   }, [year, month, daysInMonth]);
 
@@ -92,7 +105,10 @@ const Top: React.FC = () => {
   const todayString = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   // 曜日表示用
-  const daysOfWeek = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
+  const daysOfWeek = useMemo(
+    () => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    []
+  );
 
   // 指定日付をクリックしたとき
   const handleDateClick = (dateStr: string) => {
@@ -101,13 +117,21 @@ const Top: React.FC = () => {
 
   // 前の月へ
   const handlePrevMonth = () => {
-    const prevMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    const prevMonthDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1
+    );
     setCurrentDate(prevMonthDate);
   };
 
   // 次の月へ
   const handleNextMonth = () => {
-    const nextMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    const nextMonthDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      1
+    );
     setCurrentDate(nextMonthDate);
   };
 

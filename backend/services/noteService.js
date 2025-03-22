@@ -1,4 +1,5 @@
 // portfolio real\backend\services\noteService.js
+
 const supabase = require("../utils/supabaseClient");
 const { verifyToken } = require("../utils/authUtils");
 
@@ -23,6 +24,7 @@ async function getNotes(req, res) {
       .eq("date", date)
       .eq("userid", user.id);
     if (error) throw error;
+
     res.status(200).json({ notes: data });
   } catch (error) {
     console.error("Failed to fetch notes:", error.message);
@@ -61,10 +63,43 @@ async function saveNote(req, res) {
         { onConflict: ["date", "userid"] }
       );
     if (error) throw error;
+
     res.status(200).json({ message: "Note saved successfully!" });
   } catch (error) {
     console.error("Failed to save note:", error.message);
     res.status(500).json({ error: "Failed to save note", details: error.message });
+  }
+}
+
+/**
+ * GET /api/notes/range?start=YYYY-MM-DD&end=YYYY-MM-DD
+ * 指定した日付範囲のノートをまとめて取得
+ */
+async function getNotesInRange(req, res) {
+  const { start, end } = req.query;
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token missing" });
+  }
+  try {
+    const user = await verifyToken(token);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*")
+      .gte("date", start)
+      .lte("date", end)
+      .eq("userid", user.id)
+      .order("date", { ascending: true });
+    if (error) throw error;
+
+    res.status(200).json({ notes: data });
+  } catch (error) {
+    console.error("Failed to fetch notes in range:", error.message);
+    res.status(500).json({ error: "Failed to fetch notes in range", details: error.message });
   }
 }
 
@@ -82,12 +117,12 @@ async function getAllTags(req, res) {
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-    // user_tagsテーブルから取得
     const { data, error } = await supabase
       .from("user_tags")
       .select("tag")
       .eq("user_id", user.id);
     if (error) throw error;
+
     // user_tags テーブルの "tag" カラムを配列化
     const allTags = data.map((row) => row.tag);
     res.status(200).json({ tags: allTags });
@@ -121,6 +156,7 @@ async function getNotesByTags(req, res) {
       .select("*")
       .eq("userid", user.id)
       .overlaps("tags", tagArray);
+
     if (error) throw error;
     res.status(200).json({ notes: data });
   } catch (error) {
@@ -147,15 +183,29 @@ async function createTag(req, res) {
     if (!tag) {
       return res.status(400).json({ error: "Tag is required" });
     }
-    const { error } = await supabase
+
+    // まず重複チェック
+    const { data: existing, error: selError } = await supabase
+      .from("user_tags")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("tag", tag);
+
+    if (selError) {
+      throw selError;
+    }
+
+    if (existing && existing.length > 0) {
+      return res.status(200).json({ message: "Tag already exists" });
+    }
+
+    const { error: insertError } = await supabase
       .from("user_tags")
       .insert({ user_id: user.id, tag });
-    if (error) {
-      if (error.code === "23505") {
-        return res.status(409).json({ error: "Tag already exists" });
-      }
-      throw error;
+    if (insertError) {
+      throw insertError;
     }
+
     res.status(201).json({ message: "Tag created" });
   } catch (err) {
     console.error("Failed to create tag:", err.message);
@@ -165,7 +215,7 @@ async function createTag(req, res) {
 
 /**
  * DELETE /api/notes/tag/:tagName
- * タグを削除（user_tagsテーブルから削除）し、notesテーブルのtags配列からも除去する
+ * タグを削除: user_tagsテーブルから削除 → RPCでnotes.tagsからも一括削除
  */
 async function deleteTag(req, res) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -183,30 +233,21 @@ async function deleteTag(req, res) {
     }
     const decodedTag = decodeURIComponent(tagName);
 
-    const { error } = await supabase
+    const { error: deleteError } = await supabase
       .from("user_tags")
       .delete()
       .eq("user_id", user.id)
       .eq("tag", decodedTag);
-    if (error) throw error;
+    if (deleteError) throw deleteError;
 
-    const { data: notesData, error: selectError } = await supabase
-      .from("notes")
-      .select("date, tags")
-      .eq("userid", user.id)
-      .contains("tags", [decodedTag]);
-    if (selectError) throw selectError;
-    if (notesData && notesData.length > 0) {
-      for (const noteRow of notesData) {
-        const updatedTags = (noteRow.tags || []).filter((t) => t !== decodedTag);
-        const { error: updateError } = await supabase
-          .from("notes")
-          .update({ tags: updatedTags })
-          .eq("date", noteRow.date)
-          .eq("userid", user.id);
-        if (updateError) throw updateError;
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "remove_tag_from_notes",
+      {
+        _user_id: user.id,
+        _tag: decodedTag,
       }
-    }
+    );
+    if (rpcError) throw rpcError;
 
     res.status(200).json({ message: "Tag deleted" });
   } catch (err) {
@@ -218,6 +259,7 @@ async function deleteTag(req, res) {
 module.exports = {
   getNotes,
   saveNote,
+  getNotesInRange,
   getAllTags,
   getNotesByTags,
   createTag,
