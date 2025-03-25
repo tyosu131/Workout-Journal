@@ -2,18 +2,18 @@
 import React, { useState } from "react";
 import { Box, Input, Button, useToast } from "@chakra-ui/react";
 import axios from "axios";
-import { useRouter } from "next/router"; // next/routerを使用
-import { setToken } from "../../../../shared/utils/tokenUtils"; // トークン保存の関数をインポート
+import { useRouter } from "next/router";
+import { setToken } from "../../../../shared/utils/tokenUtils";
 import { validateEmail } from "../../../../shared/utils/validationUtils";
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const toast = useToast();
-  const router = useRouter(); // useNavigateから変更
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); // フォームのデフォルト送信を防止
+    e.preventDefault();
 
     if (!validateEmail(email)) {
       toast({
@@ -28,7 +28,7 @@ const LoginForm: React.FC = () => {
 
     try {
       const response = await axios.post("http://localhost:3001/api/login", { email, password });
-      setToken(response.data.token); // トークンを保存
+      setToken(response.data.token);
       toast({
         title: "Login Successful",
         description: "You have successfully logged in.",
@@ -36,7 +36,7 @@ const LoginForm: React.FC = () => {
         duration: 5000,
         isClosable: true,
       });
-      router.push("/"); // navigateから変更
+      router.push("/");
     } catch (error: any) {
       toast({
         title: "Error",

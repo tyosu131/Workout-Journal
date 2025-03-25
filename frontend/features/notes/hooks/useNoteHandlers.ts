@@ -1,53 +1,29 @@
-// frontend/features/notes/hooks/useNoteHandlers.ts
-import { useCallback, useEffect, useRef, useState } from "react";
+// portfolio real\frontend\features\notes\hooks\useNoteHandlers.ts
+
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { NoteData, Set } from "../../../types/types";
+import { NoteData, Set, Exercise } from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
 import { saveNoteAPI } from "../api";
 
 /**
- * ノート関連の操作（入力変更、日付変更、自動保存、+Add set/Exercise、削除機能、メニュー外クリック検知）
+ * ノート操作（エクササイズ、セット操作）をまとめたフック
  */
 const useNoteHandlers = (
   noteData: NoteData | null,
-  setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>,
-  // 削除時にメニューを閉じるための関数（オプション）
-  setOpenRowMenu?: React.Dispatch<React.SetStateAction<{ exIndex: number; setIndex: number } | null>>,
-  setOpenExerciseMenu?: React.Dispatch<React.SetStateAction<number | null>>
+  setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>
 ) => {
   const router = useRouter();
   const [token, setTokenState] = useState<string | null>(null);
 
-  // メニュー外クリック検知用の ref を内部で生成
-  const exerciseMenuRef = useRef<HTMLDivElement | null>(null);
-  const rowMenuRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     const savedToken = getToken();
-    if (savedToken) setTokenState(savedToken);
+    if (savedToken) {
+      setTokenState(savedToken);
+    }
   }, []);
 
-  // --- handleDocClick を内部に統合 ---
-  useEffect(() => {
-    function handleDocClick(e: MouseEvent) {
-      if (setOpenExerciseMenu && exerciseMenuRef.current) {
-        if (!exerciseMenuRef.current.contains(e.target as Node)) {
-          setOpenExerciseMenu(null);
-        }
-      }
-      if (setOpenRowMenu && rowMenuRef.current) {
-        if (!rowMenuRef.current.contains(e.target as Node)) {
-          setOpenRowMenu(null);
-        }
-      }
-    }
-    document.addEventListener("mousedown", handleDocClick);
-    return () => {
-      document.removeEventListener("mousedown", handleDocClick);
-    };
-  }, [setOpenExerciseMenu, setOpenRowMenu]);
-
-  // 自動保存
+  // ノート保存
   const saveNote = useCallback(async (data: NoteData) => {
     try {
       await saveNoteAPI(data);
@@ -56,7 +32,7 @@ const useNoteHandlers = (
     }
   }, []);
 
-  // 各入力欄更新
+  // --- Exercises/Set 操作 ---
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<HTMLInputElement>,
@@ -68,16 +44,6 @@ const useNoteHandlers = (
       const newExercises = [...noteData.exercises];
       newExercises[exerciseIndex].sets[setIndex][field] = e.target.value;
       const newData = { ...noteData, exercises: newExercises };
-      setNoteData(newData);
-      saveNote(newData);
-    },
-    [noteData, saveNote, setNoteData]
-  );
-
-  const handleNoteChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!noteData) return;
-      const newData = { ...noteData, note: e.target.value };
       setNoteData(newData);
       saveNote(newData);
     },
@@ -96,7 +62,18 @@ const useNoteHandlers = (
     [noteData, saveNote, setNoteData]
   );
 
-  // 日付変更
+  const handleExerciseNoteChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
+      if (!noteData) return;
+      const newExercises = [...noteData.exercises];
+      newExercises[index].note = e.target.value;
+      const newData = { ...noteData, exercises: newExercises };
+      setNoteData(newData);
+      saveNote(newData);
+    },
+    [noteData, saveNote, setNoteData]
+  );
+
   const handleDateChange = useCallback(
     (newDate: string) => {
       router.push(`/note/${newDate}`);
@@ -104,7 +81,6 @@ const useNoteHandlers = (
     [router]
   );
 
-  // +Add set
   const handleAddSet = useCallback(
     (exerciseIndex: number) => {
       if (!noteData) return;
@@ -120,19 +96,47 @@ const useNoteHandlers = (
     [noteData, setNoteData, saveNote]
   );
 
-  // +Add exercise
   const handleAddExercise = useCallback(() => {
     if (!noteData) return;
     const newNote = { ...noteData };
     newNote.exercises.push({
       exercise: "",
+      note: "",
       sets: [{ weight: "", reps: "", rest: "" }],
     });
     setNoteData(newNote);
     saveNote(newNote);
   }, [noteData, setNoteData, saveNote]);
 
-  // 削除機能
+  const handleDuplicateRow = useCallback(
+    (exIndex: number, setIndex: number) => {
+      if (!noteData) return;
+      const newNote = { ...noteData };
+      const originalSet = { ...newNote.exercises[exIndex].sets[setIndex] };
+      newNote.exercises[exIndex].sets.splice(setIndex + 1, 0, originalSet);
+      setNoteData(newNote);
+      saveNote(newNote);
+    },
+    [noteData, setNoteData, saveNote]
+  );
+
+  const handleDuplicateExercise = useCallback(
+    (exIndex: number) => {
+      if (!noteData) return;
+      const newNote = { ...noteData };
+      const originalEx = { ...newNote.exercises[exIndex] } as Exercise;
+      const copiedEx: Exercise = {
+        exercise: originalEx.exercise,
+        note: originalEx.note || "",
+        sets: originalEx.sets.map((s) => ({ ...s })),
+      };
+      newNote.exercises.splice(exIndex + 1, 0, copiedEx);
+      setNoteData(newNote);
+      saveNote(newNote);
+    },
+    [noteData, setNoteData, saveNote]
+  );
+
   const handleDeleteRow = useCallback(
     (exIndex: number, setIndex: number) => {
       if (!noteData) return;
@@ -140,9 +144,8 @@ const useNoteHandlers = (
       newNote.exercises[exIndex].sets.splice(setIndex, 1);
       setNoteData(newNote);
       saveNote(newNote);
-      if (setOpenRowMenu) setOpenRowMenu(null);
     },
-    [noteData, setNoteData, saveNote, setOpenRowMenu]
+    [noteData, setNoteData, saveNote]
   );
 
   const handleDeleteExercise = useCallback(
@@ -152,20 +155,19 @@ const useNoteHandlers = (
       newNote.exercises.splice(exIndex, 1);
       setNoteData(newNote);
       saveNote(newNote);
-      if (setOpenExerciseMenu) setOpenExerciseMenu(null);
     },
-    [noteData, setNoteData, saveNote, setOpenExerciseMenu]
+    [noteData, setNoteData, saveNote]
   );
 
   return {
-    exerciseMenuRef,
-    rowMenuRef,
     handleInputChange,
-    handleNoteChange,
     handleExerciseChange,
+    handleExerciseNoteChange,
     handleDateChange,
     handleAddSet,
     handleAddExercise,
+    handleDuplicateRow,
+    handleDuplicateExercise,
     handleDeleteRow,
     handleDeleteExercise,
   };

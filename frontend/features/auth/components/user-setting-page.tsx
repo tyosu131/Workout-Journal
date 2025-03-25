@@ -38,7 +38,6 @@ const UserSettings: React.FC = () => {
       }
 
       try {
-        // ★ 変更点：/api/auth/get-user に修正
         const { data } = await axios.get("http://localhost:3001/api/auth/get-user", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -46,11 +45,10 @@ const UserSettings: React.FC = () => {
         });
 
         if (data) {
-          // data.name, data.email があればそれをセット
           setUserData({
             username: data.name || "No username set",
             email: data.email || "",
-            password: "******", // パスワードはマスクする
+            password: "******",
           });
         }
       } catch (error: any) {
@@ -87,7 +85,6 @@ const UserSettings: React.FC = () => {
         throw new Error("No valid session found. Please log in again.");
       }
 
-      // ★ 変更点：/api/auth/update-user に修正
       const response = await axios.put(
         "http://localhost:3001/api/auth/update-user",
         updatedUserData,
@@ -108,7 +105,7 @@ const UserSettings: React.FC = () => {
         });
         setUserData({
           ...updatedUserData,
-          password: "******", // パスワードはマスクしたままにする
+          password: "******",
         });
       } else {
         throw new Error(response.data.error || "Failed to update user data.");

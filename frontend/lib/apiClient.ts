@@ -1,3 +1,4 @@
+// frontend/lib/apiClient.ts
 import axios from 'axios';
 import { getToken, setToken, removeToken } from '../../shared/utils/tokenUtils';
 import { API_ENDPOINTS } from '../../shared/constants/endpoints';
@@ -14,12 +15,15 @@ const apiClient = axios.create({
   },
 });
 
-// 型ガードを追加
+// --- リフレッシュ再試行回数の管理 ---
+let refreshAttempts = 0;
+const MAX_REFRESH_ATTEMPTS = 3;
+
+// 型ガード
 function isAxiosError(error: unknown): error is import('axios').AxiosError {
   return typeof error === 'object' && error !== null && 'isAxiosError' in error;
 }
 
-// 型ガードで originalRequest を確認
 function isAxiosRequestConfig(
   config: unknown
 ): config is import('axios').InternalAxiosRequestConfig<any> {
@@ -35,21 +39,35 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const originalRequest = error.config;
+    // ネットワークエラーの場合、サーバー接続ができなければすぐにトークン削除してリトライを中断
+    if (error.code === 'ERR_NETWORK') {
+      console.error('[apiClient] ネットワークエラー発生。トークンを削除して終了');
+      removeToken();
+      return Promise.reject(error);
+    }
 
+    const originalRequest = error.config;
     if (
       isAxiosRequestConfig(originalRequest) &&
       error.response?.status === 401 &&
       !originalRequest.headers._retry
     ) {
+      if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
+        console.error(`[apiClient] リフレッシュ再試行が ${MAX_REFRESH_ATTEMPTS} 回を超えました。トークン削除`);
+        removeToken();
+        return Promise.reject(error);
+      }
+
       originalRequest.headers._retry = true;
+      refreshAttempts++;
 
       try {
-        const { data } = await apiClient.post(API_ENDPOINTS.REFRESH);
+        // リフレッシュAPI呼び出し（bodyは空オブジェクト）
+        const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, {});
         const newAccessToken = data.access_token;
-
         console.log('[apiClient] トークンリフレッシュ成功:', newAccessToken);
         setToken(newAccessToken);
+        refreshAttempts = 0; // 成功したらリトライ回数をリセット
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
@@ -88,7 +106,6 @@ export const apiRequestWithAuth = async <TResponse, TData = any>(
         Authorization: `Bearer ${token}`,
       },
     });
-
     return response.data;
   } catch (error) {
     if (isAxiosError(error)) {
@@ -112,7 +129,6 @@ export const apiRequest = async <TResponse, TData = any>(
       method,
       data,
     });
-
     return response.data;
   } catch (error) {
     if (isAxiosError(error)) {
