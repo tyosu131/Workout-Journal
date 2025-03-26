@@ -50,7 +50,7 @@ export const useUserEdit = () => {
 
       // バックエンドのAPIにPUTリクエスト
       const response = await axios.put(
-        "http://localhost:3001/api/auth/update-user",
+        "/api/auth/update-user",
         { username, email, password },
         {
           headers: {
