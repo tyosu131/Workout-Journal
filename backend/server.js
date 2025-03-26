@@ -34,7 +34,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // APIルート
-app.use("/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 
 app.use("/api/notes", notesRoutes);
 
