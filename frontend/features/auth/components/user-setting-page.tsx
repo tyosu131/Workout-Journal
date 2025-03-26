@@ -38,7 +38,7 @@ const UserSettings: React.FC = () => {
       }
 
       try {
-        const { data } = await axios.get("http://localhost:3001/api/auth/get-user", {
+        const { data } = await axios.get("/api/auth/get-user"", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -86,7 +86,7 @@ const UserSettings: React.FC = () => {
       }
 
       const response = await axios.put(
-        "http://localhost:3001/api/auth/update-user",
+        "/api/auth/update-user",
         updatedUserData,
         {
           headers: {
