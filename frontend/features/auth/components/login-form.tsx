@@ -26,7 +26,7 @@ const LoginForm: React.FC = () => {
     }
 
     try {
-      const response = await axios.post("/api/login", { email, password });
+      const response = await axios.post("/api/auth/login", { email, password });
       setToken(response.data.token);
       toast({
         title: "Login Successful",
