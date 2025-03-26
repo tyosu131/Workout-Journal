@@ -194,6 +194,7 @@ const handleGetUser = async (req, res) => {
 
   try {
     const decoded = await verifyToken(token);
+    console.log("Decoded ID:", decoded.id);
     if (!decoded) {
       return res.status(401).json({ error: "Invalid token" });
     }
@@ -205,11 +206,14 @@ const handleGetUser = async (req, res) => {
       .eq("uuid", decoded.id)
       .single();
 
+      console.log("Supabase query result:", dbUser, error);
+
     if (error) {
       console.error("Failed to fetch user from DB:", error);
       return res.status(500).json({ error: "Database error" });
     }
     if (!dbUser) {
+      console.log("User not found. ID:", decoded.id);
       return res.status(404).json({ error: "User not found" });
     }
 
