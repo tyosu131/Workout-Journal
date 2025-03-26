@@ -1,5 +1,5 @@
 import React from 'react';
-import User from '../components/pages/user';
+import User from '../features/auth/components/user-setting-page';
 
 const UserPage: React.FC = () => {
   return <User />;

@@ -111,8 +111,8 @@ async function getUser(req, res) {
     const userId = decoded.id;
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, name, email")
-      .eq("id", userId)
+      .select("uuid, name, email")  
+      .eq("uuid", userId)
       .single();
 
     if (error || !user) {
@@ -158,7 +158,7 @@ async function updateUser(req, res) {
     if (username) {
       const { error: usernameError } = await supabase
         .from("users")
-        .update({ name: username })
+        .update({ name: username, email })
         .eq("uuid", userId);
 
       if (usernameError) {
