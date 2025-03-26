@@ -1,4 +1,3 @@
-// C:\Users\User\Desktop\web Development Projects\portfolio real\frontend\components\forms\LoginForm.tsx
 import React, { useState } from "react";
 import { Box, Input, Button, useToast } from "@chakra-ui/react";
 import axios from "axios";
@@ -27,7 +26,7 @@ const LoginForm: React.FC = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:3001/api/login", { email, password });
+      const response = await axios.post("/api/login", { email, password });
       setToken(response.data.token);
       toast({
         title: "Login Successful",
