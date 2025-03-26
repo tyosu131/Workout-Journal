@@ -1,4 +1,3 @@
-// components/pages/ForgotPassword.tsx
 import React, { useState } from 'react';
 import { Box, Input, Button, Center, Text, Link } from '@chakra-ui/react';
 import axios from 'axios';
@@ -10,10 +9,8 @@ const ForgotPassword: React.FC = () => {
 
   const handlePasswordReset = async () => {
     try {
-      await axios.post('http://localhost:3001/api/forgot-password', { email });
-      // パスワードリセット成功メッセージを表示するか、リダイレクトする
+      await axios.post('/api/forgot-password', { email });
     } catch (error) {
-      // エラーメッセージを表示する
     }
   };
 

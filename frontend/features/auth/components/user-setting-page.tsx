@@ -1,4 +1,3 @@
-// user.tsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -27,7 +26,6 @@ const UserSettings: React.FC = () => {
   useEffect(() => {
     setIsClient(true);
 
-    // ユーザーデータを取得する
     const fetchUserData = async () => {
       const token = localStorage.getItem("token");
 
@@ -38,7 +36,7 @@ const UserSettings: React.FC = () => {
       }
 
       try {
-        const { data } = await axios.get("/api/auth/get-user"", {
+        const { data } = await axios.get("/api/auth/get-user", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -77,7 +75,6 @@ const UserSettings: React.FC = () => {
     fetchUserData();
   }, [setUserData, toast, router]);
 
-  // ユーザーデータを更新
   const saveUserData = async (updatedUserData: any) => {
     try {
       const token = localStorage.getItem("token");
