@@ -10,7 +10,7 @@ const ForgotPassword: React.FC = () => {
 
   const handlePasswordReset = async () => {
     try {
-      await axios.post('/api/forgot-password', { email });
+      await axios.post('/api/auth/forgot-password', { email });
     } catch (error) {
     }
   };
