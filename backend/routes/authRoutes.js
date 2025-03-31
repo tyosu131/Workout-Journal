@@ -6,6 +6,7 @@ const {
   handleLogin,
   handleGetUser,
   handleUpdateUser,
+  handleForgotPassword,
 } = require("../services/authService");
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.post("/signup", handleSignUp);
 router.post("/login", handleLogin);
 router.get("/get-user", handleGetUser);
 router.put("/update-user", handleUpdateUser);
+router.post("/forgot-password", handleForgotPassword);
 
 module.exports = router;

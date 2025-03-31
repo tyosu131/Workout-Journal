@@ -206,7 +206,7 @@ const handleGetUser = async (req, res) => {
       .eq("uuid", decoded.id)
       .single();
 
-      console.log("Supabase query result:", dbUser, error);
+    console.log("Supabase query result:", dbUser, error);
 
     if (error) {
       console.error("Failed to fetch user from DB:", error);
@@ -244,7 +244,6 @@ const handleUpdateUser = async (req, res) => {
     const userId = decoded.id;
 
     // username
-    // !username で空文字や null を弾く
     if (!username) {
       return res.status(400).json({ error: "Username is required" });
     }
@@ -264,18 +263,17 @@ const handleUpdateUser = async (req, res) => {
       }
     }
 
-    // ========== Supabase への更新処理 ==========
-    // Auth のメール変更
+    // Supabase auth update
     if (email) {
       await supabase.auth.updateUser({
         email,
         options: {
+          // リダイレクト先を本番URLに
           emailRedirectTo: "http://54.188.218.191/verify-email",
         },
       });
     }
 
-    // パスワード更新
     if (password && password !== "******") {
       await supabase.auth.updateUser({ password });
     }
@@ -293,6 +291,36 @@ const handleUpdateUser = async (req, res) => {
   }
 };
 
+/**
+ * パスワードリセット (Forgot Password)
+ * フロント: /api/auth/forgot-password に POST { email }
+ */
+const handleForgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  try {
+    // Supabase のパスワードリセットメール送信API
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "http://54.188.218.191/reset-password",
+    });
+
+    if (error) {
+      console.error("Reset password error:", error);
+      return res.status(500).json({ error: "Failed to send reset email" });
+    }
+
+    return res.status(200).json({ message: "Password reset email sent" });
+  } catch (err) {
+    console.error("Exception in forgot password:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 最後に全ての関数をまとめてエクスポート
 module.exports = {
   handleSession,
   handleRefresh,
@@ -300,4 +328,5 @@ module.exports = {
   handleLogin,
   handleGetUser,
   handleUpdateUser,
+  handleForgotPassword,
 };
