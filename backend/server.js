@@ -1,4 +1,4 @@
-require("dotenv").config({ path: "C:\\Users\\User\\Desktop\\web Development Projects\\portfolio real\\backend\\.env.local" });
+require("dotenv").config({ path: "/home/ec2-user/Workout-Journal/backend/.env.local" });
 
 const express = require("express");
 const cors = require("cors");
@@ -6,7 +6,13 @@ const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 const notesRoutes = require("./routes/noteRoutes");
 
-const app = express(); // `server` を `app` に変更して重複を回避
+const app = express();
+// 全ルートのログを出力
+app.use((req, res, next) => {
+  console.log(`[ROUTE DEBUG] ${req.method} ${req.url}`);
+  next();
+});
+
 
 // 環境変数の確認ログ
 console.log("Environment Variables Check:");
@@ -32,11 +38,10 @@ app.use(cors(corsOptions));
 // ミドルウェア
 app.use(express.json());
 app.use(cookieParser());
-
 // APIルート
-app.use("/api/auth", authRoutes);
+app.use("auth", authRoutes);
 
-app.use("/api/notes", notesRoutes);
+app.use("notes", notesRoutes);
 
 // 404エラーハンドリング
 app.use((req, res, next) => {
