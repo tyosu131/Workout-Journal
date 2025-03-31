@@ -7,11 +7,12 @@ const {
   handleGetUser,
   handleUpdateUser,
   handleForgotPassword,
+  handleResetPassword,
 } = require("../services/authService");
 
 const router = express.Router();
 
-// リクエストログ用のミドルウェア
+// ログ用ミドルウェア
 router.use((req, res, next) => {
   console.log(`[${req.method}] ${req.originalUrl} - Body:`, req.body);
   next();
@@ -25,5 +26,6 @@ router.post("/login", handleLogin);
 router.get("/get-user", handleGetUser);
 router.put("/update-user", handleUpdateUser);
 router.post("/forgot-password", handleForgotPassword);
+router.put("/reset-password", handleResetPassword);
 
 module.exports = router;

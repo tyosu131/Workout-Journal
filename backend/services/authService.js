@@ -1,6 +1,5 @@
 /**
  * - validator ライブラリを使った入力値チェック
- * - エラーメッセージの明確化
  * - 既存 Supabase 連携ロジック
  */
 
@@ -13,9 +12,7 @@ const {
 const validator = require("validator");
 
 /**
- * セッション取得 (REST)
- * フロントの /api/auth/session から GET される。
- * トークンの有効性をチェックし、ユーザ情報を返す。
+ * セッション取得
  */
 const handleSession = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -28,8 +25,6 @@ const handleSession = async (req, res) => {
     if (!decoded) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
-    // DB: "public.users" からユーザーを取得
     const { data: dbUser, error } = await supabase
       .from("users")
       .select("uuid, name, email")
@@ -43,7 +38,6 @@ const handleSession = async (req, res) => {
     if (!dbUser) {
       return res.status(404).json({ error: "No valid user found" });
     }
-
     return res.status(200).json({ user: dbUser });
   } catch (error) {
     console.error("Session retrieval failed:", error.message);
@@ -76,12 +70,10 @@ const handleRefresh = async (req, res) => {
 
 /**
  * サインアップ
- * フロント: /api/auth/signup
  */
 const handleSignUp = async (req, res) => {
   const { username, email, password } = req.body;
 
-  // 1つずつバリデーション
   if (!username) {
     return res.status(400).json({ error: "Username is required" });
   }
@@ -92,7 +84,6 @@ const handleSignUp = async (req, res) => {
     return res.status(400).json({ error: "Password is required" });
   }
 
-  // メール形式とパスワード長
   if (!validator.isEmail(email)) {
     return res.status(400).json({ error: "Invalid email format" });
   }
@@ -101,7 +92,6 @@ const handleSignUp = async (req, res) => {
   }
 
   try {
-    // Supabase Auth でユーザー作成
     const { data: user, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -109,17 +99,14 @@ const handleSignUp = async (req, res) => {
     });
     if (signUpError) throw signUpError;
 
-    // DB (public.users) へ insert/upsert
     const { error: dbError } = await supabase
       .from("users")
       .upsert([{ uuid: user.user.id, name: username, email }], { onConflict: "uuid" });
     if (dbError) throw dbError;
 
-    // トークン発行
     const token = generateAccessToken(user.user);
     const refreshToken = generateRefreshToken(user.user);
 
-    // Cookie に refreshToken
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Lax",
@@ -136,12 +123,10 @@ const handleSignUp = async (req, res) => {
 
 /**
  * ログイン
- * フロント: /api/auth/login
  */
 const handleLogin = async (req, res) => {
   const { email, password } = req.body;
 
-  // 必須チェック (分割)
   if (!email) {
     return res.status(400).json({ error: "Email is required" });
   }
@@ -157,17 +142,14 @@ const handleLogin = async (req, res) => {
   }
 
   try {
-    // Supabase Auth ログイン
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.user) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // トークン
     const token = generateAccessToken(data.user);
     const refreshToken = generateRefreshToken(data.user);
 
-    // Cookie に refreshToken
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Lax",
@@ -184,7 +166,6 @@ const handleLogin = async (req, res) => {
 
 /**
  * ユーザー情報の取得
- * フロント: /api/auth/get-user
  */
 const handleGetUser = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -199,7 +180,6 @@ const handleGetUser = async (req, res) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    // DBからユーザーを取得
     const { data: dbUser, error } = await supabase
       .from("users")
       .select("uuid, name, email")
@@ -226,7 +206,6 @@ const handleGetUser = async (req, res) => {
 
 /**
  * ユーザー情報の更新
- * - username, email, password
  */
 const handleUpdateUser = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -243,12 +222,9 @@ const handleUpdateUser = async (req, res) => {
     const { username, email, password } = req.body;
     const userId = decoded.id;
 
-    // username
     if (!username) {
       return res.status(400).json({ error: "Username is required" });
     }
-
-    // email
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
@@ -256,29 +232,24 @@ const handleUpdateUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // password が "******" の場合は変更しない
     if (password !== undefined && password !== "******") {
       if (!validator.isLength(password, { min: 6 })) {
         return res.status(400).json({ error: "Password must be at least 6 characters long" });
       }
     }
 
-    // Supabase auth update
     if (email) {
       await supabase.auth.updateUser({
         email,
         options: {
-          // リダイレクト先を本番URLに
           emailRedirectTo: "http://54.188.218.191/verify-email",
         },
       });
     }
-
     if (password && password !== "******") {
       await supabase.auth.updateUser({ password });
     }
 
-    // DB テーブルの username & email 更新
     await supabase
       .from("users")
       .update({ name: username, email })
@@ -293,7 +264,6 @@ const handleUpdateUser = async (req, res) => {
 
 /**
  * パスワードリセット (Forgot Password)
- * フロント: /api/auth/forgot-password に POST { email }
  */
 const handleForgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -303,7 +273,6 @@ const handleForgotPassword = async (req, res) => {
   }
 
   try {
-    // Supabase のパスワードリセットメール送信API
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: "http://54.188.218.191/reset-password",
     });
@@ -320,7 +289,46 @@ const handleForgotPassword = async (req, res) => {
   }
 };
 
-// 最後に全ての関数をまとめてエクスポート
+/**
+ * 新しいパスワードを設定
+ */
+const handleResetPassword = async (req, res) => {
+  const { accessToken, newPassword } = req.body;
+  if (!accessToken) {
+    return res.status(400).json({ error: "Access token is missing" });
+  }
+  if (!newPassword) {
+    return res.status(400).json({ error: "New password is required" });
+  }
+  if (!validator.isLength(newPassword, { min: 6 })) {
+    return res.status(400).json({ error: "Password must be at least 6 characters long" });
+  }
+
+  try {
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: "",
+    });
+    if (sessionError) {
+      console.error("Failed to set session with accessToken:", sessionError);
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    if (updateError) {
+      console.error("Failed to update password:", updateError);
+      return res.status(500).json({ error: "Failed to update password" });
+    }
+
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Exception in handleResetPassword:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
 module.exports = {
   handleSession,
   handleRefresh,
@@ -329,4 +337,5 @@ module.exports = {
   handleGetUser,
   handleUpdateUser,
   handleForgotPassword,
+  handleResetPassword,
 };
