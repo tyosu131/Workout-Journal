@@ -1,3 +1,5 @@
+// portfolio real\frontend\features\auth\components\reset-password-page.tsx
+
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Center, Box, Text, Input, Button, useToast } from "@chakra-ui/react";
@@ -10,12 +12,17 @@ const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
 
+  // ハッシュからトークン取得
   useEffect(() => {
-    const token = router.query.access_token;
-    if (typeof token === "string") {
-      setAccessToken(token);
+    const hash = window.location.hash;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get("access_token");
+      if (token) {
+        setAccessToken(token);
+      }
     }
-  }, [router.query]);
+  }, []);
 
   const handleSave = async () => {
     if (!accessToken) {
