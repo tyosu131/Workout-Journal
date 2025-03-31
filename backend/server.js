@@ -39,9 +39,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 // APIルート
-app.use("auth", authRoutes);
+app.use("/auth", authRoutes);
 
-app.use("notes", notesRoutes);
+app.use("/notes", notesRoutes);
 
 // 404エラーハンドリング
 app.use((req, res, next) => {
