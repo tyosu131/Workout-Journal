@@ -270,7 +270,7 @@ const handleUpdateUser = async (req, res) => {
       await supabase.auth.updateUser({
         email,
         options: {
-          emailRedirectTo: "http://localhost:3000/verify-email",
+          emailRedirectTo: "http://54.188.218.191/verify-email",
         },
       });
     }

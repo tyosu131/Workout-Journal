@@ -1,3 +1,4 @@
+// portfolio real\frontend\features\auth\components\login-form.tsx
 import React, { useState } from "react";
 import { Box, Input, Button, useToast } from "@chakra-ui/react";
 import axios from "axios";
@@ -48,7 +49,7 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <Box width="400px">
+    <Box width={{ base: '90%', md: '400px' }}>
       <form onSubmit={handleLogin}>
         <Input
           placeholder="Email"

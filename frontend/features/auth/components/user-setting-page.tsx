@@ -1,3 +1,4 @@
+// portfolio real\frontend\features\auth\components\user-setting-page.tsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -128,7 +129,15 @@ const UserSettings: React.FC = () => {
   if (!isClient) return null;
 
   return (
-    <Box maxW="5xl" mx="auto" mt={10} p={8} boxShadow="lg" borderRadius="md" position="relative">
+    <Box
+      maxW={{ base: "90%", lg: "5xl" }}
+      mx="auto"
+      mt={10}
+      p={8}
+      boxShadow="lg"
+      borderRadius="md"
+      position="relative"
+    >
       <IconButton
         aria-label="Close"
         icon={<CloseButton />}

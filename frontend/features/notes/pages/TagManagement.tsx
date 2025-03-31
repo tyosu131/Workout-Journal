@@ -23,7 +23,6 @@ import { useTagManagement } from "../hooks/useTagManagement";
 const TagManagement: React.FC = () => {
   const router = useRouter();
 
-  // カスタムフックで管理
   const {
     tags,
     newTag,
@@ -43,7 +42,8 @@ const TagManagement: React.FC = () => {
 
   return (
     <Box
-      maxW="5xl"
+      /* ★ モバイル:幅90%, PC:5xl */
+      maxW={{ base: "90%", lg: "5xl" }}
       mx="auto"
       mt={10}
       p={8}
@@ -51,7 +51,6 @@ const TagManagement: React.FC = () => {
       borderRadius="md"
       position="relative"
     >
-      {/* 右上の × ボタン */}
       <IconButton
         aria-label="Close"
         icon={<CloseButton />}

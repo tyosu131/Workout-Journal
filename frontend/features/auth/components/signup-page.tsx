@@ -1,19 +1,16 @@
+// portfolio real\frontend\features\auth\components\signup-page.tsx
 import React, { useState } from "react";
 import { Box, Input, Button, useToast, Center, Text } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { useResendVerification } from "../hooks/useResendVerification";
 
 import { apiRequest } from "../../../lib/apiClient";
-
 import { setToken } from "../../../../shared/utils/tokenUtils";
-
-import { URLS } from "../../../../shared/constants/urls";
 import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 
-// サーバーが返す JSON の型を定義（token, user など）
 type SignupResponse = {
   token?: string;
-  user?: any;  
+  user?: any;
 };
 
 const SignUp: React.FC = () => {
@@ -35,7 +32,7 @@ const SignUp: React.FC = () => {
         { email, username, password }
       );
 
-      // サーバーがトークンを返していれば、それを保存
+      // サーバーがトークンを返していれば保存
       if (result.token) {
         setToken(result.token);
       }
@@ -63,8 +60,8 @@ const SignUp: React.FC = () => {
 
   if (isVerificationSent) {
     return (
-      <Center height="100vh">
-        <Box width="400px" textAlign="center">
+      <Center height={{ base: 'auto', md: '100vh' }}>
+        <Box width={{ base: '90%', md: '400px' }} textAlign="center">
           <Text fontSize="2xl" fontWeight="bold">
             Email Verification Required
           </Text>
@@ -83,8 +80,8 @@ const SignUp: React.FC = () => {
   }
 
   return (
-    <Center height="100vh">
-      <Box width="400px" textAlign="center">
+    <Center height={{ base: 'auto', md: '100vh' }}>
+      <Box width={{ base: '90%', md: '400px' }} textAlign="center">
         <Text fontSize="2xl" fontWeight="bold" pb={4}>
           Welcome
         </Text>

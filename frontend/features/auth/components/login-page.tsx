@@ -1,3 +1,4 @@
+// portfolio real\frontend\features\auth\components\login-page.tsx
 import React, { useState } from 'react';
 import { Box, Input, Button, useToast, Center, Text, Link } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
@@ -55,8 +56,8 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Center height="100vh">
-      <Box width="400px" textAlign="center">
+    <Center height={{ base: 'auto', md: '100vh' }}>
+      <Box width={{ base: '90%', md: '400px' }} textAlign="center">
         <Text fontSize="2xl" fontWeight="bold" pb={4}>Login</Text>
         <Input
           placeholder="Email"
@@ -71,12 +72,26 @@ const Login: React.FC = () => {
           onChange={(e) => setPassword(e.target.value)}
           my={2}
         />
-        <Button onClick={handleLogin} width="100%" colorScheme="blue" my={4}>Login</Button>
+        <Button onClick={handleLogin} width="100%" colorScheme="blue" my={4}>
+          Login
+        </Button>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push(URLS.SIGNUP_PAGE)}>Do not have an account? Sign up</Link>
+          <Link
+            color="blue.500"
+            cursor="pointer"
+            onClick={() => router.push(URLS.SIGNUP_PAGE)}
+          >
+            Do not have an account? Sign up
+          </Link>
         </Text>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push(URLS.FORGOT_PASSWORD_PAGE)}>Forgot your password?</Link>
+          <Link
+            color="blue.500"
+            cursor="pointer"
+            onClick={() => router.push(URLS.FORGOT_PASSWORD_PAGE)}
+          >
+            Forgot your password?
+          </Link>
         </Text>
       </Box>
     </Center>

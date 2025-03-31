@@ -1,3 +1,4 @@
+// portfolio real\frontend\features\auth\components\forgot-password-page.tsx
 import React, { useState } from 'react';
 import { Box, Input, Button, Center, Text, Link } from '@chakra-ui/react';
 import axios from 'axios';
@@ -15,8 +16,8 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <Center height="100vh">
-      <Box width="400px" textAlign="center">
+    <Center height={{ base: 'auto', md: '100vh' }}>
+      <Box width={{ base: '90%', md: '400px' }} textAlign="center">
         <Text fontSize="2xl" fontWeight="bold">Did you forget your password?</Text>
         <Text mb={4}>Please enter the email address you used to create your account</Text>
         <Input
@@ -25,9 +26,13 @@ const ForgotPassword: React.FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           mb={4}
         />
-        <Button onClick={handlePasswordReset} width="100%" colorScheme="blue">Request a password reset</Button>
+        <Button onClick={handlePasswordReset} width="100%" colorScheme="blue">
+          Request a password reset
+        </Button>
         <Text mt={4}>
-          <Link color="blue.500" onClick={() => router.push('/login')}>Return to login</Link>
+          <Link color="blue.500" cursor="pointer" onClick={() => router.push('/login')}>
+            Return to login
+          </Link>
         </Text>
       </Box>
     </Center>

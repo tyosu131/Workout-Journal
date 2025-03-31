@@ -1,3 +1,4 @@
+// portfolio real\frontend\features\contact\components\ContactPage.tsx
 import React from "react";
 import {
   Box,
@@ -59,7 +60,8 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
 
   return (
     <Box
-      maxW="5xl"
+      /* ★ レスポンシブ: モバイルは幅90% */
+      maxW={{ base: "90%", lg: "5xl" }}
       mx="auto"
       mt={10}
       p={8}
@@ -99,6 +101,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
             </Box>
           )}
         </FormControl>
+
         <FormControl id="email" mb={8} isInvalid={!!errors.email}>
           <FormLabel fontSize="lg">Email</FormLabel>
           <InputGroup>
@@ -120,6 +123,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
             </Box>
           )}
         </FormControl>
+
         <FormControl id="message" mb={8} isInvalid={!!errors.message}>
           <FormLabel fontSize="lg">Message</FormLabel>
           <Textarea
@@ -136,6 +140,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
             </Box>
           )}
         </FormControl>
+
         <Box display="flex" justifyContent="center">
           <Button
             type="submit"
