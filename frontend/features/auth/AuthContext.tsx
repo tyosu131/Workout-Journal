@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
 import { User } from "@supabase/supabase-js";
 import { getToken, setToken, removeToken } from "../../../shared/utils/tokenUtils";
 import { useRouter } from "next/router";
-import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 import { loginUser, fetchSession, refreshAccessToken } from "./api";
 
 type AuthContextProps = {
@@ -17,6 +15,11 @@ type AuthProviderProps = {
 };
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+
+const getErrorSummary = (error: any) => ({
+  status: error?.response?.status,
+  message: error?.message,
+});
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -67,14 +70,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             await handleTokenRefresh();
           } catch (refreshError) {
-            console.error("Failed to refresh access token:", refreshError);
+            console.error("Failed to refresh access token:", getErrorSummary(refreshError));
             logout();
           }
         } else {
-          console.error(`Failed to get session (status: ${status})`, error);
+          console.error(`Failed to get session (status: ${status})`, getErrorSummary(error));
         }
       } else {
-        console.error("Failed to get session:", error);
+        console.error("Failed to get session:", getErrorSummary(error));
       }
     } finally {
       setLoading(false);
@@ -89,11 +92,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const resp = await refreshAccessToken();
       if (resp.access_token) {
         setToken(resp.access_token);
-        console.log("Token refreshed:", resp.access_token);
+        console.log("Token refreshed:", Boolean(resp.access_token));
         await getSession();
       }
     } catch (error) {
-      console.error("Token refresh failed:", error);
+      console.error("Token refresh failed:", getErrorSummary(error));
       throw error;
     }
   };
@@ -131,7 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // ログイン直後にもセッション取得して最新情報を反映
       await getSession();
     } catch (error: any) {
-      console.error("Login failed:", error);
+      console.error("Login failed:", getErrorSummary(error));
     }
   };
 

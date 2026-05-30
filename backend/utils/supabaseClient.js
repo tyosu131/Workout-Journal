@@ -4,9 +4,9 @@ const { createClient } = require("@supabase/supabase-js");
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
-// 環境変数の確認ログ
-console.log("Supabase URL:", supabaseUrl);
-console.log("Supabase Key:", supabaseKey ? "*****" : "Not found");
+// 環境変数の確認ログ（値そのものは出力しない）
+console.log("SUPABASE_URL configured:", Boolean(supabaseUrl));
+console.log("SUPABASE_KEY configured:", Boolean(supabaseKey));
 
 // エラーチェック
 if (!supabaseUrl || !supabaseKey) {

@@ -14,7 +14,7 @@ const router = express.Router();
 
 // ログ用ミドルウェア
 router.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.originalUrl} - Body:`, req.body);
+  console.log(`[${req.method}] ${req.originalUrl} - Body keys:`, Object.keys(req.body || {}));
   next();
 });
 

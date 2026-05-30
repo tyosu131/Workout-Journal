@@ -4,8 +4,7 @@ import { getToken, setToken, removeToken } from '../../shared/utils/tokenUtils';
 import { API_ENDPOINTS } from '../../shared/constants/endpoints';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-console.log('API Base URL:', baseURL);
-console.log('API Base URL:', process.env.NEXT_PUBLIC_API_URL);
+console.log('NEXT_PUBLIC_API_URL configured:', Boolean(process.env.NEXT_PUBLIC_API_URL));
 
 const apiClient = axios.create({
   baseURL,
@@ -65,7 +64,7 @@ apiClient.interceptors.response.use(
         // リフレッシュAPI呼び出し（bodyは空オブジェクト）
         const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, {});
         const newAccessToken = data.access_token;
-        console.log('[apiClient] トークンリフレッシュ成功:', newAccessToken);
+        console.log('[apiClient] トークンリフレッシュ成功:', Boolean(newAccessToken));
         setToken(newAccessToken);
         refreshAttempts = 0; // 成功したらリトライ回数をリセット
 

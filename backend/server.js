@@ -1,4 +1,7 @@
-require("dotenv").config({ path: "/home/ec2-user/Workout-Journal/backend/.env.local" });
+const path = require("path");
+
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+require("dotenv").config({ path: path.resolve(__dirname, ".env.local"), override: true });
 
 const express = require("express");
 const cors = require("cors");
@@ -14,25 +17,28 @@ app.use((req, res, next) => {
 });
 
 
-// 環境変数の確認ログ
+// 環境変数の確認ログ（値そのものは出力しない）
 console.log("Environment Variables Check:");
-console.log("PORT:", process.env.PORT);
-console.log("ACCESS_TOKEN_EXPIRES:", process.env.ACCESS_TOKEN_EXPIRES);
-console.log("REFRESH_TOKEN_EXPIRES:", process.env.REFRESH_TOKEN_EXPIRES);
-console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
-console.log("SUPABASE_KEY:", process.env.SUPABASE_KEY);
+console.log("PORT configured:", Boolean(process.env.PORT));
+console.log("ACCESS_TOKEN_EXPIRES configured:", Boolean(process.env.ACCESS_TOKEN_EXPIRES));
+console.log("REFRESH_TOKEN_EXPIRES configured:", Boolean(process.env.REFRESH_TOKEN_EXPIRES));
+console.log("SUPABASE_URL configured:", Boolean(process.env.SUPABASE_URL));
+console.log("SUPABASE_KEY configured:", Boolean(process.env.SUPABASE_KEY));
+console.log("JWT_SECRET configured:", Boolean(process.env.JWT_SECRET));
 
 // Supabase関連の初期化部分
 const supabaseClient = require("./utils/supabaseClient");
 console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
 
 // CORS設定
+const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: corsOrigin,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "_retry"],
   credentials: true,
 };
+console.log("CORS origin configured:", Boolean(corsOrigin));
 app.use(cors(corsOptions));
 
 // ミドルウェア
