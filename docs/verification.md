@@ -33,6 +33,9 @@ GitHub Actions runs the same baseline on push and pull request:
 - Root Jest is configured in `jest.config.js` and scans both `frontend` and `shared`.
 - Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
 - `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
+- Test output no longer includes the old `calendarUtils` debug log or the `ts-jest` `esModuleInterop` warning.
+- Frontend build output no longer logs repeated `NEXT_PUBLIC_API_URL configured: false` messages.
+- The Next.js custom font warning remains because `frontend/pages/_document.tsx` does not exist yet.
 
 ## Test Candidates
 
@@ -40,3 +43,4 @@ GitHub Actions runs the same baseline on push and pull request:
 - Add API client tests for token refresh and authorization header behavior.
 - Add backend auth utility tests for token creation and validation.
 - Add route/service tests for notes and auth error paths.
+- Add `frontend/pages/_document.tsx` and move global font links there, if the app keeps using link-based font loading.

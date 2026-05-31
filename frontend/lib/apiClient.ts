@@ -4,7 +4,6 @@ import { getToken, setToken, removeToken } from '../../shared/utils/tokenUtils';
 import { API_ENDPOINTS } from '../../shared/constants/endpoints';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-console.log('NEXT_PUBLIC_API_URL configured:', Boolean(process.env.NEXT_PUBLIC_API_URL));
 
 const apiClient = axios.create({
   baseURL,
