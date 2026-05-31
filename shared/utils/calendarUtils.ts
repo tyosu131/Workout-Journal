@@ -24,6 +24,5 @@ export const generateCalendarDates = (year: number, month: number) => {
       datesArray.push(null);
   }
 
-  console.log(datesArray); // デバッグ用に追加
   return datesArray;
 };
