@@ -31,6 +31,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Frontend build is expected to pass once frontend dependencies are installed.
 - Backend build runs a JavaScript syntax check over backend `.js` files with `node --check`.
 - Root Jest is configured in `jest.config.js` and scans `frontend`, `shared`, and `backend`.
+- Frontend API client tests under `frontend/lib/__tests__` are included in `npm test` and CI.
 - Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
 - `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
@@ -41,7 +42,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add API client tests for token refresh and authorization header behavior.
+- Expand API client tests for retry limits and non-401 error paths.
 - Add route/service tests for notes and auth error paths.
 - Add `frontend/pages/_document.tsx` and move global font links there, if the app keeps using link-based font loading.
 - Add backend unit tests or integration tests; the current backend build checks syntax only.
