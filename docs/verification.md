@@ -11,7 +11,7 @@ npm ci --prefix backend
 npm run lint --prefix frontend
 npm run build --prefix frontend
 npm run build --prefix backend
-npm test -- --passWithNoTests
+npm test
 ```
 
 ## CI Checks
@@ -24,20 +24,19 @@ GitHub Actions runs the same baseline on push and pull request:
 - Run frontend lint with `npm run lint --prefix frontend`
 - Run frontend build with `npm run build --prefix frontend`
 - Run backend build with `npm run build --prefix backend`
-- Run the root Jest baseline with `npm test -- --passWithNoTests`
+- Run the root Jest baseline with `npm test`
 
 ## Current Baseline
 
 - Frontend build is expected to pass once frontend dependencies are installed.
 - Backend build currently runs `echo 'No build process required for backend'`; it is a placeholder verification step.
-- Root Jest is configured in `jest.config.js`, but it currently scans `frontend` only.
-- There is a shared utility test under `shared/utils/__tests__/calendarUtils.spec.ts`, but it is outside the current Jest root and is not counted by the root Jest run yet.
-- `--passWithNoTests` is a temporary CI baseline measure. It keeps CI useful while making the missing test coverage explicit.
+- Root Jest is configured in `jest.config.js` and scans both `frontend` and `shared`.
+- Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
+- `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
 
 ## Test Candidates
 
-- Include shared utility tests in the Jest roots or add a dedicated shared test command.
-- Add tests for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
+- Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
 - Add API client tests for token refresh and authorization header behavior.
 - Add backend auth utility tests for token creation and validation.
 - Add route/service tests for notes and auth error paths.
