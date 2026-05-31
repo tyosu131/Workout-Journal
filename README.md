@@ -64,6 +64,9 @@ Use [backend/.env.example](./backend/.env.example) and [frontend/.env.example](.
 
 For Azure or other production deployments, configure these values in the hosting platform rather than storing real values in repository files.
 
+## Verification
+See [docs/verification.md](./docs/verification.md) for local and CI verification commands.
+
 ## Run the app:
 ```bash
 npm run dev

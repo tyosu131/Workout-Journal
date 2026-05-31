@@ -4,9 +4,12 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "lint": "npm run lint --prefix frontend",
     "start": "concurrently \"npm run start --prefix backend\" \"npm run start --prefix frontend\"",
     "clean": "rimraf backend/node_modules frontend/node_modules && rimraf backend/package-lock.json frontend/package-lock.json",
-    "test": "npx jest --config ./jest.config.js"
+    "test": "jest --config ./jest.config.js"
   },
   "devDependencies": {
     "@types/axios": "^0.14.4",
