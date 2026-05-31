@@ -35,6 +35,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
+- Backend auth service validation tests under `backend/services/__tests__` are included in `npm test` and CI.
 - `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
 - Test output no longer includes the old `calendarUtils` debug log or the `ts-jest` `esModuleInterop` warning.
 - Frontend build output no longer logs repeated `NEXT_PUBLIC_API_URL configured: false` messages.
@@ -44,6 +45,6 @@ GitHub Actions runs the same baseline on push and pull request:
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
 - Expand API client tests for retry limits and non-401 error paths.
-- Expand route/service tests for notes and auth error paths.
+- Expand route/service tests for notes and auth Supabase success/error paths.
 - Add `frontend/pages/_document.tsx` and move global font links there, if the app keeps using link-based font loading.
 - Add backend unit tests or integration tests; the current backend build checks syntax only.
