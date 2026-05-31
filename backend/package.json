@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "node server.js",
     "clean": "rimraf node_modules && rimraf package-lock.json",
-    "build": "echo 'No build process required for backend'",
+    "build": "node scripts/checkSyntax.js",
     "start": "node server.js"
   },
   "dependencies": {

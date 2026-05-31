@@ -23,13 +23,13 @@ GitHub Actions runs the same baseline on push and pull request:
 - Install backend dependencies with `npm ci --prefix backend`
 - Run frontend lint with `npm run lint --prefix frontend`
 - Run frontend build with `npm run build --prefix frontend`
-- Run backend build with `npm run build --prefix backend`
+- Run backend JavaScript syntax check with `npm run build --prefix backend`
 - Run the root Jest baseline with `npm test`
 
 ## Current Baseline
 
 - Frontend build is expected to pass once frontend dependencies are installed.
-- Backend build currently runs `echo 'No build process required for backend'`; it is a placeholder verification step.
+- Backend build runs a JavaScript syntax check over backend `.js` files with `node --check`.
 - Root Jest is configured in `jest.config.js` and scans both `frontend` and `shared`.
 - Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
 - `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
@@ -44,3 +44,4 @@ GitHub Actions runs the same baseline on push and pull request:
 - Add backend auth utility tests for token creation and validation.
 - Add route/service tests for notes and auth error paths.
 - Add `frontend/pages/_document.tsx` and move global font links there, if the app keeps using link-based font loading.
+- Add backend unit tests or integration tests; the current backend build checks syntax only.
