@@ -55,7 +55,7 @@ const handleRefresh = async (req, res) => {
   }
 
   try {
-    const decoded = verifyToken(refreshToken);
+    const decoded = await verifyToken(refreshToken);
     if (!decoded) {
       return res.status(401).json({ error: "Invalid or expired refresh token" });
     }
