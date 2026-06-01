@@ -67,6 +67,8 @@ For Azure or other production deployments, configure these values in the hosting
 ## Verification
 See [docs/verification.md](./docs/verification.md) for local and CI verification commands.
 
+See [docs/quality-improvements.md](./docs/quality-improvements.md) for a summary of operational quality improvements.
+
 ## Run the app:
 ```bash
 npm run dev
