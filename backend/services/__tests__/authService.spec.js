@@ -31,6 +31,7 @@ jest.mock(
 const {
   handleLogin,
   handleSignUp,
+  handleRefresh,
   handleResetPassword,
   handleForgotPassword,
 } = require("../authService");
@@ -169,6 +170,62 @@ describe("authService validation", () => {
       expect(res.json).toHaveBeenCalledWith(expected);
       expect(supabase.auth.setSession).not.toHaveBeenCalled();
       expect(supabase.auth.updateUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("handleRefresh", () => {
+    it("returns 401 when refreshToken cookie is missing", async () => {
+      const req = { cookies: {} };
+      const res = createResponse();
+
+      await handleRefresh(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ error: "Refresh token is missing" });
+      expect(authUtils.verifyToken).not.toHaveBeenCalled();
+      expect(authUtils.generateAccessToken).not.toHaveBeenCalled();
+    });
+
+    it("returns 401 when verifyToken returns null", async () => {
+      authUtils.verifyToken.mockResolvedValue(null);
+      const req = { cookies: { refreshToken: "invalid-refresh-token" } };
+      const res = createResponse();
+
+      await handleRefresh(req, res);
+
+      expect(authUtils.verifyToken).toHaveBeenCalledWith("invalid-refresh-token");
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ error: "Invalid or expired refresh token" });
+      expect(authUtils.generateAccessToken).not.toHaveBeenCalled();
+    });
+
+    it("returns a new access token when verifyToken returns decoded user", async () => {
+      const decoded = { id: "user-123", email: "user@example.com" };
+      authUtils.verifyToken.mockResolvedValue(decoded);
+      authUtils.generateAccessToken.mockReturnValue("new-access-token");
+      const req = { cookies: { refreshToken: "valid-refresh-token" } };
+      const res = createResponse();
+
+      await handleRefresh(req, res);
+
+      expect(authUtils.verifyToken).toHaveBeenCalledWith("valid-refresh-token");
+      expect(authUtils.generateAccessToken).toHaveBeenCalledWith(decoded);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ access_token: "new-access-token" });
+    });
+
+    it("returns 500 when verifyToken rejects", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      authUtils.verifyToken.mockRejectedValue(new Error("verify failed"));
+      const req = { cookies: { refreshToken: "broken-refresh-token" } };
+      const res = createResponse();
+
+      await handleRefresh(req, res);
+
+      expect(authUtils.verifyToken).toHaveBeenCalledWith("broken-refresh-token");
+      expect(authUtils.generateAccessToken).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: "Failed to refresh token" });
     });
   });
 
