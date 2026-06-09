@@ -33,6 +33,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Root Jest is configured in `jest.config.js` and scans `frontend`, `shared`, and `backend`.
 - Frontend API client tests under `frontend/lib/__tests__` are included in `npm test` and CI.
 - Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
+- Shared training normalization tests for `normalizeWorkoutSets` are included in `npm test` and CI.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
 - Backend auth service validation and refresh tests under `backend/services/__tests__` are included in `npm test` and CI.
@@ -44,6 +45,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
+- Add analytics utilities for estimated 1RM, volume load, weekly volume, and PR detection.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
