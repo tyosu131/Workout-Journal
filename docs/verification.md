@@ -39,6 +39,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared training personal record detection tests are included in `npm test` and CI.
 - Shared exercise metadata canonicalization tests are included in `npm test` and CI.
 - Shared BIG3 trend aggregation tests are included in `npm test` and CI.
+- Shared weekly muscle group volume aggregation tests are included in `npm test` and CI.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
 - Backend auth service validation and refresh tests under `backend/services/__tests__` are included in `npm test` and CI.
@@ -50,7 +51,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add analytics utilities for muscle group volume analysis, then wire graph UI.
+- Add graph data/UI integration, RPE/RIR input, and AI weekly summaries.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
