@@ -150,6 +150,11 @@ const Top: React.FC = () => {
             _active={{ transform: "scale(0.95)" }}
           />
           <MenuList>
+            <MenuItem onClick={() => router.push(URLS.ANALYTICS_PAGE)}>
+              <Box fontSize="lg" py={4}>
+                Analytics
+              </Box>
+            </MenuItem>
             <MenuItem onClick={() => router.push(URLS.USER_PAGE)}>
               <Box fontSize="lg" py={4}>
                 User
