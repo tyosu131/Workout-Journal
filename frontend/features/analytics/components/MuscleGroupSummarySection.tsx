@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import type { WeeklyMuscleGroupVolumeRow } from "../../../../shared/utils/muscleGroupVolume";
 import type { ChartSeries } from "../../../../shared/utils/trainingGraphData";
+import MuscleGroupVolumeChart from "./MuscleGroupVolumeChart";
 
 type MuscleGroupSummarySectionProps = {
   rows: WeeklyMuscleGroupVolumeRow[];
@@ -48,6 +49,10 @@ const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
         <Text mt={1} fontSize="sm" color="gray.600">
           {series.length} tracked muscle groups
         </Text>
+      </Box>
+
+      <Box mb={6}>
+        <MuscleGroupVolumeChart series={series} />
       </Box>
 
       {visibleRows.length === 0 ? (
