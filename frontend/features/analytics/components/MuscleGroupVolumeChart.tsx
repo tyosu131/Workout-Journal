@@ -10,9 +10,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { ChartSeries } from "../../../../shared/utils/trainingGraphData";
+import type {
+  ChartSeries,
+  MuscleGroupVolumeMetric,
+} from "../../../../shared/utils/trainingGraphData";
 
 type MuscleGroupVolumeChartProps = {
+  metric: MuscleGroupVolumeMetric;
   series: ChartSeries[];
 };
 
@@ -30,6 +34,7 @@ type TooltipPayload = {
 type MuscleGroupTooltipProps = {
   active?: boolean;
   label?: string;
+  metric: MuscleGroupVolumeMetric;
   payload?: TooltipPayload[];
 };
 
@@ -43,6 +48,29 @@ const SERIES_COLORS = [
   "#D53F8C",
   "#718096",
 ];
+
+const METRIC_LABELS: Record<MuscleGroupVolumeMetric, {
+  ariaLabel: string;
+  description: string;
+  title: string;
+  tooltipSuffix: string;
+  yAxisLabel: string;
+}> = {
+  totalSets: {
+    ariaLabel: "Weekly muscle group set volume chart",
+    description: "total sets",
+    title: "Weekly Set Volume",
+    tooltipSuffix: "sets",
+    yAxisLabel: "Sets",
+  },
+  totalVolumeLoad: {
+    ariaLabel: "Weekly muscle group volume load chart",
+    description: "total volume load",
+    title: "Weekly Volume Load",
+    tooltipSuffix: "volume load",
+    yAxisLabel: "Volume Load",
+  },
+};
 
 const formatNumber = (value: number): string => new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
@@ -93,6 +121,7 @@ const toChartRows = (series: ChartSeries[]): MuscleGroupChartRow[] => {
 const MuscleGroupTooltip: React.FC<MuscleGroupTooltipProps> = ({
   active,
   label,
+  metric,
   payload,
 }) => {
   if (!active || !payload || payload.length === 0) {
@@ -123,7 +152,7 @@ const MuscleGroupTooltip: React.FC<MuscleGroupTooltipProps> = ({
 
         return (
           <Text key={`${item.dataKey ?? name}`} color={item.color ?? "gray.700"} fontSize="sm">
-            {name}: {formatNumber(value)}
+            {name}: {formatNumber(value)} {METRIC_LABELS[metric].tooltipSuffix}
           </Text>
         );
       })}
@@ -132,10 +161,12 @@ const MuscleGroupTooltip: React.FC<MuscleGroupTooltipProps> = ({
 };
 
 const MuscleGroupVolumeChart: React.FC<MuscleGroupVolumeChartProps> = ({
+  metric,
   series,
 }) => {
   const visibleSeries = useMemo(() => getTopSeries(series), [series]);
   const chartRows = useMemo(() => toChartRows(visibleSeries), [visibleSeries]);
+  const metricLabels = METRIC_LABELS[metric];
 
   if (visibleSeries.length === 0 || chartRows.length === 0) {
     return (
@@ -147,7 +178,7 @@ const MuscleGroupVolumeChart: React.FC<MuscleGroupVolumeChartProps> = ({
 
   return (
     <Box
-      aria-label="Weekly muscle group set volume chart"
+      aria-label={metricLabels.ariaLabel}
       border="1px solid"
       borderColor="gray.200"
       borderRadius="6px"
@@ -155,10 +186,10 @@ const MuscleGroupVolumeChart: React.FC<MuscleGroupVolumeChartProps> = ({
       p={{ base: 3, md: 4 }}
     >
       <Heading as="h3" size="sm" mb={1}>
-        Weekly Set Volume
+        {metricLabels.title}
       </Heading>
       <Text fontSize="sm" color="gray.600" mb={4}>
-        Top {visibleSeries.length} muscle groups by total sets in the selected range.
+        Top {visibleSeries.length} muscle groups by {metricLabels.description} in the selected range.
       </Text>
       <Box h={{ base: "300px", md: "380px" }} minW={0}>
         <ResponsiveContainer width="100%" height="100%">
@@ -171,11 +202,17 @@ const MuscleGroupVolumeChart: React.FC<MuscleGroupVolumeChartProps> = ({
               tickMargin={8}
             />
             <YAxis
-              allowDecimals={false}
+              allowDecimals={metric === "totalVolumeLoad"}
+              label={{
+                angle: -90,
+                position: "insideLeft",
+                value: metricLabels.yAxisLabel,
+              }}
               tick={{ fontSize: 12 }}
-              width={48}
+              tickFormatter={(value) => formatNumber(Number(value))}
+              width={72}
             />
-            <Tooltip content={<MuscleGroupTooltip />} />
+            <Tooltip content={<MuscleGroupTooltip metric={metric} />} />
             <Legend
               verticalAlign="top"
               height={56}

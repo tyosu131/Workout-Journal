@@ -32,7 +32,6 @@ import {
 import { normalizeWorkoutSets } from "../../../../shared/utils/normalizeWorkoutSets";
 import {
   toBig3EstimatedOneRepMaxSeries,
-  toMuscleGroupVolumeSeries,
 } from "../../../../shared/utils/trainingGraphData";
 import { addTrainingMetricsToSet } from "../../../../shared/utils/trainingMetrics";
 import { fetchNotesInRangeAPI } from "../../notes/api";
@@ -96,10 +95,6 @@ const AnalyticsPage: React.FC = () => {
   const big3Series = useMemo(
     () => toBig3EstimatedOneRepMaxSeries(big3Summaries),
     [big3Summaries]
-  );
-  const muscleSeries = useMemo(
-    () => toMuscleGroupVolumeSeries(muscleRows),
-    [muscleRows]
   );
 
   useEffect(() => {
@@ -222,7 +217,7 @@ const AnalyticsPage: React.FC = () => {
                 <Big3SummarySection summaries={big3Summaries} series={big3Series} />
               </TabPanel>
               <TabPanel px={0} py={6}>
-                <MuscleGroupSummarySection rows={muscleRows} series={muscleSeries} />
+                <MuscleGroupSummarySection rows={muscleRows} />
               </TabPanel>
             </TabPanels>
           </Tabs>

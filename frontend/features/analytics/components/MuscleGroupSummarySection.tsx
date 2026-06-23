@@ -1,6 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
+  Button,
+  Flex,
   Heading,
   Table,
   TableContainer,
@@ -12,15 +14,31 @@ import {
   Tr,
 } from "@chakra-ui/react";
 import type { WeeklyMuscleGroupVolumeRow } from "../../../../shared/utils/muscleGroupVolume";
-import type { ChartSeries } from "../../../../shared/utils/trainingGraphData";
+import {
+  toMuscleGroupVolumeSeries,
+  type MuscleGroupVolumeMetric,
+} from "../../../../shared/utils/trainingGraphData";
 import MuscleGroupVolumeChart from "./MuscleGroupVolumeChart";
 
 type MuscleGroupSummarySectionProps = {
   rows: WeeklyMuscleGroupVolumeRow[];
-  series: ChartSeries[];
 };
 
 const MAX_VISIBLE_ROWS = 24;
+
+const METRIC_OPTIONS: Array<{
+  label: string;
+  value: MuscleGroupVolumeMetric;
+}> = [
+  {
+    label: "Sets",
+    value: "totalSets",
+  },
+  {
+    label: "Volume Load",
+    value: "totalVolumeLoad",
+  },
+];
 
 const formatNumber = (value: number): string => new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
@@ -28,8 +46,8 @@ const formatNumber = (value: number): string => new Intl.NumberFormat("en-US", {
 
 const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
   rows,
-  series,
 }) => {
+  const [metric, setMetric] = useState<MuscleGroupVolumeMetric>("totalSets");
   const visibleRows = useMemo(
     () => [...rows]
       .sort((a, b) => {
@@ -38,6 +56,10 @@ const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
       })
       .slice(0, MAX_VISIBLE_ROWS),
     [rows]
+  );
+  const series = useMemo(
+    () => toMuscleGroupVolumeSeries(rows, metric),
+    [metric, rows]
   );
 
   return (
@@ -51,8 +73,33 @@ const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
         </Text>
       </Box>
 
+      <Flex
+        aria-label="Muscle group chart metric"
+        gap={2}
+        mb={4}
+        role="group"
+        wrap="wrap"
+      >
+        {METRIC_OPTIONS.map((option) => {
+          const isSelected = option.value === metric;
+
+          return (
+            <Button
+              key={option.value}
+              aria-pressed={isSelected}
+              colorScheme={isSelected ? "teal" : "gray"}
+              onClick={() => setMetric(option.value)}
+              size="sm"
+              variant={isSelected ? "solid" : "outline"}
+            >
+              {option.label}
+            </Button>
+          );
+        })}
+      </Flex>
+
       <Box mb={6}>
-        <MuscleGroupVolumeChart series={series} />
+        <MuscleGroupVolumeChart metric={metric} series={series} />
       </Box>
 
       {visibleRows.length === 0 ? (
