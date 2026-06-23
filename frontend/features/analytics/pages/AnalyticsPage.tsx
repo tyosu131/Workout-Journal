@@ -33,12 +33,16 @@ import { normalizeWorkoutSets } from "../../../../shared/utils/normalizeWorkoutS
 import {
   toBig3EstimatedOneRepMaxSeries,
 } from "../../../../shared/utils/trainingGraphData";
-import { addTrainingMetricsToSet } from "../../../../shared/utils/trainingMetrics";
+import {
+  addTrainingMetricsToSet,
+  type NormalizedWorkoutSetWithMetrics,
+} from "../../../../shared/utils/trainingMetrics";
 import { fetchNotesInRangeAPI } from "../../notes/api";
 import AnalyticsRangeFilter, {
   type AnalyticsRange,
 } from "../components/AnalyticsRangeFilter";
 import Big3SummarySection from "../components/Big3SummarySection";
+import ExerciseTrendSection from "../components/ExerciseTrendSection";
 import MuscleGroupSummarySection from "../components/MuscleGroupSummarySection";
 
 type LoadStatus = "loading" | "success" | "error";
@@ -90,6 +94,7 @@ const AnalyticsPage: React.FC = () => {
     aggregateBig3Trend([])
   );
   const [muscleRows, setMuscleRows] = useState<WeeklyMuscleGroupVolumeRow[]>([]);
+  const [setsWithMetrics, setSetsWithMetrics] = useState<NormalizedWorkoutSetWithMetrics[]>([]);
 
   const dateRange = useMemo(() => getDateRange(range), [range]);
   const big3Series = useMemo(
@@ -118,6 +123,7 @@ const AnalyticsPage: React.FC = () => {
 
         setNoteCount(notes.length);
         setNormalizedSetCount(normalizedSets.length);
+        setSetsWithMetrics(setsWithMetrics);
         setBig3Summaries(aggregateBig3Trend(setsWithMetrics));
         setMuscleRows(aggregateWeeklyMuscleGroupVolume(setsWithMetrics));
         setStatus("success");
@@ -137,8 +143,10 @@ const AnalyticsPage: React.FC = () => {
     };
   }, [dateRange.end, dateRange.start, reloadKey, router]);
 
+  const hasExerciseData = setsWithMetrics.some((set) => set.exerciseName.trim() !== "");
   const hasAnalyticsData = big3Series.some((series) => series.points.length > 0)
-    || muscleRows.length > 0;
+    || muscleRows.length > 0
+    || hasExerciseData;
 
   return (
     <Box minH="100vh" bg="gray.50" py={{ base: 4, md: 8 }} px={{ base: 4, md: 6 }}>
@@ -201,7 +209,7 @@ const AnalyticsPage: React.FC = () => {
             <Text color="gray.600">
               {noteCount === 0
                 ? "No workout notes were found in this range."
-                : `No supported BIG3 or muscle-group data was found across ${normalizedSetCount} sets.`}
+                : `No supported analytics data was found across ${normalizedSetCount} sets.`}
             </Text>
           </Box>
         )}
@@ -211,6 +219,7 @@ const AnalyticsPage: React.FC = () => {
             <TabList overflowX="auto" overflowY="hidden">
               <Tab whiteSpace="nowrap">BIG3</Tab>
               <Tab whiteSpace="nowrap">Muscle Groups</Tab>
+              <Tab whiteSpace="nowrap">Exercises</Tab>
             </TabList>
             <TabPanels>
               <TabPanel px={0} py={6}>
@@ -218,6 +227,9 @@ const AnalyticsPage: React.FC = () => {
               </TabPanel>
               <TabPanel px={0} py={6}>
                 <MuscleGroupSummarySection rows={muscleRows} />
+              </TabPanel>
+              <TabPanel px={0} py={6}>
+                <ExerciseTrendSection sets={setsWithMetrics} />
               </TabPanel>
             </TabPanels>
           </Tabs>
