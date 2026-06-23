@@ -42,7 +42,9 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared weekly muscle group volume aggregation tests are included in `npm test` and CI.
 - Shared training graph data transformation tests are included in `npm test` and CI.
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
-- Analytics currently uses cards and tables; no graph library has been added.
+- Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
+- The Analytics muscle-group view still uses a table; broader graph UI is a future task.
+- Recharts and `react-is` are frontend dependencies only.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
 - Backend auth service validation and refresh tests under `backend/services/__tests__` are included in `npm test` and CI.
@@ -54,7 +56,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add full BIG3 and muscle-group graph rendering, RPE/RIR input, and AI weekly summaries.
+- Add muscle-group graph rendering, RPE/RIR input, and AI weekly summaries.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
