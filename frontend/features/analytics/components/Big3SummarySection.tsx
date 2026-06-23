@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react";
 import type { Big3TrendSummary } from "../../../../shared/utils/big3Trend";
 import type { ChartSeries } from "../../../../shared/utils/trainingGraphData";
+import Big3EstimatedOneRepMaxChart from "./Big3EstimatedOneRepMaxChart";
 
 type Big3SummarySectionProps = {
   summaries: Big3TrendSummary[];
@@ -42,6 +43,9 @@ const Big3SummarySection: React.FC<Big3SummarySectionProps> = ({
       <Heading id="big3-heading" as="h2" size="md" mb={4}>
         BIG3
       </Heading>
+      <Box mb={6}>
+        <Big3EstimatedOneRepMaxChart series={series} />
+      </Box>
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
         {summaries.map((summary) => {
           const latest = summary.latestTopSet;
