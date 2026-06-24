@@ -42,14 +42,16 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared weekly muscle group volume aggregation tests are included in `npm test` and CI.
 - Shared training graph data transformation tests are included in `npm test` and CI.
 - Shared set intensity validation tests for RPE/RIR/failure are included in `npm test` and CI.
+- Shared effort analytics summary tests are included in `npm test` and CI.
 - Frontend note set types allow optional `rpe`, `rir`, and `failure` fields.
 - Note input UI can optionally capture set-level `rpe`, `rir`, and `failure` from an advanced effort row.
 - Existing `weight` / `reps` / `rest` input remains the primary note entry flow.
-- Analytics effort display is still a future task.
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
 - Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
 - Analytics uses Recharts for the weekly muscle-group chart with `totalSets` / `totalVolumeLoad` metric toggle; the muscle-group table remains as exact-value fallback content.
 - Analytics includes an exercise trend selector using existing normalized set metrics and canonical exercise groups when metadata matches.
+- Analytics displays set-level effort summary for RPE/RIR/failure when logged.
+- Missing effort values are treated as unknown, not zero.
 - Analytics chart empty states are range-aware, and exact-value fallback tables remain available for BIG3, muscle groups, and exercise trends.
 - Unmatched exercise trends remain raw-name groups; exercise chart tooltips and fallback tables show raw exercise names.
 - Frontend analytics canonical exercise grouping helper tests are included in `npm test` and CI.
@@ -67,7 +69,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add analytics effort display, AI weekly summaries, and DB-backed/custom exercise catalog exploration.
+- Add AI weekly summaries, DB-backed/custom exercise catalog exploration, and expanded effort trend charts if needed.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
