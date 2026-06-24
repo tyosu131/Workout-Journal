@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { NoteData, Set, Exercise } from "../../../types/types";
+import type { NoteData, SetTextField, Exercise } from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
 import { saveNoteAPI } from "../api";
 
@@ -38,7 +38,7 @@ const useNoteHandlers = (
       e: React.ChangeEvent<HTMLInputElement>,
       exerciseIndex: number,
       setIndex: number,
-      field: keyof Set
+      field: SetTextField
     ) => {
       if (!noteData) return;
       const newExercises = [...noteData.exercises];

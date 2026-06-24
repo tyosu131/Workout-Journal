@@ -1,17 +1,7 @@
 // frontend/features/notes/components/table-body.tsx
 import React from "react";
 import { Tr, Td, Input, Button, useBreakpointValue } from "@chakra-ui/react";
-
-interface Set {
-  weight: string;
-  reps: string;
-  rest: string;
-}
-
-interface Exercise {
-  exercise: string;
-  sets: Set[];
-}
+import type { Exercise, SetTextField } from "../../../types/types";
 
 interface TableBodyProps {
   exercises: Exercise[];
@@ -23,7 +13,7 @@ interface TableBodyProps {
     e: React.ChangeEvent<HTMLInputElement>,
     exerciseIndex: number,
     setIndex: number,
-    field: keyof Set
+    field: SetTextField
   ) => void;
   onAddSet: (exerciseIndex: number) => void;
 }
