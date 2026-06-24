@@ -2,8 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import type { NoteData, SetTextField, Exercise } from "../../../types/types";
+import type {
+  NoteData,
+  SetIntensityField,
+  SetIntensityInputValue,
+  SetTextField,
+  Exercise,
+} from "../../../types/types";
 import { getToken } from "../../../../shared/utils/tokenUtils";
+import {
+  normalizeFailure,
+  normalizeRir,
+  normalizeRpe,
+} from "../../../../shared/utils/setIntensityValidation";
 import { saveNoteAPI } from "../api";
 
 /**
@@ -43,6 +54,43 @@ const useNoteHandlers = (
       if (!noteData) return;
       const newExercises = [...noteData.exercises];
       newExercises[exerciseIndex].sets[setIndex][field] = e.target.value;
+      const newData = { ...noteData, exercises: newExercises };
+      setNoteData(newData);
+      saveNote(newData);
+    },
+    [noteData, saveNote, setNoteData]
+  );
+
+  const handleSetIntensityChange = useCallback(
+    (
+      exerciseIndex: number,
+      setIndex: number,
+      field: SetIntensityField,
+      value: SetIntensityInputValue
+    ) => {
+      if (!noteData) return;
+
+      const newExercises = [...noteData.exercises];
+      const exercise = newExercises[exerciseIndex];
+      const currentSet = exercise?.sets[setIndex];
+      if (!exercise || !currentSet) return;
+
+      const nextSet = { ...currentSet };
+      if (field === "rpe") {
+        nextSet.rpe = normalizeRpe(value);
+      } else if (field === "rir") {
+        nextSet.rir = normalizeRir(value);
+      } else {
+        nextSet.failure = normalizeFailure(value);
+      }
+
+      newExercises[exerciseIndex] = {
+        ...exercise,
+        sets: exercise.sets.map((set, index) => (
+          index === setIndex ? nextSet : set
+        )),
+      };
+
       const newData = { ...noteData, exercises: newExercises };
       setNoteData(newData);
       saveNote(newData);
@@ -161,6 +209,7 @@ const useNoteHandlers = (
 
   return {
     handleInputChange,
+    handleSetIntensityChange,
     handleExerciseChange,
     handleExerciseNoteChange,
     handleDateChange,

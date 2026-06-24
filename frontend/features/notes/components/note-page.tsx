@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
+  Checkbox,
   Text,
   Spinner,
   Center,
@@ -22,6 +23,7 @@ import {
   MenuList,
   MenuItem,
   Flex,
+  Select,
 } from "@chakra-ui/react";
 import {
   ChevronDownIcon,
@@ -42,6 +44,15 @@ import useNoteHandlers from "../hooks/useNoteHandlers";
 import useTagHandlers from "../hooks/useTagHandlers";
 import { useTagColor } from "../contexts/TagColorContext";
 
+const RPE_OPTIONS = Array.from({ length: 19 }, (_, index) => (
+  Number((1 + index * 0.5).toFixed(1))
+));
+const RIR_OPTIONS = Array.from({ length: 11 }, (_, index) => index);
+
+const getEffortRowKey = (exerciseIndex: number, setIndex: number) => (
+  `${exerciseIndex}-${setIndex}`
+);
+
 const NotePage: React.FC = () => {
   const router = useRouter();
   const { date } = router.query;
@@ -52,6 +63,9 @@ const NotePage: React.FC = () => {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
   const [folded, setFolded] = useState<boolean[]>([]);
+  const [expandedEffortRows, setExpandedEffortRows] = useState<
+    Record<string, boolean>
+  >({});
   const [showPrevious, setShowPrevious] = useState(false);
   const previousPopupRef = useRef<HTMLDivElement | null>(null);
   const [previousNote, setPreviousNote] = useState<NoteData | null>(null);
@@ -127,6 +141,7 @@ const NotePage: React.FC = () => {
 
   const {
     handleInputChange,
+    handleSetIntensityChange,
     handleExerciseChange,
     handleExerciseNoteChange,
     handleDateChange,
@@ -190,6 +205,14 @@ const NotePage: React.FC = () => {
       newState[exIndex] = !newState[exIndex];
       return newState;
     });
+  };
+
+  const toggleEffortRow = (exerciseIndex: number, setIndex: number) => {
+    const key = getEffortRowKey(exerciseIndex, setIndex);
+    setExpandedEffortRows((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   if (!noteData) {
@@ -417,59 +440,166 @@ const NotePage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {exercise.sets.map((set, sIndex) => (
-                    <tr key={sIndex}>
-                      <td style={tdStyle}>{sIndex + 1}</td>
-                      <td style={tdStyle}>
-                        <input
-                          style={inputStyle}
-                          value={set.weight}
-                          onChange={(ev) =>
-                            handleInputChange(ev, eIndex, sIndex, "weight")
-                          }
-                        />
-                      </td>
-                      <td style={tdStyle}>
-                        <input
-                          style={inputStyle}
-                          value={set.reps}
-                          onChange={(ev) =>
-                            handleInputChange(ev, eIndex, sIndex, "reps")
-                          }
-                        />
-                      </td>
-                      <td style={tdStyle}>
-                        <input
-                          style={inputStyle}
-                          value={set.rest}
-                          onChange={(ev) =>
-                            handleInputChange(ev, eIndex, sIndex, "rest")
-                          }
-                        />
-                      </td>
-                      <td style={tdStyle}>
-                        <Menu isLazy={false}>
-                          <MenuButton
-                            as={Button}
-                            variant="ghost"
-                            size="xs"
-                            px={2}
-                            _hover={{ bg: "gray.100" }}
-                          >
-                            ...
-                          </MenuButton>
-                          <MenuList>
-                            <MenuItem onClick={() => handleDuplicateRow(eIndex, sIndex)}>
-                              Duplicate
-                            </MenuItem>
-                            <MenuItem onClick={() => handleDeleteRow(eIndex, sIndex)}>
-                              Delete
-                            </MenuItem>
-                          </MenuList>
-                        </Menu>
-                      </td>
-                    </tr>
-                  ))}
+                  {exercise.sets.map((set, sIndex) => {
+                    const effortRowKey = getEffortRowKey(eIndex, sIndex);
+                    const isEffortExpanded = Boolean(expandedEffortRows[effortRowKey]);
+
+                    return (
+                      <React.Fragment key={sIndex}>
+                        <tr>
+                          <td style={tdStyle}>{sIndex + 1}</td>
+                          <td style={tdStyle}>
+                            <input
+                              style={inputStyle}
+                              value={set.weight}
+                              onChange={(ev) =>
+                                handleInputChange(ev, eIndex, sIndex, "weight")
+                              }
+                            />
+                          </td>
+                          <td style={tdStyle}>
+                            <input
+                              style={inputStyle}
+                              value={set.reps}
+                              onChange={(ev) =>
+                                handleInputChange(ev, eIndex, sIndex, "reps")
+                              }
+                            />
+                          </td>
+                          <td style={tdStyle}>
+                            <input
+                              style={inputStyle}
+                              value={set.rest}
+                              onChange={(ev) =>
+                                handleInputChange(ev, eIndex, sIndex, "rest")
+                              }
+                            />
+                          </td>
+                          <td style={tdStyle}>
+                            <Flex justify="center" align="center" gap={1} flexWrap="wrap">
+                              <Button
+                                size="xs"
+                                variant={isEffortExpanded ? "solid" : "outline"}
+                                colorScheme={isEffortExpanded ? "teal" : undefined}
+                                aria-expanded={isEffortExpanded}
+                                aria-controls={`effort-${effortRowKey}`}
+                                onClick={() => toggleEffortRow(eIndex, sIndex)}
+                              >
+                                Effort
+                              </Button>
+                              <Menu isLazy={false}>
+                                <MenuButton
+                                  as={Button}
+                                  variant="ghost"
+                                  size="xs"
+                                  px={2}
+                                  _hover={{ bg: "gray.100" }}
+                                >
+                                  ...
+                                </MenuButton>
+                                <MenuList>
+                                  <MenuItem onClick={() => handleDuplicateRow(eIndex, sIndex)}>
+                                    Duplicate
+                                  </MenuItem>
+                                  <MenuItem onClick={() => handleDeleteRow(eIndex, sIndex)}>
+                                    Delete
+                                  </MenuItem>
+                                </MenuList>
+                              </Menu>
+                            </Flex>
+                          </td>
+                        </tr>
+                        {isEffortExpanded && (
+                          <tr id={`effort-${effortRowKey}`}>
+                            <td colSpan={5} style={effortTdStyle}>
+                              <Flex
+                                align="center"
+                                justify="center"
+                                gap={3}
+                                flexWrap="wrap"
+                              >
+                                <Text fontSize="sm" fontWeight="semibold">
+                                  Effort
+                                </Text>
+                                <Box minW={{ base: "84px", md: "96px" }}>
+                                  <Text fontSize="xs" mb={1}>
+                                    RPE
+                                  </Text>
+                                  <Select
+                                    aria-label={`RPE for set ${sIndex + 1}`}
+                                    size="sm"
+                                    value={
+                                      set.rpe === null || set.rpe === undefined
+                                        ? ""
+                                        : String(set.rpe)
+                                    }
+                                    onChange={(ev) =>
+                                      handleSetIntensityChange(
+                                        eIndex,
+                                        sIndex,
+                                        "rpe",
+                                        ev.target.value
+                                      )
+                                    }
+                                  >
+                                    <option value="">-</option>
+                                    {RPE_OPTIONS.map((value) => (
+                                      <option key={value} value={value}>
+                                        {value}
+                                      </option>
+                                    ))}
+                                  </Select>
+                                </Box>
+                                <Box minW={{ base: "84px", md: "96px" }}>
+                                  <Text fontSize="xs" mb={1}>
+                                    RIR
+                                  </Text>
+                                  <Select
+                                    aria-label={`RIR for set ${sIndex + 1}`}
+                                    size="sm"
+                                    value={
+                                      set.rir === null || set.rir === undefined
+                                        ? ""
+                                        : String(set.rir)
+                                    }
+                                    onChange={(ev) =>
+                                      handleSetIntensityChange(
+                                        eIndex,
+                                        sIndex,
+                                        "rir",
+                                        ev.target.value
+                                      )
+                                    }
+                                  >
+                                    <option value="">-</option>
+                                    {RIR_OPTIONS.map((value) => (
+                                      <option key={value} value={value}>
+                                        {value}
+                                      </option>
+                                    ))}
+                                  </Select>
+                                </Box>
+                                <Checkbox
+                                  size="sm"
+                                  isChecked={set.failure === true}
+                                  onChange={(ev) =>
+                                    handleSetIntensityChange(
+                                      eIndex,
+                                      sIndex,
+                                      "failure",
+                                      ev.target.checked ? true : null
+                                    )
+                                  }
+                                >
+                                  Failure
+                                </Checkbox>
+                              </Flex>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr>
@@ -515,6 +645,11 @@ const tdStyle: React.CSSProperties = {
   border: "1px solid #000",
   padding: "8px",
   textAlign: "center",
+};
+
+const effortTdStyle: React.CSSProperties = {
+  ...tdStyle,
+  background: "#f7fafc",
 };
 
 const inputStyle: React.CSSProperties = {
