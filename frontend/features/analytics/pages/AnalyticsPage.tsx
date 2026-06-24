@@ -30,6 +30,7 @@ import {
   type WeeklyMuscleGroupVolumeRow,
 } from "../../../../shared/utils/muscleGroupVolume";
 import { normalizeWorkoutSets } from "../../../../shared/utils/normalizeWorkoutSets";
+import { summarizeSetEffort } from "../../../../shared/utils/effortAnalytics";
 import {
   toBig3EstimatedOneRepMaxSeries,
 } from "../../../../shared/utils/trainingGraphData";
@@ -42,6 +43,7 @@ import AnalyticsRangeFilter, {
   type AnalyticsRange,
 } from "../components/AnalyticsRangeFilter";
 import Big3SummarySection from "../components/Big3SummarySection";
+import EffortSummarySection from "../components/EffortSummarySection";
 import ExerciseTrendSection from "../components/ExerciseTrendSection";
 import MuscleGroupSummarySection from "../components/MuscleGroupSummarySection";
 
@@ -101,6 +103,10 @@ const AnalyticsPage: React.FC = () => {
     () => toBig3EstimatedOneRepMaxSeries(big3Summaries),
     [big3Summaries]
   );
+  const effortSummary = useMemo(
+    () => summarizeSetEffort(setsWithMetrics),
+    [setsWithMetrics]
+  );
 
   useEffect(() => {
     if (!getToken()) {
@@ -144,8 +150,10 @@ const AnalyticsPage: React.FC = () => {
   }, [dateRange.end, dateRange.start, reloadKey, router]);
 
   const hasExerciseData = setsWithMetrics.some((set) => set.exerciseName.trim() !== "");
+  const hasEffortData = effortSummary.effortLoggedSetCount > 0;
   const hasAnalyticsData = big3Series.some((series) => series.points.length > 0)
     || muscleRows.length > 0
+    || hasEffortData
     || hasExerciseData;
 
   return (
@@ -229,6 +237,9 @@ const AnalyticsPage: React.FC = () => {
                 <MuscleGroupSummarySection rows={muscleRows} />
               </TabPanel>
               <TabPanel px={0} py={6}>
+                <Box mb={8}>
+                  <EffortSummarySection summary={effortSummary} />
+                </Box>
                 <ExerciseTrendSection sets={setsWithMetrics} />
               </TabPanel>
             </TabPanels>
