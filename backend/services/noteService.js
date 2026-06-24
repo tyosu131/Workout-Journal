@@ -2,6 +2,9 @@
 
 const supabase = require("../utils/supabaseClient");
 const { verifyToken } = require("../utils/authUtils");
+const {
+  normalizeExercisesPayloadForSave,
+} = require("../utils/noteExercisesValidation");
 
 /**
  * GET /api/notes/:date
@@ -48,6 +51,7 @@ async function saveNote(req, res) {
       return res.status(401).json({ error: "Invalid token" });
     }
     const { note, exercises, tags } = req.body;
+    const normalizedExercises = normalizeExercisesPayloadForSave(exercises);
     const { error } = await supabase
       .from("notes")
       .upsert(
@@ -55,7 +59,7 @@ async function saveNote(req, res) {
           {
             date,
             note,
-            exercises,
+            exercises: normalizedExercises,
             tags,
             userid: user.id,
           },

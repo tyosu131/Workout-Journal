@@ -45,7 +45,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Frontend note set types allow optional `rpe`, `rir`, and `failure` fields.
 - Note input UI can optionally capture set-level `rpe`, `rir`, and `failure` from an advanced effort row.
 - Existing `weight` / `reps` / `rest` input remains the primary note entry flow.
-- Backend defensive validation and analytics effort display are still future tasks.
+- Analytics effort display is still a future task.
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
 - Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
 - Analytics uses Recharts for the weekly muscle-group chart with `totalSets` / `totalVolumeLoad` metric toggle; the muscle-group table remains as exact-value fallback content.
@@ -55,7 +55,9 @@ GitHub Actions runs the same baseline on push and pull request:
 - Frontend analytics canonical exercise grouping helper tests are included in `npm test` and CI.
 - Recharts and `react-is` are frontend dependencies only.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
+- Backend note exercises validation tests are included in `npm test` and CI.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
+- Backend `saveNote` defensively normalizes nested exercise intensity fields before persistence.
 - Backend auth service validation and refresh tests under `backend/services/__tests__` are included in `npm test` and CI.
 - `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
 - Test output no longer includes the old `calendarUtils` debug log or the `ts-jest` `esModuleInterop` warning.
@@ -65,7 +67,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add backend defensive validation, analytics effort display, AI weekly summaries, and DB-backed/custom exercise catalog exploration.
+- Add analytics effort display, AI weekly summaries, and DB-backed/custom exercise catalog exploration.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.

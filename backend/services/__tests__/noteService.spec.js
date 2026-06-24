@@ -11,7 +11,7 @@ jest.mock("../../utils/supabaseClient", () => ({
   from,
 }));
 
-const { getNotes, createTag, getNotesByTags } = require("../noteService");
+const { getNotes, saveNote, createTag, getNotesByTags } = require("../noteService");
 
 const createResponse = () => {
   const res = {
@@ -81,6 +81,108 @@ describe("noteService", () => {
       expect(eqUserId).toHaveBeenCalledWith("userid", "user-123");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ notes });
+    });
+  });
+
+  describe("saveNote", () => {
+    it("passes normalized exercises to Supabase upsert", async () => {
+      const upsert = jest.fn().mockResolvedValue({ error: null });
+      from.mockReturnValue({ upsert });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        params: { date: "2024-06-01" },
+        headers: { authorization: "Bearer valid-token" },
+        body: {
+          note: "Bench day",
+          tags: ["push"],
+          exercises: JSON.stringify([
+            {
+              exercise: "Bench Press",
+              sets: [
+                {
+                  weight: "100",
+                  reps: "5",
+                  rest: "120",
+                  rpe: "8.5",
+                  rir: "1",
+                  failure: "false",
+                },
+                {
+                  weight: "90",
+                  reps: "8",
+                  rest: "90",
+                  rpe: "invalid",
+                  rir: 11,
+                  failure: "unknown",
+                },
+              ],
+            },
+          ]),
+        },
+      };
+      const res = createResponse();
+
+      await saveNote(req, res);
+
+      expect(from).toHaveBeenCalledWith("notes");
+      expect(upsert).toHaveBeenCalledWith(
+        [
+          {
+            date: "2024-06-01",
+            note: "Bench day",
+            exercises: expect.any(String),
+            tags: ["push"],
+            userid: "user-123",
+          },
+        ],
+        { onConflict: ["date", "userid"] }
+      );
+
+      const savedNote = upsert.mock.calls[0][0][0];
+      expect(JSON.parse(savedNote.exercises)).toEqual([
+        {
+          exercise: "Bench Press",
+          sets: [
+            {
+              weight: "100",
+              reps: "5",
+              rest: "120",
+              rpe: 8.5,
+              rir: 1,
+              failure: false,
+            },
+            {
+              weight: "90",
+              reps: "8",
+              rest: "90",
+            },
+          ],
+        },
+      ]);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: "Note saved successfully!" });
+    });
+
+    it("normalizes invalid exercises without crashing saveNote", async () => {
+      const upsert = jest.fn().mockResolvedValue({ error: null });
+      from.mockReturnValue({ upsert });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        params: { date: "2024-06-01" },
+        headers: { authorization: "Bearer valid-token" },
+        body: {
+          note: "Invalid exercise payload",
+          tags: [],
+          exercises: "{not-json",
+        },
+      };
+      const res = createResponse();
+
+      await saveNote(req, res);
+
+      expect(upsert.mock.calls[0][0][0].exercises).toBe("[]");
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: "Note saved successfully!" });
     });
   });
 
