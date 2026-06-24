@@ -10,6 +10,8 @@ export interface Set {
 }
 
 export type SetTextField = "weight" | "reps" | "rest";
+export type SetIntensityField = "rpe" | "rir" | "failure";
+export type SetIntensityInputValue = string | number | boolean | null;
 
 export interface Exercise {
   exercise: string;
