@@ -18,19 +18,17 @@ import {
 } from "@chakra-ui/react";
 import type { NormalizedWorkoutSetWithMetrics } from "../../../../shared/utils/trainingMetrics";
 import {
-  toExerciseMetricSeries,
   type ChartSeries,
   type ExerciseMetric,
 } from "../../../../shared/utils/trainingGraphData";
+import {
+  buildCanonicalExerciseTrendGroups,
+  toCanonicalExerciseMetricSeries,
+} from "../utils/exerciseTrendCanonicalGrouping";
 import ExerciseTrendChart from "./ExerciseTrendChart";
 
 type ExerciseTrendSectionProps = {
   sets: NormalizedWorkoutSetWithMetrics[];
-};
-
-type ExerciseOption = {
-  name: string;
-  setCount: number;
 };
 
 const MAX_VISIBLE_ROWS = 12;
@@ -68,71 +66,61 @@ const formatNumber = (value: number): string => new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 }).format(value);
 
-const getExerciseOptions = (
-  sets: NormalizedWorkoutSetWithMetrics[]
-): ExerciseOption[] => {
-  const countsByExercise = new Map<string, number>();
-
-  sets.forEach((set) => {
-    if (set.exerciseName.trim() === "") {
-      return;
-    }
-
-    countsByExercise.set(
-      set.exerciseName,
-      (countsByExercise.get(set.exerciseName) ?? 0) + 1
-    );
-  });
-
-  return Array.from(countsByExercise.entries())
-    .map(([name, setCount]) => ({ name, setCount }))
-    .sort((a, b) => {
-      const countCompare = b.setCount - a.setCount;
-      return countCompare !== 0 ? countCompare : a.name.localeCompare(b.name);
-    });
-};
-
 const getRecentRows = (series: ChartSeries): ChartSeries["points"] => (
   [...series.points]
     .sort((a, b) => b.x.localeCompare(a.x))
     .slice(0, MAX_VISIBLE_ROWS)
 );
 
+const getGroupOptionLabel = (group: ReturnType<typeof buildCanonicalExerciseTrendGroups>[number]): string => {
+  const nameCountLabel = group.rawExerciseNames.length > 1
+    ? `, ${group.rawExerciseNames.length} names`
+    : "";
+  const customLabel = group.isMetadataMatched ? "" : ", custom";
+
+  return `${group.groupName} (${group.setCount} sets${nameCountLabel}${customLabel})`;
+};
+
 const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
   sets,
 }) => {
-  const exerciseOptions = useMemo(() => getExerciseOptions(sets), [sets]);
-  const [selectedExerciseName, setSelectedExerciseName] = useState("");
+  const groups = useMemo(() => buildCanonicalExerciseTrendGroups(sets), [sets]);
+  const [selectedGroupName, setSelectedGroupName] = useState("");
   const [metric, setMetric] = useState<ExerciseMetric>("estimatedOneRepMax");
 
   useEffect(() => {
-    if (exerciseOptions.length === 0) {
-      setSelectedExerciseName("");
+    if (groups.length === 0) {
+      setSelectedGroupName("");
       return;
     }
 
-    const hasSelectedExercise = exerciseOptions.some((option) => (
-      option.name === selectedExerciseName
+    const hasSelectedGroup = groups.some((group) => (
+      group.groupName === selectedGroupName
     ));
 
-    if (!hasSelectedExercise) {
-      setSelectedExerciseName(exerciseOptions[0].name);
+    if (!hasSelectedGroup) {
+      setSelectedGroupName(groups[0].groupName);
     }
-  }, [exerciseOptions, selectedExerciseName]);
+  }, [groups, selectedGroupName]);
+
+  const selectedGroup = useMemo(
+    () => groups.find((group) => group.groupName === selectedGroupName) ?? null,
+    [groups, selectedGroupName]
+  );
 
   const selectedSeries = useMemo(
-    () => selectedExerciseName === ""
+    () => selectedGroup === null
       ? {
         id: "",
         label: "",
         points: [],
       }
-      : toExerciseMetricSeries(sets, selectedExerciseName, metric),
-    [metric, selectedExerciseName, sets]
+      : toCanonicalExerciseMetricSeries(sets, selectedGroup, metric),
+    [metric, selectedGroup, sets]
   );
   const recentRows = useMemo(() => getRecentRows(selectedSeries), [selectedSeries]);
 
-  if (exerciseOptions.length === 0) {
+  if (groups.length === 0) {
     return (
       <Box as="section" aria-labelledby="exercise-trend-heading">
         <Heading id="exercise-trend-heading" as="h2" size="md" mb={4}>
@@ -152,7 +140,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
           Exercises
         </Heading>
         <Text mt={1} fontSize="sm" color="gray.600">
-          {exerciseOptions.length} tracked exercises using exact exercise names.
+          {groups.length} exercise groups using canonical metadata when available.
         </Text>
       </Box>
 
@@ -163,12 +151,12 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
           </FormLabel>
           <Select
             aria-label="Select exercise trend"
-            value={selectedExerciseName}
-            onChange={(event) => setSelectedExerciseName(event.target.value)}
+            value={selectedGroupName}
+            onChange={(event) => setSelectedGroupName(event.target.value)}
           >
-            {exerciseOptions.map((option) => (
-              <option key={option.name} value={option.name}>
-                {option.name} ({option.setCount})
+            {groups.map((group) => (
+              <option key={group.groupName} value={group.groupName}>
+                {getGroupOptionLabel(group)}
               </option>
             ))}
           </Select>
@@ -201,7 +189,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
 
       <Box mb={6}>
         <ExerciseTrendChart
-          exerciseName={selectedExerciseName}
+          exerciseName={selectedGroup?.groupName ?? ""}
           metric={metric}
           series={selectedSeries}
         />
@@ -219,6 +207,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
             <Thead bg="gray.50">
               <Tr>
                 <Th whiteSpace="nowrap">Date</Th>
+                <Th>Exercise</Th>
                 <Th>Metric</Th>
                 <Th isNumeric>Value</Th>
               </Tr>
@@ -227,6 +216,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
               {recentRows.map((point, index) => (
                 <Tr key={`${point.x}:${point.y}:${index}`}>
                   <Td whiteSpace="nowrap">{point.x}</Td>
+                  <Td>{point.label ?? selectedGroup?.groupName ?? "-"}</Td>
                   <Td>{METRIC_LABELS[metric]}</Td>
                   <Td isNumeric>{formatNumber(point.y)}</Td>
                 </Tr>

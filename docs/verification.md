@@ -44,8 +44,9 @@ GitHub Actions runs the same baseline on push and pull request:
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
 - Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
 - Analytics uses Recharts for the weekly muscle-group chart with `totalSets` / `totalVolumeLoad` metric toggle; the muscle-group table remains as exact-value fallback content.
-- Analytics includes an exercise trend selector using existing normalized set metrics, exact raw exercise names, and an exact-value table fallback.
-- Frontend analytics canonical exercise grouping helper tests are included in `npm test` and CI; the helper is not wired into the selector UI yet.
+- Analytics includes an exercise trend selector using existing normalized set metrics, canonical exercise groups when metadata matches, and an exact-value table fallback.
+- Analytics exercise trend selector uses canonical exercise groups when metadata matches; unmatched exercises remain raw-name groups and the fallback table shows raw exercise names.
+- Frontend analytics canonical exercise grouping helper tests are included in `npm test` and CI.
 - Recharts and `react-is` are frontend dependencies only.
 - Backend auth utility tests under `backend/utils/__tests__` are included in `npm test` and CI.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
@@ -58,7 +59,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add Exercise trend canonical selector UI integration, RPE/RIR input, AI weekly summaries, and chart UX polish if needed.
+- Add RPE/RIR input, AI weekly summaries, DB-backed/custom exercise catalog exploration, and chart UX polish if needed.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
