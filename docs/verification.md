@@ -41,6 +41,8 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared BIG3 trend aggregation tests are included in `npm test` and CI.
 - Shared weekly muscle group volume aggregation tests are included in `npm test` and CI.
 - Shared training graph data transformation tests are included in `npm test` and CI.
+- Shared set intensity validation tests for RPE/RIR/failure are included in `npm test` and CI.
+- RPE/RIR/failure validation helpers exist but are not wired into the note input UI yet.
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
 - Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
 - Analytics uses Recharts for the weekly muscle-group chart with `totalSets` / `totalVolumeLoad` metric toggle; the muscle-group table remains as exact-value fallback content.
@@ -60,7 +62,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add RPE/RIR input, AI weekly summaries, and DB-backed/custom exercise catalog exploration.
+- Add frontend Set type extension, optional advanced set input UI, backend defensive validation, analytics effort display, AI weekly summaries, and DB-backed/custom exercise catalog exploration.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
