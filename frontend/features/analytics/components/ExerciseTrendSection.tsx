@@ -140,11 +140,16 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
           Exercises
         </Heading>
         <Text mt={1} fontSize="sm" color="gray.600">
-          {groups.length} exercise groups using canonical metadata when available.
+          {groups.length} exercise groups. Canonical metadata is used when available, and raw names stay visible in the table.
         </Text>
       </Box>
 
-      <Flex align={{ base: "stretch", md: "end" }} direction={{ base: "column", md: "row" }} gap={4} mb={4}>
+      <Flex
+        align={{ base: "stretch", md: "end" }}
+        direction={{ base: "column", md: "row" }}
+        gap={4}
+        mb={4}
+      >
         <FormControl maxW={{ base: "100%", md: "360px" }}>
           <FormLabel fontSize="sm" fontWeight="semibold">
             Exercise
@@ -167,6 +172,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
           gap={2}
           role="group"
           wrap="wrap"
+          w={{ base: "100%", md: "auto" }}
         >
           {METRIC_OPTIONS.map((option) => {
             const isSelected = option.value === metric;
@@ -179,6 +185,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
                 onClick={() => setMetric(option.value)}
                 size="sm"
                 variant={isSelected ? "solid" : "outline"}
+                minW={{ base: "calc(50% - 4px)", sm: "auto" }}
               >
                 {option.label}
               </Button>
@@ -207,7 +214,7 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
             <Thead bg="gray.50">
               <Tr>
                 <Th whiteSpace="nowrap">Date</Th>
-                <Th>Exercise</Th>
+                <Th minW="180px">Exercise</Th>
                 <Th>Metric</Th>
                 <Th isNumeric>Value</Th>
               </Tr>
@@ -216,7 +223,9 @@ const ExerciseTrendSection: React.FC<ExerciseTrendSectionProps> = ({
               {recentRows.map((point, index) => (
                 <Tr key={`${point.x}:${point.y}:${index}`}>
                   <Td whiteSpace="nowrap">{point.x}</Td>
-                  <Td>{point.label ?? selectedGroup?.groupName ?? "-"}</Td>
+                  <Td maxW="260px" whiteSpace="normal" wordBreak="break-word">
+                    {point.label ?? selectedGroup?.groupName ?? "-"}
+                  </Td>
                   <Td>{METRIC_LABELS[metric]}</Td>
                   <Td isNumeric>{formatNumber(point.y)}</Td>
                 </Tr>
