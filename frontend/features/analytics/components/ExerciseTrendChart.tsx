@@ -22,6 +22,7 @@ type ExerciseTrendChartProps = {
 
 type ExerciseTrendTooltipPayload = {
   color?: string;
+  payload?: ExerciseTrendChartPoint;
   value?: number | string;
 };
 
@@ -30,6 +31,12 @@ type ExerciseTrendTooltipProps = {
   label?: string;
   metric: ExerciseMetric;
   payload?: ExerciseTrendTooltipPayload[];
+};
+
+type ExerciseTrendChartPoint = {
+  date: string;
+  exerciseName?: string;
+  value: number;
 };
 
 const METRIC_LABELS: Record<ExerciseMetric, {
@@ -103,6 +110,11 @@ const ExerciseTrendTooltip: React.FC<ExerciseTrendTooltipProps> = ({
       <Text color={payload[0]?.color ?? "gray.700"} fontSize="sm">
         {METRIC_LABELS[metric].tooltipLabel}: {formatNumber(value)}
       </Text>
+      {payload[0]?.payload?.exerciseName && (
+        <Text color="gray.600" fontSize="sm">
+          {payload[0].payload.exerciseName}
+        </Text>
+      )}
     </Box>
   );
 };
@@ -113,15 +125,16 @@ const ExerciseTrendChart: React.FC<ExerciseTrendChartProps> = ({
   series,
 }) => {
   const metricLabels = METRIC_LABELS[metric];
-  const points = series.points.map((point) => ({
+  const points: ExerciseTrendChartPoint[] = series.points.map((point) => ({
     date: point.x,
+    exerciseName: point.label,
     value: point.y,
   }));
 
   if (points.length === 0) {
     return (
       <Box border="1px solid" borderColor="gray.200" borderRadius="6px" p={6}>
-        <Text color="gray.500">No exercise trend data yet</Text>
+        <Text color="gray.500">No exercise trend data for the selected metric.</Text>
       </Box>
     );
   }
@@ -139,7 +152,7 @@ const ExerciseTrendChart: React.FC<ExerciseTrendChartProps> = ({
         {metricLabels.title}
       </Heading>
       <Text fontSize="sm" color="gray.600" mb={4}>
-        {exerciseName}
+        Selected group: {exerciseName}. Canonical metadata is used when available.
       </Text>
       <Box h={{ base: "280px", md: "360px" }} minW={0}>
         <ResponsiveContainer width="100%" height="100%">

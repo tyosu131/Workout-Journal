@@ -171,7 +171,7 @@ const MuscleGroupVolumeChart: React.FC<MuscleGroupVolumeChartProps> = ({
   if (visibleSeries.length === 0 || chartRows.length === 0) {
     return (
       <Box border="1px solid" borderColor="gray.200" borderRadius="6px" p={6}>
-        <Text color="gray.500">No muscle group volume data yet</Text>
+        <Text color="gray.500">No muscle group volume data in this range.</Text>
       </Box>
     );
   }

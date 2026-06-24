@@ -79,6 +79,7 @@ const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
         mb={4}
         role="group"
         wrap="wrap"
+        w={{ base: "100%", md: "auto" }}
       >
         {METRIC_OPTIONS.map((option) => {
           const isSelected = option.value === metric;
@@ -91,6 +92,7 @@ const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
               onClick={() => setMetric(option.value)}
               size="sm"
               variant={isSelected ? "solid" : "outline"}
+              minW={{ base: "calc(50% - 4px)", sm: "auto" }}
             >
               {option.label}
             </Button>
@@ -104,7 +106,7 @@ const MuscleGroupSummarySection: React.FC<MuscleGroupSummarySectionProps> = ({
 
       {visibleRows.length === 0 ? (
         <Box border="1px solid" borderColor="gray.200" borderRadius="6px" p={6}>
-          <Text color="gray.500">No data yet</Text>
+          <Text color="gray.500">No muscle group rows in this range.</Text>
         </Box>
       ) : (
         <TableContainer border="1px solid" borderColor="gray.200" borderRadius="6px">

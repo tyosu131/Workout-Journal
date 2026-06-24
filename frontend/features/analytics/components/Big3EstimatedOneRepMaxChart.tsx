@@ -156,7 +156,7 @@ const Big3EstimatedOneRepMaxChart: React.FC<Big3EstimatedOneRepMaxChartProps> = 
   if (chartRows.length === 0) {
     return (
       <Box border="1px solid" borderColor="gray.200" borderRadius="6px" p={6}>
-        <Text color="gray.500">No BIG3 trend data yet</Text>
+        <Text color="gray.500">No BIG3 estimated 1RM data in this range.</Text>
       </Box>
     );
   }
