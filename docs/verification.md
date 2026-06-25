@@ -47,6 +47,8 @@ GitHub Actions runs the same baseline on push and pull request:
 - Weekly summary input builder prepares deterministic aggregate data for future AI/rule-based summaries without calling an AI API.
 - Shared rule-based weekly summary tests are included in `npm test` and CI.
 - Analytics displays a deterministic rule-based weekly summary preview without calling an AI API.
+- Shared weekly summary prompt builder tests are included in `npm test` and CI.
+- Weekly summary prompt builder creates provider-neutral prompt payloads without calling an external AI API.
 - Frontend note set types allow optional `rpe`, `rir`, and `failure` fields.
 - Note input UI can optionally capture set-level `rpe`, `rir`, and `failure` from an advanced effort row.
 - Existing `weight` / `reps` / `rest` input remains the primary note entry flow.
@@ -73,7 +75,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add prompt builder helper/tests, backend AI endpoint design, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after prompt/backend design.
+- Add backend AI endpoint design, weekly summary response validation helper, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after backend design and response validation.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
