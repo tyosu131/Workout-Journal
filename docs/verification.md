@@ -43,6 +43,8 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared training graph data transformation tests are included in `npm test` and CI.
 - Shared set intensity validation tests for RPE/RIR/failure are included in `npm test` and CI.
 - Shared effort analytics summary tests are included in `npm test` and CI.
+- Shared weekly summary input builder tests are included in `npm test` and CI.
+- Weekly summary input builder prepares deterministic aggregate data for future AI/rule-based summaries without calling an AI API.
 - Frontend note set types allow optional `rpe`, `rir`, and `failure` fields.
 - Note input UI can optionally capture set-level `rpe`, `rir`, and `failure` from an advanced effort row.
 - Existing `weight` / `reps` / `rest` input remains the primary note entry flow.
@@ -69,7 +71,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add AI weekly summary input builder and rule-based summary preview, DB-backed/custom exercise catalog exploration, and expanded effort trend charts if needed.
+- Add rule-based weekly summary preview, prompt builder docs/tests, DB-backed/custom exercise catalog exploration, and expanded effort trend charts if needed.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
