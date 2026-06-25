@@ -30,6 +30,9 @@ import {
   type WeeklyMuscleGroupVolumeRow,
 } from "../../../../shared/utils/muscleGroupVolume";
 import { normalizeWorkoutSets } from "../../../../shared/utils/normalizeWorkoutSets";
+import {
+  buildRuleBasedWeeklySummary,
+} from "../../../../shared/utils/ruleBasedWeeklySummary";
 import { summarizeSetEffort } from "../../../../shared/utils/effortAnalytics";
 import {
   toBig3EstimatedOneRepMaxSeries,
@@ -38,6 +41,7 @@ import {
   addTrainingMetricsToSet,
   type NormalizedWorkoutSetWithMetrics,
 } from "../../../../shared/utils/trainingMetrics";
+import { buildWeeklySummaryInput } from "../../../../shared/utils/weeklySummaryInput";
 import { fetchNotesInRangeAPI } from "../../notes/api";
 import AnalyticsRangeFilter, {
   type AnalyticsRange,
@@ -46,6 +50,7 @@ import Big3SummarySection from "../components/Big3SummarySection";
 import EffortSummarySection from "../components/EffortSummarySection";
 import ExerciseTrendSection from "../components/ExerciseTrendSection";
 import MuscleGroupSummarySection from "../components/MuscleGroupSummarySection";
+import WeeklySummaryPreviewSection from "../components/WeeklySummaryPreviewSection";
 
 type LoadStatus = "loading" | "success" | "error";
 
@@ -106,6 +111,30 @@ const AnalyticsPage: React.FC = () => {
   const effortSummary = useMemo(
     () => summarizeSetEffort(setsWithMetrics),
     [setsWithMetrics]
+  );
+  const weeklySummaryInput = useMemo(
+    () => buildWeeklySummaryInput({
+      rangeStart: dateRange.start,
+      rangeEnd: dateRange.end,
+      totalNotes: noteCount,
+      normalizedSets: setsWithMetrics,
+      big3Summaries,
+      muscleRows,
+      effortSummary,
+    }),
+    [
+      big3Summaries,
+      dateRange.end,
+      dateRange.start,
+      effortSummary,
+      muscleRows,
+      noteCount,
+      setsWithMetrics,
+    ]
+  );
+  const weeklySummary = useMemo(
+    () => buildRuleBasedWeeklySummary(weeklySummaryInput),
+    [weeklySummaryInput]
   );
 
   useEffect(() => {
@@ -207,6 +236,16 @@ const AnalyticsPage: React.FC = () => {
               Retry
             </Button>
           </Alert>
+        )}
+
+        {status === "success" && (
+          <Box mb={6}>
+            <WeeklySummaryPreviewSection
+              summary={weeklySummary}
+              rangeStart={dateRange.start}
+              rangeEnd={dateRange.end}
+            />
+          </Box>
         )}
 
         {status === "success" && !hasAnalyticsData && (
