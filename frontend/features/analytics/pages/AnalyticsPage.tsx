@@ -33,6 +33,7 @@ import { normalizeWorkoutSets } from "../../../../shared/utils/normalizeWorkoutS
 import {
   buildRuleBasedWeeklySummary,
 } from "../../../../shared/utils/ruleBasedWeeklySummary";
+import { buildGrowthSignals } from "../../../../shared/utils/growthSignals";
 import { summarizeSetEffort } from "../../../../shared/utils/effortAnalytics";
 import {
   toBig3EstimatedOneRepMaxSeries,
@@ -53,6 +54,7 @@ import AnalyticsRangeFilter, {
 import Big3SummarySection from "../components/Big3SummarySection";
 import EffortSummarySection from "../components/EffortSummarySection";
 import ExerciseTrendSection from "../components/ExerciseTrendSection";
+import GrowthSignalsSection from "../components/GrowthSignalsSection";
 import MuscleGroupSummarySection from "../components/MuscleGroupSummarySection";
 import WeeklySummaryPreviewSection from "../components/WeeklySummaryPreviewSection";
 
@@ -143,6 +145,19 @@ const AnalyticsPage: React.FC = () => {
   );
   const weeklySummary = useMemo(
     () => buildRuleBasedWeeklySummary(weeklySummaryInput),
+    [weeklySummaryInput]
+  );
+  const growthSignalsSummary = useMemo(
+    () => buildGrowthSignals({
+      rangeStart: weeklySummaryInput.rangeStart,
+      rangeEnd: weeklySummaryInput.rangeEnd,
+      totalNotes: weeklySummaryInput.totalNotes,
+      totalSets: weeklySummaryInput.totalSets,
+      big3: weeklySummaryInput.big3,
+      muscleGroups: weeklySummaryInput.muscleGroups,
+      effort: weeklySummaryInput.effort,
+      dataQualityNotes: weeklySummaryInput.dataQualityNotes,
+    }),
     [weeklySummaryInput]
   );
 
@@ -288,18 +303,23 @@ const AnalyticsPage: React.FC = () => {
         )}
 
         {status === "success" && (
-          <Box mb={6}>
-            <WeeklySummaryPreviewSection
-              summary={weeklySummary}
-              rangeStart={dateRange.start}
-              rangeEnd={dateRange.end}
-              generatedResponse={generatedWeeklySummary}
-              generationError={weeklySummaryError}
-              isGenerating={isGeneratingWeeklySummary}
-              canGenerate={status === "success"}
-              onGenerate={handleGenerateWeeklySummary}
-            />
-          </Box>
+          <>
+            <Box mb={6}>
+              <WeeklySummaryPreviewSection
+                summary={weeklySummary}
+                rangeStart={dateRange.start}
+                rangeEnd={dateRange.end}
+                generatedResponse={generatedWeeklySummary}
+                generationError={weeklySummaryError}
+                isGenerating={isGeneratingWeeklySummary}
+                canGenerate={status === "success"}
+                onGenerate={handleGenerateWeeklySummary}
+              />
+            </Box>
+            <Box mb={6}>
+              <GrowthSignalsSection summary={growthSignalsSummary} />
+            </Box>
+          </>
         )}
 
         {status === "success" && !hasAnalyticsData && (
