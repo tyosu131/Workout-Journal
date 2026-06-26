@@ -80,6 +80,27 @@ describe("weeklySummaryService", () => {
   });
 
   describe("generateWeeklySummary", () => {
+    it("uses the default mock provider when provider is omitted", async () => {
+      const result = await generateWeeklySummary({
+        rangeStart: "2026-06-01",
+        rangeEnd: "2026-06-07",
+        summaryInput: createSummaryInput(),
+      });
+
+      expect(result).toEqual({
+        source: SUMMARY_SOURCE_AI,
+        summary: {
+          headline: "Mock weekly summary",
+          summary: "This is a mocked weekly summary response.",
+          highlights: [],
+          concerns: [],
+          nextWeekFocus: [],
+          dataQualityNotes: [],
+        },
+        validationErrors: [],
+      });
+    });
+
     it("returns source ai when the mocked provider returns a valid response", async () => {
       const provider = {
         generateWeeklySummary: jest.fn().mockResolvedValue(createValidProviderResponse()),
@@ -101,6 +122,28 @@ describe("weeklySummaryService", () => {
           highlights: ["42 sets logged."],
           concerns: [],
           nextWeekFocus: ["Keep logging effort."],
+          dataQualityNotes: [],
+        },
+        validationErrors: [],
+      });
+    });
+
+    it("uses the default mock provider when an injected provider shape is invalid", async () => {
+      const result = await generateWeeklySummary({
+        rangeStart: "2026-06-01",
+        rangeEnd: "2026-06-07",
+        summaryInput: createSummaryInput(),
+        provider: { model: "not-used" },
+      });
+
+      expect(result).toEqual({
+        source: SUMMARY_SOURCE_AI,
+        summary: {
+          headline: "Mock weekly summary",
+          summary: "This is a mocked weekly summary response.",
+          highlights: [],
+          concerns: [],
+          nextWeekFocus: [],
           dataQualityNotes: [],
         },
         validationErrors: [],

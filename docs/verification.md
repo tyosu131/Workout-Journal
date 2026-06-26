@@ -68,6 +68,8 @@ GitHub Actions runs the same baseline on push and pull request:
 - Backend note exercises validation tests are included in `npm test` and CI.
 - Backend weekly summary endpoint skeleton tests are included in `npm test` and CI.
 - Backend weekly summary endpoint uses a mocked provider only and does not call an external AI API.
+- Backend weekly summary provider adapter tests are included in `npm test` and CI.
+- Backend weekly summary provider adapter remains mocked and does not call an external AI API.
 - Backend note service tests under `backend/services/__tests__` are included in `npm test` and CI.
 - Backend `saveNote` defensively normalizes nested exercise intensity fields before persistence.
 - Backend auth service validation and refresh tests under `backend/services/__tests__` are included in `npm test` and CI.
@@ -79,7 +81,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add provider adapter interface, frontend Generate AI summary button against the mocked endpoint, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after provider adapter and mocked endpoint tests.
+- Add frontend Generate AI summary button against the mocked endpoint, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after the mocked endpoint and frontend flow are stable.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.

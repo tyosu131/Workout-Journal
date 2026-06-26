@@ -6,8 +6,9 @@ const {
   parseAndValidateWeeklySummaryResponse,
 } = require("../utils/weeklySummaryResponseValidation");
 const {
-  weeklySummaryMockProvider,
-} = require("../utils/weeklySummaryMockProvider");
+  getDefaultWeeklySummaryProvider,
+  isWeeklySummaryProvider,
+} = require("../utils/weeklySummaryProviderAdapter");
 
 const SUMMARY_SOURCE_AI = "ai";
 const SUMMARY_SOURCE_FALLBACK = "rule_based_fallback";
@@ -127,7 +128,7 @@ const generateWeeklySummary = async ({
   rangeStart,
   rangeEnd,
   summaryInput,
-  provider = weeklySummaryMockProvider,
+  provider,
 }) => {
   const fallback = buildRuleBasedFallbackSummary({
     rangeStart,
@@ -139,9 +140,12 @@ const generateWeeklySummary = async ({
     rangeEnd,
     summaryInput,
   });
+  const weeklySummaryProvider = isWeeklySummaryProvider(provider)
+    ? provider
+    : getDefaultWeeklySummaryProvider();
 
   try {
-    const providerResponse = await provider.generateWeeklySummary(promptMessages);
+    const providerResponse = await weeklySummaryProvider.generateWeeklySummary(promptMessages);
     const validationResult = parseAndValidateWeeklySummaryResponse(
       providerResponse,
       fallback
