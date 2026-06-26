@@ -8,6 +8,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 const notesRoutes = require("./routes/noteRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
 // 全ルートのログを出力
@@ -48,6 +49,8 @@ app.use(cookieParser());
 app.use("/auth", authRoutes);
 
 app.use("/notes", notesRoutes);
+
+app.use("/analytics", analyticsRoutes);
 
 // 404エラーハンドリング
 app.use((req, res, next) => {
