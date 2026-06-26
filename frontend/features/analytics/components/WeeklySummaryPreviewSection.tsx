@@ -1,7 +1,11 @@
 import React from "react";
 import {
+  Alert,
+  AlertDescription,
+  AlertIcon,
   Badge,
   Box,
+  Button,
   Flex,
   Heading,
   List,
@@ -13,11 +17,19 @@ import {
 import type {
   RuleBasedWeeklySummary,
 } from "../../../../shared/utils/ruleBasedWeeklySummary";
+import type {
+  GenerateWeeklySummaryResponse,
+} from "../api/weeklySummaryApi";
 
 type WeeklySummaryPreviewSectionProps = {
   summary: RuleBasedWeeklySummary;
   rangeStart: string;
   rangeEnd: string;
+  generatedResponse?: GenerateWeeklySummaryResponse | null;
+  generationError?: string | null;
+  isGenerating?: boolean;
+  canGenerate?: boolean;
+  onGenerate?: () => void;
 };
 
 type SummaryListProps = {
@@ -51,10 +63,74 @@ const SummaryList: React.FC<SummaryListProps> = ({
   </Box>
 );
 
+const getGeneratedLabel = (source: GenerateWeeklySummaryResponse["source"]) => (
+  source === "ai" ? "Mocked endpoint response" : "Fallback summary"
+);
+
+const SummaryCard: React.FC<{
+  summary: RuleBasedWeeklySummary;
+  badgeLabel: string;
+  badgeColorScheme?: string;
+}> = ({
+  summary,
+  badgeLabel,
+  badgeColorScheme = "gray",
+}) => (
+  <Box bg="gray.50" borderRadius="6px" p={4}>
+    <Flex
+      align={{ base: "flex-start", sm: "center" }}
+      justify="space-between"
+      gap={3}
+      direction={{ base: "column", sm: "row" }}
+      mb={3}
+    >
+      <Box>
+        <Text fontWeight="semibold" color="gray.800">
+          {summary.headline}
+        </Text>
+      </Box>
+      <Badge colorScheme={badgeColorScheme} alignSelf={{ base: "flex-start", sm: "center" }}>
+        {badgeLabel}
+      </Badge>
+    </Flex>
+    <Text fontSize="sm" color="gray.700">
+      {summary.summary}
+    </Text>
+
+    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mt={4}>
+      <SummaryList
+        title="Highlights"
+        items={summary.highlights}
+        emptyText="No highlights yet."
+      />
+      <SummaryList
+        title="Concerns"
+        items={summary.concerns}
+        emptyText="No concerns from the available data."
+      />
+      <SummaryList
+        title="Next Week Focus"
+        items={summary.nextWeekFocus}
+        emptyText="No focus items yet."
+      />
+      <SummaryList
+        title="Data Quality"
+        items={summary.dataQualityNotes}
+        emptyText="No data quality notes."
+      />
+    </SimpleGrid>
+  </Box>
+);
+
 const WeeklySummaryPreviewSection: React.FC<WeeklySummaryPreviewSectionProps> = ({
   summary,
   rangeStart,
   rangeEnd,
+  generatedResponse = null,
+  generationError = null,
+  isGenerating = false,
+  canGenerate = true,
+  onGenerate,
 }) => (
   <Box
     as="section"
@@ -80,42 +156,53 @@ const WeeklySummaryPreviewSection: React.FC<WeeklySummaryPreviewSectionProps> = 
             {rangeStart} to {rangeEnd}
           </Text>
         </Box>
-        <Badge colorScheme="gray" alignSelf={{ base: "flex-start", sm: "center" }}>
-          Rule-based preview
-        </Badge>
+        <Button
+          colorScheme="teal"
+          size="sm"
+          onClick={onGenerate}
+          isLoading={isGenerating}
+          loadingText="Generating"
+          isDisabled={!canGenerate || isGenerating || !onGenerate}
+          alignSelf={{ base: "stretch", sm: "center" }}
+          w={{ base: "100%", sm: "auto" }}
+        >
+          Generate AI summary
+        </Button>
       </Flex>
 
-      <Box bg="gray.50" borderRadius="6px" p={4}>
-        <Text fontWeight="semibold" color="gray.800">
-          {summary.headline}
-        </Text>
-        <Text mt={2} fontSize="sm" color="gray.700">
-          {summary.summary}
-        </Text>
-      </Box>
+      <Text fontSize="sm" color="gray.600">
+        Uses the mocked backend endpoint for now. The local rule-based preview remains visible.
+      </Text>
 
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-        <SummaryList
-          title="Highlights"
-          items={summary.highlights}
-          emptyText="No highlights yet."
-        />
-        <SummaryList
-          title="Concerns"
-          items={summary.concerns}
-          emptyText="No concerns from the available data."
-        />
-        <SummaryList
-          title="Next Week Focus"
-          items={summary.nextWeekFocus}
-          emptyText="No focus items yet."
-        />
-        <SummaryList
-          title="Data Quality"
-          items={summary.dataQualityNotes}
-          emptyText="No data quality notes."
-        />
-      </SimpleGrid>
+      {generationError && (
+        <Alert status="error" variant="left-accent">
+          <AlertIcon />
+          <AlertDescription>{generationError}</AlertDescription>
+        </Alert>
+      )}
+
+      <SummaryCard summary={summary} badgeLabel="Rule-based preview" />
+
+      {generatedResponse && (
+        <Box>
+          <SummaryCard
+            summary={generatedResponse.summary}
+            badgeLabel={getGeneratedLabel(generatedResponse.source)}
+            badgeColorScheme={generatedResponse.source === "ai" ? "teal" : "orange"}
+          />
+          {generatedResponse.validationErrors.length > 0 && (
+            <Text mt={2} fontSize="xs" color="gray.500">
+              Validation notes: {generatedResponse.validationErrors.slice(0, 2).join(" ")}
+            </Text>
+          )}
+        </Box>
+      )}
+
+      {!generatedResponse && (
+        <Text fontSize="xs" color="gray.500">
+          Generated endpoint response will appear here after the request completes.
+        </Text>
+      )}
     </Stack>
   </Box>
 );

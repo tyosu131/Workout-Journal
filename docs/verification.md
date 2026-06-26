@@ -55,6 +55,8 @@ GitHub Actions runs the same baseline on push and pull request:
 - Note input UI can optionally capture set-level `rpe`, `rir`, and `failure` from an advanced effort row.
 - Existing `weight` / `reps` / `rest` input remains the primary note entry flow.
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
+- Frontend weekly summary API helper tests are included in `npm test` and CI.
+- Analytics can request a mocked backend weekly summary response without calling an external AI API.
 - Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
 - Analytics uses Recharts for the weekly muscle-group chart with `totalSets` / `totalVolumeLoad` metric toggle; the muscle-group table remains as exact-value fallback content.
 - Analytics includes an exercise trend selector using existing normalized set metrics and canonical exercise groups when metadata matches.
@@ -81,7 +83,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add frontend Generate AI summary button against the mocked endpoint, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after the mocked endpoint and frontend flow are stable.
+- Add external AI integration only after the mocked frontend/backend flow is stable, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and optional weekly summary persistence/cache design.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
