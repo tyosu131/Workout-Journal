@@ -77,7 +77,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add backend AI endpoint design, backend AI endpoint implementation with mocked provider tests, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after backend design and mocked endpoint tests.
+- Add backend AI endpoint skeleton with mocked provider tests, provider adapter interface, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and external AI integration only after backend endpoint and mocked provider tests.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
