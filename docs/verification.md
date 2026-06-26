@@ -83,7 +83,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add external AI integration only after the mocked frontend/backend flow is stable, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, and optional weekly summary persistence/cache design.
+- Add Growth Signals pure helper and tests, Analytics Growth Signals card, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, optional weekly summary persistence/cache design, and external AI integration only after core analytics signals and the mocked frontend/backend flow are stable.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
