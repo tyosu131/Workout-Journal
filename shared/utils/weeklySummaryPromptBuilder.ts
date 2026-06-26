@@ -1,4 +1,9 @@
 import type {
+  GrowthSignal,
+  GrowthSignalsSummary,
+  GrowthSignalStatus,
+} from "./growthSignals";
+import type {
   WeeklySummaryBig3Input,
   WeeklySummaryInput,
   WeeklySummaryMuscleGroupInput,
@@ -103,6 +108,10 @@ const toText = (value: string | null | undefined): string => (
   typeof value === "string" ? value : ""
 );
 
+const toNullableText = (value: string | null | undefined): string | null => (
+  typeof value === "string" ? value : null
+);
+
 const resolveLocale = (
   locale: WeeklySummaryPromptLocale | undefined
 ): WeeklySummaryPromptLocale => (
@@ -154,26 +163,86 @@ const sanitizeDataQualityNotes = (notes: string[]): string[] => {
   return notes.filter((note) => typeof note === "string");
 };
 
+const sanitizeGrowthSignalStatus = (
+  status: GrowthSignalStatus | undefined
+): GrowthSignalStatus => (
+  status === "positive" ||
+  status === "neutral" ||
+  status === "watch" ||
+  status === "unknown"
+    ? status
+    : "unknown"
+);
+
+const sanitizeGrowthSignalEvidence = (evidence: string[]): string[] => {
+  if (!Array.isArray(evidence)) {
+    return [];
+  }
+
+  return evidence.filter((item) => typeof item === "string");
+};
+
+const sanitizeGrowthSignals = (
+  growthSignals: GrowthSignalsSummary | undefined,
+  rangeStart: string,
+  rangeEnd: string
+): GrowthSignalsSummary => {
+  if (!growthSignals || !Array.isArray(growthSignals.signals)) {
+    return {
+      rangeStart,
+      rangeEnd,
+      signals: [],
+      dataQualityNotes: [],
+    };
+  }
+
+  return {
+    rangeStart: toText(growthSignals.rangeStart) || rangeStart,
+    rangeEnd: toText(growthSignals.rangeEnd) || rangeEnd,
+    signals: growthSignals.signals.map((signal: GrowthSignal) => ({
+      id: toText(signal.id),
+      label: toText(signal.label),
+      status: sanitizeGrowthSignalStatus(signal.status),
+      headline: toText(signal.headline),
+      detail: toText(signal.detail),
+      evidence: sanitizeGrowthSignalEvidence(signal.evidence),
+      nextFocus: toNullableText(signal.nextFocus),
+    })),
+    dataQualityNotes: sanitizeDataQualityNotes(growthSignals.dataQualityNotes),
+  };
+};
+
 const sanitizeWeeklySummaryInput = (
   input: WeeklySummaryInput
-): WeeklySummaryInput => ({
-  rangeStart: toText(input.rangeStart),
-  rangeEnd: toText(input.rangeEnd),
-  totalNotes: toNonNegativeCount(input.totalNotes),
-  totalSets: toNonNegativeCount(input.totalSets),
-  big3: sanitizeBig3(input.big3),
-  muscleGroups: sanitizeMuscleGroups(input.muscleGroups),
-  effort: {
-    totalSetCount: toNonNegativeCount(input.effort.totalSetCount),
-    effortLoggedSetCount: toNonNegativeCount(input.effort.effortLoggedSetCount),
-    rpeCount: toNonNegativeCount(input.effort.rpeCount),
-    averageRpe: toFiniteNumberOrNull(input.effort.averageRpe),
-    rirCount: toNonNegativeCount(input.effort.rirCount),
-    averageRir: toFiniteNumberOrNull(input.effort.averageRir),
-    failureCount: toNonNegativeCount(input.effort.failureCount),
-  },
-  dataQualityNotes: sanitizeDataQualityNotes(input.dataQualityNotes),
-});
+): WeeklySummaryInput => {
+  const rangeStart = toText(input.rangeStart);
+  const rangeEnd = toText(input.rangeEnd);
+  const growthSignals = (
+    input as WeeklySummaryInput & {
+      growthSignals?: GrowthSignalsSummary;
+    }
+  ).growthSignals;
+
+  return {
+    rangeStart,
+    rangeEnd,
+    totalNotes: toNonNegativeCount(input.totalNotes),
+    totalSets: toNonNegativeCount(input.totalSets),
+    big3: sanitizeBig3(input.big3),
+    muscleGroups: sanitizeMuscleGroups(input.muscleGroups),
+    effort: {
+      totalSetCount: toNonNegativeCount(input.effort.totalSetCount),
+      effortLoggedSetCount: toNonNegativeCount(input.effort.effortLoggedSetCount),
+      rpeCount: toNonNegativeCount(input.effort.rpeCount),
+      averageRpe: toFiniteNumberOrNull(input.effort.averageRpe),
+      rirCount: toNonNegativeCount(input.effort.rirCount),
+      averageRir: toFiniteNumberOrNull(input.effort.averageRir),
+      failureCount: toNonNegativeCount(input.effort.failureCount),
+    },
+    growthSignals: sanitizeGrowthSignals(growthSignals, rangeStart, rangeEnd),
+    dataQualityNotes: sanitizeDataQualityNotes(input.dataQualityNotes),
+  };
+};
 
 const buildTaskInstruction = (
   locale: WeeklySummaryPromptLocale,

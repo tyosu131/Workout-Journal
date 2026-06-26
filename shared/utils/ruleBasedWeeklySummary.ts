@@ -1,6 +1,7 @@
 import type {
   EffortAnalyticsSummary,
 } from "./effortAnalytics";
+import type { GrowthSignal } from "./growthSignals";
 import type {
   WeeklySummaryBig3Input,
   WeeklySummaryInput,
@@ -75,6 +76,16 @@ const getDataQualityNotes = (input: WeeklySummaryInput): string[] => (
     ? input.dataQualityNotes.filter((note) => typeof note === "string")
     : []
 );
+
+const getGrowthSignals = (input: WeeklySummaryInput): GrowthSignal[] => {
+  const growthSignals = (
+    input as WeeklySummaryInput & {
+      growthSignals?: WeeklySummaryInput["growthSignals"] | null;
+    }
+  ).growthSignals;
+
+  return Array.isArray(growthSignals?.signals) ? growthSignals.signals : [];
+};
 
 const getTopBig3 = (
   big3: WeeklySummaryBig3Input[]
@@ -194,6 +205,15 @@ const buildHighlights = ({
   return highlights;
 };
 
+const buildGrowthSignalHighlights = (input: WeeklySummaryInput): string[] => (
+  getGrowthSignals(input)
+    .filter((signal) => signal.status === "positive")
+    .slice(0, 2)
+    .map((signal) => (
+      `Positive ${signal.label.toLowerCase()} signal: ${signal.headline}.`
+    ))
+);
+
 const buildConcerns = (input: WeeklySummaryInput, dataQualityNotes: string[]): string[] => {
   const concerns: string[] = [];
 
@@ -223,6 +243,15 @@ const buildConcerns = (input: WeeklySummaryInput, dataQualityNotes: string[]): s
 
   return concerns;
 };
+
+const buildGrowthSignalConcerns = (input: WeeklySummaryInput): string[] => (
+  getGrowthSignals(input)
+    .filter((signal) => signal.status === "watch")
+    .slice(0, 2)
+    .map((signal) => (
+      `Watch ${signal.label.toLowerCase()}: ${signal.headline}.`
+    ))
+);
 
 const buildNextWeekFocus = ({
   input,
@@ -288,12 +317,18 @@ export const buildRuleBasedWeeklySummary = (
       totalSets,
       topBig3,
     }),
-    highlights: buildHighlights({
-      input: safeInput,
-      topBig3,
-      topMuscleGroup,
-    }),
-    concerns: buildConcerns(safeInput, dataQualityNotes),
+    highlights: [
+      ...buildHighlights({
+        input: safeInput,
+        topBig3,
+        topMuscleGroup,
+      }),
+      ...buildGrowthSignalHighlights(safeInput),
+    ],
+    concerns: [
+      ...buildConcerns(safeInput, dataQualityNotes),
+      ...buildGrowthSignalConcerns(safeInput),
+    ],
     nextWeekFocus: buildNextWeekFocus({
       input: safeInput,
       totalSets,

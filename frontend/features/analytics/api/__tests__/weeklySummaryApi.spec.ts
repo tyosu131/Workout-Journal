@@ -27,6 +27,22 @@ const createRequest = () => ({
       averageRir: 1.5,
       failureCount: 2,
     },
+    growthSignals: {
+      rangeStart: "2026-06-01",
+      rangeEnd: "2026-06-07",
+      signals: [
+        {
+          id: "effort",
+          label: "Effort",
+          status: "neutral" as const,
+          headline: "Effort data is available",
+          detail: "Logged effort data is available.",
+          evidence: ["Effort coverage: 12 / 42 sets."],
+          nextFocus: "Review effort alongside volume and top sets.",
+        },
+      ],
+      dataQualityNotes: [],
+    },
     dataQualityNotes: [],
   },
 });

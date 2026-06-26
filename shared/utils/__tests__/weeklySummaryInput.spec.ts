@@ -100,7 +100,9 @@ const buildInput = (overrides: Partial<Parameters<typeof buildWeeklySummaryInput
 describe("weeklySummaryInput", () => {
   describe("buildWeeklySummaryInput", () => {
     it("builds deterministic aggregate summary input from full data", () => {
-      expect(buildInput()).toEqual({
+      const input = buildInput();
+
+      expect(input).toEqual({
         rangeStart: "2026-06-01",
         rangeEnd: "2026-06-07",
         totalNotes: 3,
@@ -138,8 +140,75 @@ describe("weeklySummaryInput", () => {
           },
         ],
         effort: effortSummary,
+        growthSignals: expect.objectContaining({
+          rangeStart: "2026-06-01",
+          rangeEnd: "2026-06-07",
+          signals: expect.any(Array),
+          dataQualityNotes: [],
+        }),
         dataQualityNotes: [],
       });
+    });
+
+    it("includes Growth Signals in fixed order", () => {
+      const input = buildInput();
+
+      expect(input.growthSignals.signals).toHaveLength(5);
+      expect(input.growthSignals.signals.map((signal) => signal.id)).toEqual([
+        "strength",
+        "volume",
+        "consistency",
+        "effort",
+        "exercise_progress",
+      ]);
+    });
+
+    it("includes unknown Growth Signals when no data is available", () => {
+      const input = buildInput({
+        totalNotes: 0,
+        normalizedSets: [],
+        big3Summaries: [],
+        muscleRows: [],
+        effortSummary: {
+          totalSetCount: 0,
+          effortLoggedSetCount: 0,
+          rpeCount: 0,
+          averageRpe: null,
+          rirCount: 0,
+          averageRir: null,
+          failureCount: 0,
+        },
+      });
+
+      expect(input.growthSignals.signals.map((signal) => signal.status)).toEqual([
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown",
+      ]);
+      expect(input.growthSignals.dataQualityNotes).toEqual([
+        "No workout notes found in this range.",
+        "No normalized sets found in this range.",
+        "No BIG3 trend data found in this range.",
+        "No muscle group volume data found in this range.",
+        "No effort data logged in this range.",
+      ]);
+    });
+
+    it("passes data quality notes into Growth Signals", () => {
+      const input = buildInput({
+        effortSummary: {
+          ...effortSummary,
+          totalSetCount: 10,
+          effortLoggedSetCount: 2,
+        },
+      });
+
+      expect(input.dataQualityNotes).toContain("Effort data is sparse in this range.");
+      expect(input.growthSignals.dataQualityNotes).toContain(
+        "Effort data is sparse in this range."
+      );
     });
 
     it("adds a data quality note when no notes are present", () => {

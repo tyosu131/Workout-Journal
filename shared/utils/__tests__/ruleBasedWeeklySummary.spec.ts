@@ -2,57 +2,74 @@ import {
   buildRuleBasedWeeklySummary,
   type RuleBasedWeeklySummary,
 } from "../ruleBasedWeeklySummary";
+import { buildGrowthSignals } from "../growthSignals";
 import type { WeeklySummaryInput } from "../weeklySummaryInput";
 
-const buildInput = (overrides: Partial<WeeklySummaryInput> = {}): WeeklySummaryInput => ({
-  rangeStart: "2026-06-01",
-  rangeEnd: "2026-06-07",
-  totalNotes: 3,
-  totalSets: 12,
-  big3: [
-    {
-      lift: "squat",
-      latestEstimatedOneRepMax: 152.5,
-      maxEstimatedOneRepMax: 155,
-      trendPointCount: 2,
+const buildInput = (overrides: Partial<WeeklySummaryInput> = {}): WeeklySummaryInput => {
+  const input = {
+    rangeStart: "2026-06-01",
+    rangeEnd: "2026-06-07",
+    totalNotes: 3,
+    totalSets: 12,
+    big3: [
+      {
+        lift: "squat",
+        latestEstimatedOneRepMax: 152.5,
+        maxEstimatedOneRepMax: 155,
+        trendPointCount: 2,
+      },
+      {
+        lift: "bench",
+        latestEstimatedOneRepMax: 122.5,
+        maxEstimatedOneRepMax: 125,
+        trendPointCount: 3,
+      },
+      {
+        lift: "deadlift",
+        latestEstimatedOneRepMax: 180,
+        maxEstimatedOneRepMax: 180,
+        trendPointCount: 1,
+      },
+    ],
+    muscleGroups: [
+      {
+        muscle: "chest",
+        totalSets: 10,
+        totalVolumeLoad: 2400,
+      },
+      {
+        muscle: "back",
+        totalSets: 8,
+        totalVolumeLoad: 2100,
+      },
+    ],
+    effort: {
+      totalSetCount: 12,
+      effortLoggedSetCount: 8,
+      rpeCount: 6,
+      averageRpe: 8.25,
+      rirCount: 4,
+      averageRir: 1.5,
+      failureCount: 2,
     },
-    {
-      lift: "bench",
-      latestEstimatedOneRepMax: 122.5,
-      maxEstimatedOneRepMax: 125,
-      trendPointCount: 3,
-    },
-    {
-      lift: "deadlift",
-      latestEstimatedOneRepMax: 180,
-      maxEstimatedOneRepMax: 180,
-      trendPointCount: 1,
-    },
-  ],
-  muscleGroups: [
-    {
-      muscle: "chest",
-      totalSets: 10,
-      totalVolumeLoad: 2400,
-    },
-    {
-      muscle: "back",
-      totalSets: 8,
-      totalVolumeLoad: 2100,
-    },
-  ],
-  effort: {
-    totalSetCount: 12,
-    effortLoggedSetCount: 8,
-    rpeCount: 6,
-    averageRpe: 8.25,
-    rirCount: 4,
-    averageRir: 1.5,
-    failureCount: 2,
-  },
-  dataQualityNotes: [],
-  ...overrides,
-});
+    dataQualityNotes: [],
+    ...overrides,
+  };
+
+  return {
+    ...input,
+    growthSignals: overrides.growthSignals ?? buildGrowthSignals({
+      rangeStart: input.rangeStart,
+      rangeEnd: input.rangeEnd,
+      totalNotes: input.totalNotes,
+      totalSets: input.totalSets,
+      big3: input.big3,
+      muscleGroups: input.muscleGroups,
+      effort: input.effort,
+      dataQualityNotes: input.dataQualityNotes,
+    }),
+  };
+};
 
 const expectNoUnsafeNumbers = (summary: RuleBasedWeeklySummary) => {
   const serialized = JSON.stringify(summary);
@@ -182,6 +199,94 @@ describe("ruleBasedWeeklySummary", () => {
         "Effort data is sparse, so intensity trends may be less reliable."
       );
       expect(summary.summary).toContain("effort was logged for 2 / 12 sets");
+    });
+
+    it("adds watch Growth Signals to concerns", () => {
+      const summary = buildRuleBasedWeeklySummary(
+        buildInput({
+          growthSignals: {
+            rangeStart: "2026-06-01",
+            rangeEnd: "2026-06-07",
+            signals: [
+              {
+                id: "effort",
+                label: "Effort",
+                status: "watch",
+                headline: "Effort data is sparse",
+                detail: "Effort coverage is below the target range.",
+                evidence: ["Effort coverage: 2 / 12 sets."],
+                nextFocus: "Log RPE/RIR on more sets.",
+              },
+            ],
+            dataQualityNotes: [],
+          },
+        })
+      );
+
+      expect(summary.concerns).toContain("Watch effort: Effort data is sparse.");
+    });
+
+    it("adds positive Growth Signals to highlights", () => {
+      const summary = buildRuleBasedWeeklySummary(
+        buildInput({
+          growthSignals: {
+            rangeStart: "2026-06-01",
+            rangeEnd: "2026-06-07",
+            signals: [
+              {
+                id: "strength",
+                label: "Strength",
+                status: "positive",
+                headline: "Top lift signal improved",
+                detail: "The current range is above the previous range.",
+                evidence: ["Bench Press estimated 1RM increased."],
+                nextFocus: "Watch whether the trend continues.",
+              },
+            ],
+            dataQualityNotes: [],
+          },
+        })
+      );
+
+      expect(summary.highlights).toContain(
+        "Positive strength signal: Top lift signal improved."
+      );
+    });
+
+    it("does not over-surface unknown Growth Signals", () => {
+      const summary = buildRuleBasedWeeklySummary(
+        buildInput({
+          growthSignals: {
+            rangeStart: "2026-06-01",
+            rangeEnd: "2026-06-07",
+            signals: [
+              {
+                id: "exercise_progress",
+                label: "Exercise Progress",
+                status: "unknown",
+                headline: "Exercise progress signal not connected yet",
+                detail: "Exercise trend data is not connected yet.",
+                evidence: [],
+                nextFocus: "Use the exercise trend selector.",
+              },
+            ],
+            dataQualityNotes: [],
+          },
+        })
+      );
+      const serialized = JSON.stringify(summary);
+
+      expect(serialized).not.toContain("Exercise progress signal not connected yet");
+      expect(serialized).not.toContain("Exercise Progress");
+    });
+
+    it("handles legacy weekly summary input without Growth Signals", () => {
+      const legacyInput = buildInput() as WeeklySummaryInput & {
+        growthSignals?: WeeklySummaryInput["growthSignals"];
+      };
+      delete legacyInput.growthSignals;
+
+      expect(() => buildRuleBasedWeeklySummary(legacyInput)).not.toThrow();
     });
 
     it("flags relatively frequent failure sets", () => {

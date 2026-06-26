@@ -45,8 +45,10 @@ GitHub Actions runs the same baseline on push and pull request:
 - Shared effort analytics summary tests are included in `npm test` and CI.
 - Shared weekly summary input builder tests are included in `npm test` and CI.
 - Weekly summary input builder prepares deterministic aggregate data for future AI/rule-based summaries without calling an AI API.
+- Weekly summary input includes deterministic Growth Signals for future rule-based and AI summaries.
 - Shared rule-based weekly summary tests are included in `npm test` and CI.
 - Analytics displays a deterministic rule-based weekly summary preview without calling an AI API.
+- Rule-based weekly summary can use Growth Signals without calling an external AI API.
 - Shared weekly summary prompt builder tests are included in `npm test` and CI.
 - Weekly summary prompt builder creates provider-neutral prompt payloads without calling an external AI API.
 - Shared weekly summary response validation tests are included in `npm test` and CI.
@@ -87,7 +89,7 @@ GitHub Actions runs the same baseline on push and pull request:
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
-- Add Growth Signals integration into Weekly Summary input if useful, DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, optional weekly summary persistence/cache design, and external AI integration only after core analytics signals and the mocked frontend/backend flow are stable.
+- Add DB-backed/custom exercise catalog exploration, expanded effort trend charts if needed, optional weekly summary persistence/cache design, and external AI integration only after core analytics signals and the mocked frontend/backend flow are stable.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.

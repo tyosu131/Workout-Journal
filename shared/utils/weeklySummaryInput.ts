@@ -1,5 +1,9 @@
 import type { Big3TrendSummary } from "./big3Trend";
 import type { EffortAnalyticsSummary } from "./effortAnalytics";
+import {
+  buildGrowthSignals,
+  type GrowthSignalsSummary,
+} from "./growthSignals";
 import type { WeeklyMuscleGroupVolumeRow } from "./muscleGroupVolume";
 
 export type WeeklySummaryBig3Input = {
@@ -23,6 +27,7 @@ export type WeeklySummaryInput = {
   big3: WeeklySummaryBig3Input[];
   muscleGroups: WeeklySummaryMuscleGroupInput[];
   effort: EffortAnalyticsSummary;
+  growthSignals: GrowthSignalsSummary;
   dataQualityNotes: string[];
 };
 
@@ -203,6 +208,23 @@ export const buildWeeklySummaryInput = ({
   const big3 = buildBig3Input(big3Summaries);
   const muscleGroups = buildMuscleGroupInput(muscleRows);
   const effort = sanitizeEffortSummary(effortSummary);
+  const dataQualityNotes = buildDataQualityNotes({
+    totalNotes: safeTotalNotes,
+    totalSets,
+    big3,
+    muscleGroups,
+    effort,
+  });
+  const growthSignals = buildGrowthSignals({
+    rangeStart,
+    rangeEnd,
+    totalNotes: safeTotalNotes,
+    totalSets,
+    big3,
+    muscleGroups,
+    effort,
+    dataQualityNotes,
+  });
 
   return {
     rangeStart,
@@ -212,12 +234,7 @@ export const buildWeeklySummaryInput = ({
     big3,
     muscleGroups,
     effort,
-    dataQualityNotes: buildDataQualityNotes({
-      totalNotes: safeTotalNotes,
-      totalSets,
-      big3,
-      muscleGroups,
-      effort,
-    }),
+    growthSignals,
+    dataQualityNotes,
   };
 };

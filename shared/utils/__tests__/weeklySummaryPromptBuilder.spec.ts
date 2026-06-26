@@ -35,6 +35,22 @@ const weeklySummaryInput: WeeklySummaryInput = {
     averageRir: 1.5,
     failureCount: 2,
   },
+  growthSignals: {
+    rangeStart: "2026-06-01",
+    rangeEnd: "2026-06-07",
+    signals: [
+      {
+        id: "effort",
+        label: "Effort",
+        status: "watch",
+        headline: "Effort data is sparse",
+        detail: "Effort coverage is below the desired range.",
+        evidence: ["Effort coverage: 8 / 12 sets."],
+        nextFocus: "Keep logging RPE/RIR for better effort tracking.",
+      },
+    ],
+    dataQualityNotes: ["Effort data is sparse in this range."],
+  },
   dataQualityNotes: ["Effort data is sparse in this range."],
 };
 
@@ -117,6 +133,17 @@ describe("weeklySummaryPromptBuilder", () => {
 
     it("keeps weekly summary input as structured data", () => {
       expect(buildPayload().data).toEqual(weeklySummaryInput);
+    });
+
+    it("includes Growth Signals in prompt payload data", () => {
+      const payload = buildPayload();
+
+      expect(payload.data.growthSignals.signals).toHaveLength(1);
+      expect(payload.data.growthSignals.signals[0]).toEqual(expect.objectContaining({
+        id: "effort",
+        status: "watch",
+        headline: "Effort data is sparse",
+      }));
     });
 
     it("does not include raw note text from accidental extra input fields", () => {
@@ -217,6 +244,8 @@ describe("weeklySummaryPromptBuilder", () => {
       expect(messages[1].content).toContain('"rangeStart": "2026-06-01"');
       expect(messages[1].content).toContain('"totalSets": 12');
       expect(messages[1].content).toContain('"averageRpe": 8.1');
+      expect(messages[1].content).toContain('"growthSignals"');
+      expect(messages[1].content).toContain('"headline": "Effort data is sparse"');
     });
 
     it("does not add provider-specific fields", () => {
