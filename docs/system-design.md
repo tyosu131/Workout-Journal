@@ -2,7 +2,7 @@
 
 ## Scope and Status Language
 
-This document is a concise system-design overview for Workout-Journal. It describes the three completed sections in this revision: Requirements, High-level Architecture, and Data Model.
+This document is a concise system-design overview for Workout-Journal. It describes five completed sections in this revision: Requirements, High-level Architecture, Data Model, Component Responsibilities, and API Design.
 
 Every claim below is labelled as one of the following:
 
@@ -159,7 +159,7 @@ flowchart TD
 | --- | --- | --- |
 | Daily note | **Current / Implemented** | The frontend `NoteData` contains `date`, `note`, `exercises`, and optional `tags`. The backend stores `date`, `note`, serialized `exercises`, `tags`, and verified `userid`. |
 | Exercise | **Current / Implemented** | An exercise is `{ exercise: string, note?: string, sets: Set[] }`. The exercise name and optional exercise note are nested inside the serialized `notes.exercises` payload. |
-| Set | **Current / Implemented** | A set has string-form primary input fields `weight`, `reps`, and `rest`. Optional fields are `rpe?: string | number | null`, `rir?: string | number | null`, and `failure?: boolean | null`. |
+| Set | **Current / Implemented** | A set has string-form primary input fields `weight`, `reps`, and `rest`. Optional RPE and RIR accept string, number, or null; failure accepts boolean or null. |
 | Effort field persistence | **Current / Implemented** | The frontend serializes the exercise array. Backend save normalization accepts an array or JSON string, preserves surrounding exercise/set fields, normalizes valid RPE/RIR/failure values, and omits null/invalid optional effort fields before saving JSON text. |
 | Tags on notes | **Current / Implemented** | The save payload always supplies a tags array; the reviewed schema stores it in `notes.tags` as `text[]`. |
 | User-created tag catalog | **Current / Implemented** | Backend tag operations read and write `user_tags` rows scoped by `user_id`, and delete uses the `remove_tag_from_notes` RPC to remove a tag from note rows. |
@@ -204,6 +204,175 @@ flowchart TD
 
 **Current / Implemented:** The current weekly-summary input is aggregate data: range bounds, note and set counts, BIG3 aggregates, muscle-group aggregates, effort summary, Growth Signals, and data-quality notes. Raw workout note text is not part of the current provider-facing data shape.
 
+## 4. Component Responsibilities
+
+### Component Boundaries
+
+| Component | Status | Owns | Must not own |
+| --- | --- | --- | --- |
+| Next.js pages and feature components | **Current / Implemented** | Page routing, interactive note/calendar/account screens, and responsive presentation. | Direct database access, backend service logic, provider secrets, or service-role credentials. |
+| Frontend API clients | **Current / Implemented** | Axios base configuration, authenticated request headers, feature-level request wrappers, and response delivery to feature code. | Supabase persistence, business aggregation, or durable UI state. |
+| Frontend authentication and token handling | **Current / Implemented** | Local access-token storage, client session checks, redirect behavior, and retrying a failed request after refresh. | Backend JWT signing, refresh-token issuance, server-side revocation, or provider secrets. |
+| Analytics page orchestration | **Current / Implemented** | Fetching range notes, normalization, metric aggregation, chart/summary inputs, range-local UI state, and rendering Analytics sections. | Persisting derived analytics, changing note records, or replacing deterministic analytics with a provider result. |
+| Express server and middleware | **Current / Implemented** | Environment loading, CORS, JSON/cookie middleware, internal route mounts, and global 404/error middleware. | Feature-specific analytics calculation or provider-specific model behavior. |
+| Auth routes and service | **Current / Implemented** | Route registration; Supabase Auth operations; user record updates; backend access/refresh JWT issuance; and protected user/session operations. | Note persistence, training aggregation, or frontend token storage. |
+| Note routes and service | **Current / Implemented** | Thin note/tag route registration, bearer-token checks, user-scoped `notes` and `user_tags` operations, note upsert, and nested effort-field normalization. | Computing derived charts/signals or issuing authentication tokens. |
+| Shared deterministic analytics utilities | **Current / Implemented** | Pure normalization, metric calculation, trend/volume/effort aggregation, Growth Signals, weekly-summary input, rule-based summary, and provider-neutral prompt data. | Database access, network calls, UI state, Express request handling, or secret access. |
+| Weekly-summary route and service | **Current / Implemented** | Bearer-token extraction and authenticated handling, weekly-summary request validation, prompt-message construction orchestration, provider-adapter invocation, provider-shaped response validation, rule-based fallback selection, and HTTP response construction. | Frontend analytics UI state, direct note persistence, generated-summary persistence, provider-specific SDK/configuration details, or secrets exposed to the frontend. |
+| Weekly-summary provider adapter | **Current / Implemented** | The narrow `generateWeeklySummary(promptMessages)` contract and the current local mock response. | Authentication, authorization, note-range retrieval, database access, fallback policy, HTTP response construction, or frontend state. |
+| Supabase Auth | **Current / Implemented** | Sign-up, password sign-in, password reset, user update, and session operations invoked by the backend. | Application analytics derivation, frontend routing, or weekly-summary generation. |
+| Supabase PostgreSQL | **Current / Implemented** | Persisted application records accessed by the backend, including notes, users, and the user tag catalog. | On-demand analytics, Growth Signals, or initial weekly-summary persistence. |
+| Exercise metadata | **Current / Implemented** | Static canonical names, aliases, muscle metadata, and BIG3 lift classification used by deterministic analytics. | User-defined exercise catalog persistence, fuzzy matching, or user goal inference. |
+| CI verification boundary | **Current / Implemented** | Independent dependency installation plus frontend lint/build, backend syntax checking, and root Jest verification on push and pull request. | Deployment, production health monitoring, or runtime authorization. |
+
+**Current Design Decision:** Frontend code does not receive a backend Supabase key or an AI-provider secret. The current provider adapter is local and mocked; external provider configuration remains outside this implementation.
+
+**Future Direction:** A future external provider call should be isolated behind the provider adapter. Provider SDK, model settings, timeout, and secret access should not leak into routes, frontend code, or shared deterministic analytics. External provider integration is not currently implemented.
+
+**Open Question:** The repository contains `backend/services/userService.js`, but the mounted route modules inspected here do not import it. Its runtime reachability and intended ownership need confirmation before it is treated as part of the HTTP API surface.
+
+### Dependency Direction
+
+**Current / Implemented:** The primary request path is:
+
+```text
+UI
+-> API clients / feature orchestration
+-> Express routes
+-> services
+-> Supabase
+```
+
+**Current / Implemented:** Analytics uses a separate deterministic flow:
+
+```text
+Persisted notes
+-> normalization
+-> deterministic metrics
+-> charts / Growth Signals / weekly summary input
+-> rule-based or mocked-provider summary
+```
+
+**Current / Implemented:** The Analytics page imports shared TypeScript utilities and feature API clients. The inspected backend route and service modules import backend-local utilities; no inspected backend module imports frontend code.
+
+**Open Question:** A repository-wide circular-dependency rule or a runtime strategy for sharing the TypeScript summary utilities with the JavaScript backend is not present. The backend currently maintains local weekly-summary validation, prompt, and fallback logic instead.
+
+## 5. API Design
+
+### API Design Principles
+
+**Current / Implemented:** Notes, tags, authenticated user operations, and the weekly-summary endpoint extract a Bearer token and verify the backend JWT before their user-scoped work. Sign-up, login, forgot-password, and reset-password use their own credential or reset-token flows.
+
+**Current / Implemented:** Express route files are registration layers that delegate handlers to services. The Analytics page derives charts, Growth Signals, and the structured weekly-summary input from an authenticated notes-range response on the frontend; there is no general analytics aggregation API.
+
+**Current / Implemented:** Daily note saving is an upsert, and nested exercises accept the historical JSON-string shape. Backend normalization sanitizes optional RPE, RIR, and failure values while preserving valid older payloads without a migration.
+
+**Current / Implemented:** The weekly-summary boundary accepts structured `summaryInput`, rejects named raw-note-content fields, validates provider-shaped output, and returns a rule-based fallback when the mock provider response is invalid or throws.
+
+### Endpoint Inventory
+
+**Current / Implemented:** The following inventory combines the Express mount in `backend/server.js` with each route module. These are internal Express paths, not an assertion about a production proxy prefix.
+
+#### Authentication / User
+
+| Method | Express path | Authentication | Responsibility |
+| --- | --- | --- | --- |
+| `GET` | `/auth/session` | Bearer token | Verify the backend token and return the current user's selected profile data. |
+| `POST` | `/auth/refresh` | Refresh-token cookie | Verify the refresh token and issue a new backend access token. |
+| `POST` | `/auth/signup` | None | Validate sign-up fields, create a Supabase Auth user and application user row, then issue backend tokens. |
+| `POST` | `/auth/login` | None | Validate credentials through Supabase Auth, then issue backend tokens. |
+| `GET` | `/auth/get-user` | Bearer token | Return the authenticated user's application profile. |
+| `PUT` | `/auth/update-user` | Bearer token | Validate and update the authenticated user's profile and selected Supabase Auth attributes. |
+| `POST` | `/auth/forgot-password` | None | Request a Supabase password-reset email. |
+| `PUT` | `/auth/reset-password` | Reset access token in request body | Establish a Supabase session from the supplied reset access token and update the password. |
+
+#### Notes / Tags
+
+| Method | Express path | Authentication | Responsibility |
+| --- | --- | --- | --- |
+| `GET` | `/notes/:date` | Bearer token | Return notes matching the requested date and authenticated user ID. |
+| `POST` | `/notes/:date` | Bearer token | Normalize nested exercises and upsert one daily note for the authenticated user. |
+| `GET` | `/notes/range?start=...&end=...` | Bearer token | Return the authenticated user's notes in the supplied inclusive date range, ordered by date. |
+| `GET` | `/notes/all-tags` | Bearer token | Return the authenticated user's tag catalog. |
+| `GET` | `/notes/by-tags?tags=...` | Bearer token | Return the authenticated user's notes whose tag array overlaps the supplied comma-separated tags. |
+| `POST` | `/notes/tag` | Bearer token | Create a user-scoped tag when it does not already exist. |
+| `DELETE` | `/notes/tag/:tagName` | Bearer token | Delete a user-scoped tag and invoke the tag-removal RPC for that user's notes. |
+
+#### Analytics / Weekly Summary
+
+| Method | Express path | Authentication | Responsibility |
+| --- | --- | --- | --- |
+| `POST` | `/analytics/weekly-summary` | Bearer token | Validate range and structured input, invoke the local mock provider boundary, validate its response, and return an `ai` or `rule_based_fallback` source. |
+
+**Open Question:** Frontend auth and notes clients commonly use `/api/auth/*` and `/api/notes/*`, while the weekly-summary client uses `/analytics/weekly-summary`. No rewrite, Next.js API route, or hosting proxy definition in this repository proves how these public paths map to the internal Express mounts.
+
+**Current / Implemented:** `frontend/features/auth/hooks/useResendVerification.ts` calls `/api/signup` through `apiRequestWithAuth`. That wrapper requires a stored access token and throws before making an HTTP request when no access token exists. The mounted Express signup route is `POST /auth/signup`.
+
+**Open Question:** No repository-visible proxy or rewrite proves that `/api/signup` reaches `POST /auth/signup`. Verification resend is expected to be usable around an unauthenticated signup flow, but the authenticated wrapper may prevent the request from being sent when no access token exists. The intended endpoint, authentication requirement, and deployed reachability need confirmation.
+
+### Authentication and Token Lifecycle
+
+**Current / Implemented:** Sign-up and login call Supabase Auth, then the backend signs a separate access token and refresh token using its own JWT utility. The access token is returned to the frontend and used as a Bearer token for authenticated requests; the refresh token is issued as an HTTP-only cookie.
+
+**Current / Implemented:** The Axios client enables credentials, attaches the stored access token for authenticated calls, and intercepts 401 responses. A request marked for retry is refreshed once; a module-level limit stops repeated refresh attempts and removes the local access token after exhaustion or refresh failure.
+
+**Current / Implemented:** Frontend logout clears the locally stored access token and redirects to login. The associated server logout request is commented out in the current AuthContext.
+
+**Open Question:** No mounted logout endpoint, server-side access-token revocation list, refresh-token rotation, or refresh-token invalidation mechanism was found in the inspected code. Production session invalidation behavior therefore remains unverified.
+
+### Request Validation
+
+| Area | Status | Current validation boundary |
+| --- | --- | --- |
+| Auth sign-up, login, and profile update | **Current / Implemented** | `authService` checks required fields, email format, and minimum password length where applicable. |
+| Password reset | **Current / Implemented** | `authService` checks for a reset access token and a non-empty password with minimum length. |
+| Note path and range dates | **Current / Implemented** | `noteService` has no dedicated date-format validator; it passes `:date`, `start`, and `end` to Supabase queries. Malformed direct-request behavior beyond that boundary is not verified. |
+| Notes payload | **Current / Implemented** | `saveNote` accepts `note`, `exercises`, and `tags`; nested exercises are normalized by `noteExercisesValidation`. A complete schema for note text and tags is not enforced in the inspected service. |
+| Nested exercises and effort | **Current / Implemented** | Backend utility accepts an array or JSON string, safely falls back to `[]`, preserves valid set fields, accepts finite RPE 1-10 and RIR 0-10, and accepts boolean or `"true"`/`"false"` failure values. Invalid optional effort values are omitted before save. |
+| Tags | **Current / Implemented** | Tag creation rejects a falsy `tag`; deletion rejects a missing route parameter. Length, character, and normalization rules beyond that are not present in the inspected service. |
+| Weekly-summary request | **Current / Implemented** | Backend utility requires an object, valid ordered `YYYY-MM-DD` bounds within 183 days, an object `summaryInput`, and rejects named raw-note-content fields recursively. |
+| Provider-shaped summary response | **Current / Implemented** | Backend utility requires the six structured summary fields, string arrays, bounded lengths/counts, and uses a normalized fallback on parse or shape failure. |
+
+### Write Semantics and Idempotency
+
+**Current / Implemented:** `POST /notes/:date` normalizes exercises and uses Supabase upsert with `(date, userid)` as the conflict target. The daily-key risk in the reviewed backup is documented in [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
+
+**Current / Implemented:** Tag creation first checks for an existing user-scoped tag, returning success without a new row when one exists. Tag deletion removes the catalog row and calls `remove_tag_from_notes` for the matching user and tag, so it has a note-record side effect.
+
+**Current Design Decision:** `POST /analytics/weekly-summary` performs no database write. Generated summaries are returned on demand and are not persisted.
+
+### Response and Error Boundaries
+
+**Current / Implemented:** Missing or invalid Bearer tokens commonly return `401` with an `error` field. Auth validation returns `400`; the weekly-summary request validator returns `400` with `error` and `details`; and backend failures generally return `500` with an endpoint-specific error message.
+
+**Current / Implemented:** A requested note with no matching row returns a successful notes collection from the current query path rather than a dedicated not-found response. Auth session/profile lookups can return `404` when the selected user record is absent.
+
+**Current / Implemented:** The weekly-summary service returns `200` with `source: "rule_based_fallback"`, a safe summary, and `validationErrors` when the provider response is invalid or the provider throws. Global Express middleware returns `404` with `Not Found` or `500` with `Internal Server Error` for unhandled paths/errors.
+
+**Open Question:** Response envelopes vary by endpoint: examples include a direct user object, `{ user }`, `{ notes }`, `{ tags }`, `{ message }`, and `{ error, details }`. A consistent API error/response schema is not implemented in the inspected code.
+
+### API Security and Privacy
+
+**Current / Implemented:** Note and tag database operations apply the user ID derived from the verified backend JWT. The backend reads Supabase credentials from server environment variables; frontend configuration is limited to public environment variables.
+
+**Current / Implemented:** The current weekly-summary validation boundary rejects named raw-note fields, and the summary service avoids logging prompt messages or provider response text. The local provider is mocked and no external provider call occurs.
+
+**Current / Implemented:** The weekly-summary endpoint accepts `summaryInput` from the client and does not rebuild it from notes in the current service. Authenticated client-provided aggregate data is therefore not equivalent to server-rebuilt analytics.
+
+**Future Direction:** Before an external provider is introduced, define rate limiting, request-size limits, trusted backend reconstruction of summary input, timeout behavior, and a production logging policy.
+
+### API Open Questions
+
+- **Open Question:** The production mapping between frontend `/api/*` paths and Express `/auth` or `/notes` mounts is not in this repository.
+- **Open Question:** API versioning is not present in the inspected route mounts.
+- **Open Question:** A common error-response schema is not present across the current services.
+- **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
+- **Open Question:** Rate limiting is not present in the inspected Express middleware or weekly-summary service.
+- **Open Question:** The weekly-summary input may need backend reconstruction from user-scoped notes before external provider use.
+- **Open Question:** The JavaScript backend currently does not reuse the shared TypeScript weekly-summary utilities at runtime.
+- **Open Question:** Live Supabase schema, RLS policy, and multi-user isolation behavior require production verification.
+- **Open Question:** Resend-verification route mapping and its authentication requirement are unresolved.
+
 ## References
 
 - [README](../README.md)
@@ -221,12 +390,8 @@ flowchart TD
 
 ## Future Sections
 
-### Component Responsibilities
+### 6. Async Jobs
 
-### API Design
+### 7. Failure Handling
 
-### Async Jobs
-
-### Failure Handling
-
-### Observability
+### 8. Observability
