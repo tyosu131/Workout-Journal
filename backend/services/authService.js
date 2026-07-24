@@ -3,7 +3,8 @@
  * - 既存 Supabase 連携ロジック
  */
 
-const supabase = require("../utils/supabaseClient");
+const { getAdminDbClient } = require("../utils/supabaseAdminClient");
+const { createAuthClient } = require("../utils/supabaseAuthClient");
 const {
   verifyToken,
   generateAccessToken,
@@ -25,7 +26,7 @@ const handleSession = async (req, res) => {
     if (!decoded) {
       return res.status(401).json({ error: "Invalid token" });
     }
-    const { data: dbUser, error } = await supabase
+    const { data: dbUser, error } = await getAdminDbClient()
       .from("users")
       .select("uuid, name, email")
       .eq("uuid", decoded.id)
@@ -92,20 +93,33 @@ const handleSignUp = async (req, res) => {
   }
 
   try {
-    const { data: user, error: signUpError } = await supabase.auth.signUp({
+    const authClient = createAuthClient();
+    const { data: signUpData, error: signUpError } = await authClient.auth.signUp({
       email,
       password,
       options: { data: { username } },
     });
     if (signUpError) throw signUpError;
 
-    const { error: dbError } = await supabase
-      .from("users")
-      .upsert([{ uuid: user.user.id, name: username, email }], { onConflict: "uuid" });
-    if (dbError) throw dbError;
+    const createdUser = signUpData.user;
+    if (!createdUser) {
+      return res.status(500).json({ error: "Sign-up did not return a user" });
+    }
 
-    const token = generateAccessToken(user.user);
-    const refreshToken = generateRefreshToken(user.user);
+    if (!signUpData.session) {
+      return res.status(201).json({ user: createdUser, verificationRequired: true });
+    }
+
+    const { error: dbError } = await getAdminDbClient()
+      .from("users")
+      .upsert([{ uuid: createdUser.id, name: username, email }], { onConflict: "uuid" });
+    if (dbError) {
+      console.error("Sign-up succeeded but profile creation failed:", dbError.message);
+      throw dbError;
+    }
+
+    const token = generateAccessToken(createdUser);
+    const refreshToken = generateRefreshToken(createdUser);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -114,7 +128,7 @@ const handleSignUp = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(201).json({ token, user: user.user });
+    return res.status(201).json({ token, user: createdUser, verificationRequired: false });
   } catch (error) {
     console.error("Failed to sign up user:", error.message);
     return res.status(500).json({ error: error.message });
@@ -142,9 +156,36 @@ const handleLogin = async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const authClient = createAuthClient();
+    const { data, error } = await authClient.auth.signInWithPassword({ email, password });
     if (error || !data.user) {
       return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const adminDbClient = getAdminDbClient();
+    const { data: profile, error: profileLookupError } = await adminDbClient
+      .from("users")
+      .select("uuid")
+      .eq("uuid", data.user.id)
+      .maybeSingle();
+    if (profileLookupError) {
+      console.error("Failed to look up login profile:", profileLookupError.message);
+      return res.status(500).json({ error: "Login failed" });
+    }
+
+    if (!profile) {
+      const metadataUsername = data.user.user_metadata?.username;
+      const name = typeof metadataUsername === "string" ? metadataUsername : "";
+      const { error: profileCreateError } = await adminDbClient
+        .from("users")
+        .upsert(
+          [{ uuid: data.user.id, name, email: data.user.email }],
+          { onConflict: "uuid" }
+        );
+      if (profileCreateError) {
+        console.error("Login succeeded but profile creation failed:", profileCreateError.message);
+        return res.status(500).json({ error: "Login failed" });
+      }
     }
 
     const token = generateAccessToken(data.user);
@@ -180,7 +221,7 @@ const handleGetUser = async (req, res) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const { data: dbUser, error } = await supabase
+    const { data: dbUser, error } = await getAdminDbClient()
       .from("users")
       .select("uuid, name, email")
       .eq("uuid", decoded.id)
@@ -232,28 +273,38 @@ const handleUpdateUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    if (password !== undefined && password !== "******") {
-      if (!validator.isLength(password, { min: 6 })) {
-        return res.status(400).json({ error: "Password must be at least 6 characters long" });
-      }
+    const { data: dbUser, error: userError } = await getAdminDbClient()
+      .from("users")
+      .select("uuid, email")
+      .eq("uuid", userId)
+      .maybeSingle();
+    if (userError) {
+      console.error("Failed to fetch current user profile:", userError.message);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (!dbUser) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    if (email) {
-      await supabase.auth.updateUser({
-        email,
-        options: {
-          emailRedirectTo: "http://54.188.218.191/verify-email",
-        },
+    if (email !== dbUser.email) {
+      return res.status(400).json({
+        error: "Email changes require a dedicated confirmation flow",
       });
     }
-    if (password && password !== "******") {
-      await supabase.auth.updateUser({ password });
+    if (password !== undefined && password !== "******") {
+      return res.status(400).json({
+        error: "Password changes require a dedicated security flow",
+      });
     }
 
-    await supabase
+    const { error: profileError } = await getAdminDbClient()
       .from("users")
-      .update({ name: username, email })
+      .update({ name: username })
       .eq("uuid", userId);
+    if (profileError) {
+      console.error("Failed to update user profile:", profileError.message);
+      return res.status(500).json({ error: "Failed to update user" });
+    }
 
     return res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
@@ -273,8 +324,15 @@ const handleForgotPassword = async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://54.188.218.191/reset-password",
+    const passwordResetRedirectUrl = process.env.PASSWORD_RESET_REDIRECT_URL;
+    if (!passwordResetRedirectUrl) {
+      console.error("PASSWORD_RESET_REDIRECT_URL is not configured");
+      return res.status(500).json({ error: "Password reset is not configured" });
+    }
+
+    const authClient = createAuthClient();
+    const { error } = await authClient.auth.resetPasswordForEmail(email, {
+      redirectTo: passwordResetRedirectUrl,
     });
 
     if (error) {
@@ -289,46 +347,6 @@ const handleForgotPassword = async (req, res) => {
   }
 };
 
-/**
- * 新しいパスワードを設定
- */
-const handleResetPassword = async (req, res) => {
-  const { accessToken, newPassword } = req.body;
-  if (!accessToken) {
-    return res.status(400).json({ error: "Access token is missing" });
-  }
-  if (!newPassword) {
-    return res.status(400).json({ error: "New password is required" });
-  }
-  if (!validator.isLength(newPassword, { min: 6 })) {
-    return res.status(400).json({ error: "Password must be at least 6 characters long" });
-  }
-
-  try {
-    const { error: sessionError } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: "",
-    });
-    if (sessionError) {
-      console.error("Failed to set session with accessToken:", sessionError);
-      return res.status(401).json({ error: "Invalid or expired token" });
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    if (updateError) {
-      console.error("Failed to update password:", updateError);
-      return res.status(500).json({ error: "Failed to update password" });
-    }
-
-    return res.status(200).json({ message: "Password updated successfully" });
-  } catch (err) {
-    console.error("Exception in handleResetPassword:", err);
-    return res.status(500).json({ error: "Server error" });
-  }
-};
-
 module.exports = {
   handleSession,
   handleRefresh,
@@ -337,5 +355,4 @@ module.exports = {
   handleGetUser,
   handleUpdateUser,
   handleForgotPassword,
-  handleResetPassword,
 };

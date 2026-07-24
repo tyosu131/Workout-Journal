@@ -1,4 +1,4 @@
-const supabase = require("../utils/supabaseClient"); // Supabaseクライアントのインポート
+const { verifyToken } = require("../utils/authUtils");
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -11,13 +11,14 @@ const authenticate = async (req, res, next) => {
   console.log("Authorization token provided:", Boolean(token));
   console.log("JWT_SECRET configured:", Boolean(process.env.JWT_SECRET));
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser(token);
-  
-  console.log("Authenticated user:", user ? { id: user.id } : null);
+  const user = await verifyToken(token);
+  if (!user || !user.id) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  console.log("Authenticated user:", { id: user.id });
   req.user = user;
-  next();
+  return next();
 };
 
 module.exports = authenticate;

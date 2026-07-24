@@ -7,7 +7,6 @@ const {
   handleGetUser,
   handleUpdateUser,
   handleForgotPassword,
-  handleResetPassword,
 } = require("../services/authService");
 
 const router = express.Router();
@@ -26,6 +25,5 @@ router.post("/login", handleLogin);
 router.get("/get-user", handleGetUser);
 router.put("/update-user", handleUpdateUser);
 router.post("/forgot-password", handleForgotPassword);
-router.put("/reset-password", handleResetPassword);
 
 module.exports = router;

@@ -161,20 +161,24 @@ Important caveat:
 - Supabase may reject the write if the actual `notes.exercises` column type, constraints, triggers, or RLS-related logic do not accept the payload.
 - The repository alone does not prove the database behavior.
 
-## Database Schema Findings
+## Historical Repository Findings
 
-Repository search results:
+At the time of this compatibility investigation, repository search found:
 
 - No SQL migration files were found.
 - No Supabase schema file was found.
 - No `notes` table DDL was found.
-- Only `backend/utils/supabaseClient.js` exists for Supabase connection setup.
+- The current backend uses separate Auth and Admin/DB Supabase client modules; neither repository module supplies historical schema DDL.
 - Existing docs mention Supabase, but do not define the `notes.exercises` column type.
 
 Conclusion:
 
 - Repository does not contain schema evidence for `notes.exercises`.
 - The exact column type is unknown from local code/docs.
+
+## Current Target Schema Context
+
+The repository now contains a new-project [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql), including a target `public.notes` definition. This migration is a current reconstruction target, not evidence that the historical backup or any live Supabase project has identical DDL or runtime behavior.
 
 Items to confirm in the real database:
 

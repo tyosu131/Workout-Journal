@@ -10,7 +10,7 @@ I wanted to build a workout logging app that's easy to manage day by day. By com
 ## Features
 - User registration & login
 - Create, update, and delete workout logs
-- Update user information (username, email, etc.)
+- Update username
 - Calendar-style view to track progress by date
 
 For a detailed list of features, please see [this GitHub repository](https://github.com/tyosu131/Workout-Journal.git).
@@ -50,7 +50,9 @@ Use [backend/.env.example](./backend/.env.example) and [frontend/.env.example](.
 | `CORS_ORIGIN` | No | No | Allowed frontend origin for credentialed CORS. Defaults to `http://localhost:3000`. Set this to the Azure Static Web Apps origin in production. |
 | `FRONTEND_ORIGIN` | No | No | Alternative to `CORS_ORIGIN`; used only when `CORS_ORIGIN` is unset. |
 | `SUPABASE_URL` | Yes | No | Supabase project URL for backend access. |
-| `SUPABASE_KEY` | Yes | Yes | Backend Supabase key. Treat as secret, especially if using a service-role key. |
+| `SUPABASE_PUBLISHABLE_KEY` | Yes | No | Used only by backend Auth client factories for sign-up, login, and password-reset requests. |
+| `SUPABASE_SECRET_KEY` | Yes | Yes | Used only by the backend Admin/DB client for application tables and RPCs. Never expose it to the browser. |
+| `PASSWORD_RESET_REDIRECT_URL` | Yes | No | Registered browser URL for the Supabase password-recovery redirect. |
 | `JWT_SECRET` | Yes | Yes | JWT signing secret. Must be different per environment. |
 | `ACCESS_TOKEN_EXPIRES` | No | No | Access token lifetime. Defaults to `1h`. |
 | `REFRESH_TOKEN_EXPIRES` | No | No | Refresh token lifetime. Defaults to `7d`. |
@@ -59,10 +61,13 @@ Use [backend/.env.example](./backend/.env.example) and [frontend/.env.example](.
 | Variable | Required | Secret | Notes |
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Yes | No | Backend API base URL. Use `http://localhost:3001` locally and the Azure backend URL in production. |
-| `NEXT_PUBLIC_SUPABASE_URL` | If frontend Supabase APIs are used | No | Supabase project URL exposed to the browser. |
-| `NEXT_PUBLIC_SUPABASE_KEY` | If frontend Supabase APIs are used | No | Supabase anon/public key only. Do not set a service-role key here. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | No | Required by browser password recovery; this Supabase project URL is exposed to the browser. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | No | Public key used only for browser password recovery. Never set a secret or service-role key here. |
 
 For Azure or other production deployments, configure these values in the hosting platform rather than storing real values in repository files.
+
+### Supabase Client Boundaries
+The backend uses a request-local Auth client with the publishable key for sign-up, login, and password-reset email requests. A separate singleton Admin/DB client uses the secret key for `public` tables and RPCs. Browser password recovery requires both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, creates a temporary Supabase session only to update the password, then clears that session. Never expose a secret or service-role key to the frontend. Email changes and logged-in password changes are not implemented; they require separate confirmation and security flows.
 
 ## Verification
 See [docs/verification.md](./docs/verification.md) for local and CI verification commands.

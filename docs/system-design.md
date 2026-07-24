@@ -24,7 +24,7 @@ Every claim below is labelled as one of the following:
 
 | Capability | Status | Current behavior |
 | --- | --- | --- |
-| Authentication and account management | **Current / Implemented** | The backend supports sign-up, login, session lookup, token refresh, user lookup/update, password reset, and verification-related flows. Sign-up and login use Supabase Auth; the backend then issues its own signed access and refresh JWTs. |
+| Authentication and account management | **Current / Implemented** | The application supports sign-up, login, session lookup, token refresh, user lookup/update, and browser password recovery. A sessionless Supabase sign-up returns `verificationRequired` without backend tokens or a profile; a later successful login can create the missing profile before issuing backend JWTs. Verification resend routing and authentication remain unresolved. |
 | Daily workout logging | **Current / Implemented** | A note is opened for a date and saved through the authenticated notes API. The calendar links users to dated note screens and displays note/tag state. |
 | Exercise and set recording | **Current / Implemented** | A note contains exercises; each exercise has a name, optional exercise note, and a sequence of sets with weight, reps, and rest. Add, duplicate, and delete operations are present in the note editor. |
 | Optional set effort input | **Current / Implemented** | An expandable Effort row provides RPE in 0.5 steps from 1 to 10, RIR from 0 to 10, and a failure checkbox. The frontend normalizes these values before saving; backend save normalization preserves valid optional intensity fields. |
@@ -87,8 +87,9 @@ flowchart TD
     Browser --> Frontend
     Frontend -->|Authenticated HTTP| Backend
     Frontend -->|Uses| Shared
-    Backend -->|Auth operations| SupabaseAuth
-    Backend -->|Notes, users, tags| SupabaseDb
+    Backend -->|Request-local Auth: sign-up, login, reset email| SupabaseAuth
+    Frontend -->|Browser recovery only: publishable key| SupabaseAuth
+    Backend -->|Admin/DB secret client: notes, users, tags| SupabaseDb
     Backend --> Summary
     Summary -->|Mock response only| MockProvider
 ```
@@ -97,7 +98,7 @@ flowchart TD
 
 **Current / Implemented:** The backend is a Node.js and Express service. It owns authentication handlers, bearer-token verification, note and tag persistence, request validation, and the current weekly-summary endpoint boundary.
 
-**Current / Implemented:** Supabase provides Auth operations and the PostgreSQL-backed data store accessed by the backend Supabase client.
+**Current / Implemented:** The backend uses request-local Auth clients for sign-up, login, and password-reset email requests. Browser password recovery alone connects directly to Supabase Auth through a temporary client configured with the publishable key; the Admin/DB secret client remains backend-only for PostgreSQL and RPC operations.
 
 **Current / Implemented:** Shared TypeScript utilities are used by the frontend to normalize persisted note data and compute deterministic metrics, chart series, weekly summary input, rule-based summaries, prompt payloads, response validation, and Growth Signals.
 
@@ -109,10 +110,10 @@ flowchart TD
 
 | Boundary | Status | Responsibility |
 | --- | --- | --- |
-| Frontend | **Current / Implemented** | Collect and display note data; attach the access token; fetch user-scoped notes; derive and render analytics; construct the structured weekly-summary request; show rule-based, mocked-endpoint, and fallback states. |
-| Backend | **Current / Implemented** | Authenticate requests; enforce user-scoped note/tag database operations; normalize nested exercise intensity fields before saving; validate weekly-summary requests; call the local mock provider boundary; validate provider-shaped responses; return fallback output when needed. |
+| Frontend | **Current / Implemented** | Collect and display note data; attach the access token; fetch user-scoped notes; derive and render analytics; construct the structured weekly-summary request; show rule-based, mocked-endpoint, and fallback states; and use a temporary publishable-key client only for browser password recovery. |
+| Backend | **Current / Implemented** | Authenticate requests; use request-local Auth clients for sign-up, login, and password-reset email requests; enforce user-scoped note/tag database operations through the Admin/DB secret client; normalize nested exercise intensity fields before saving; validate weekly-summary requests; call the local mock provider boundary; validate provider-shaped responses; and return fallback output when needed. |
 | Shared analytics | **Current / Implemented** | Parse nested exercise payloads into normalized sets and derive metrics, weekly volume, BIG3 trends, muscle groups, effort summaries, Growth Signals, weekly summary input, and provider-neutral prompt payloads without network or database calls. |
-| Supabase | **Current / Implemented** | Authenticate sign-up/login/password operations and store application data accessed by the backend, including `notes`, users, and the user tag catalog. |
+| Supabase | **Current / Implemented** | Authenticate backend sign-up/login/password-reset-email requests and browser recovery-session password updates. Store application data accessed only through the backend Admin/DB secret client, including `notes`, users, and the user tag catalog. |
 | Weekly summary | **Current / Implemented** | Keep deterministic rule-based output available independently of the mocked endpoint; use only structured aggregate input at the current backend boundary; validate returned structured output before rendering it as an endpoint response. |
 
 ### API Path Clarification
@@ -127,7 +128,7 @@ flowchart TD
 
 ## 3. Data Model
 
-### Verified Persisted Schema
+### Verified Historical Backup Schema
 
 **Verified Infrastructure Fact:** The reviewed PostgreSQL cluster backup documents this `public.notes` table shape:
 
@@ -149,9 +150,13 @@ flowchart TD
 
 **Current / Implemented:** `saveNote` upserts a note using `(date, userid)` as its conflict target and adds the verified user ID to the row.
 
-**Open Question:** If `PRIMARY KEY (date)` exists in the live schema, different users cannot each retain a note for the same date. That conflicts with the intended multi-user model of one note per user per date, despite the application's `(date, userid)` upsert target. The live Supabase schema and actual multi-user behavior must be verified. This docs-only change does not modify the schema.
+**Current Design Decision:** The repository's merged [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql) defines `PRIMARY KEY (date, userid)`, matching the application's upsert conflict target and the intended one-user, one-date, one-note model.
 
-**Open Question:** The backup is verified evidence for the reviewed environment, but this repository does not prove that the current production Supabase schema is identical.
+**Future Direction:** The target migration has not been applied to an isolated new Supabase project. The next work is migration application, the read-only [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end verification before legacy application data is imported.
+
+**Open Question:** The historical legacy schema is verified only through the reviewed backup; its complete DDL and runtime behavior remain unverified.
+
+**Current Design Decision:** The historical legacy schema is migration evidence and is not treated as the target schema for the new project.
 
 ### Persisted Application Shape
 
@@ -163,7 +168,9 @@ flowchart TD
 | Effort field persistence | **Current / Implemented** | The frontend serializes the exercise array. Backend save normalization accepts an array or JSON string, preserves surrounding exercise/set fields, normalizes valid RPE/RIR/failure values, and omits null/invalid optional effort fields before saving JSON text. |
 | Tags on notes | **Current / Implemented** | The save payload always supplies a tags array; the reviewed schema stores it in `notes.tags` as `text[]`. |
 | User-created tag catalog | **Current / Implemented** | Backend tag operations read and write `user_tags` rows scoped by `user_id`, and delete uses the `remove_tag_from_notes` RPC to remove a tag from note rows. |
-| `user_tags` schema and RPC definition | **Open Question** | The repository code confirms use of `user_tags` and the RPC, but no reviewed DDL for their columns, constraints, policies, or function body is available in this design scope. |
+| `user_tags` target schema and RPC definition | **Current Design Decision** | The [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql) defines `public.user_tags` with `UNIQUE (user_id, tag)`. The [target RPC migration](../supabase/migrations/20260724000100_create_remove_tag_from_notes.sql) defines user-scoped `remove_tag_from_notes`; neither target migration has been applied to a new Supabase project. |
+
+**Open Question:** The repository target definitions do not establish complete equivalence with the historical legacy `user_tags` DDL or RPC implementation.
 
 ### Derived Analytics Model
 
@@ -220,7 +227,7 @@ flowchart TD
 | Shared deterministic analytics utilities | **Current / Implemented** | Pure normalization, metric calculation, trend/volume/effort aggregation, Growth Signals, weekly-summary input, rule-based summary, and provider-neutral prompt data. | Database access, network calls, UI state, Express request handling, or secret access. |
 | Weekly-summary route and service | **Current / Implemented** | Bearer-token extraction and authenticated handling, weekly-summary request validation, prompt-message construction orchestration, provider-adapter invocation, provider-shaped response validation, rule-based fallback selection, and HTTP response construction. | Frontend analytics UI state, direct note persistence, generated-summary persistence, provider-specific SDK/configuration details, or secrets exposed to the frontend. |
 | Weekly-summary provider adapter | **Current / Implemented** | The narrow `generateWeeklySummary(promptMessages)` contract and the current local mock response. | Authentication, authorization, note-range retrieval, database access, fallback policy, HTTP response construction, or frontend state. |
-| Supabase Auth | **Current / Implemented** | Sign-up, password sign-in, password reset, user update, and session operations invoked by the backend. | Application analytics derivation, frontend routing, or weekly-summary generation. |
+| Supabase Auth | **Current / Implemented** | Request-local backend Auth-client sign-up, password sign-in, and password-reset email requests; plus temporary browser recovery-client session establishment and password updates. These are separate from the backend-only Admin/DB secret client. | Application analytics derivation, frontend routing, weekly-summary generation, or Admin/DB secret-client operations. |
 | Supabase PostgreSQL | **Current / Implemented** | Persisted application records accessed by the backend, including notes, users, and the user tag catalog. | On-demand analytics, Growth Signals, or initial weekly-summary persistence. |
 | Exercise metadata | **Current / Implemented** | Static canonical names, aliases, muscle metadata, and BIG3 lift classification used by deterministic analytics. | User-defined exercise catalog persistence, fuzzy matching, or user goal inference. |
 | CI verification boundary | **Current / Implemented** | Independent dependency installation plus frontend lint/build, backend syntax checking, and root Jest verification on push and pull request. | Deployment, production health monitoring, or runtime authorization. |
@@ -261,7 +268,7 @@ Persisted notes
 
 ### API Design Principles
 
-**Current / Implemented:** Notes, tags, authenticated user operations, and the weekly-summary endpoint extract a Bearer token and verify the backend JWT before their user-scoped work. Sign-up, login, forgot-password, and reset-password use their own credential or reset-token flows.
+**Current / Implemented:** Notes, tags, authenticated user operations, and the weekly-summary endpoint extract a Bearer token and verify the backend JWT before their user-scoped work. Sign-up, login, and forgot-password use dedicated credential flows; password recovery is completed in the browser through a temporary Supabase recovery session.
 
 **Current / Implemented:** Express route files are registration layers that delegate handlers to services. The Analytics page derives charts, Growth Signals, and the structured weekly-summary input from an authenticated notes-range response on the frontend; there is no general analytics aggregation API.
 
@@ -279,12 +286,11 @@ Persisted notes
 | --- | --- | --- | --- |
 | `GET` | `/auth/session` | Bearer token | Verify the backend token and return the current user's selected profile data. |
 | `POST` | `/auth/refresh` | Refresh-token cookie | Verify the refresh token and issue a new backend access token. |
-| `POST` | `/auth/signup` | None | Validate sign-up fields, create a Supabase Auth user and application user row, then issue backend tokens. |
-| `POST` | `/auth/login` | None | Validate credentials through Supabase Auth, then issue backend tokens. |
+| `POST` | `/auth/signup` | None | Validate sign-up fields and create a Supabase Auth user. When Supabase returns a session, create the application user row and issue backend tokens; otherwise return `verificationRequired` without backend authentication state. |
+| `POST` | `/auth/login` | None | Validate credentials through Supabase Auth, preserve an existing application profile or create a missing one, then issue backend tokens. |
 | `GET` | `/auth/get-user` | Bearer token | Return the authenticated user's application profile. |
-| `PUT` | `/auth/update-user` | Bearer token | Validate and update the authenticated user's profile and selected Supabase Auth attributes. |
+| `PUT` | `/auth/update-user` | Bearer token | Update the authenticated user's username when the submitted email is unchanged; email and password changes require dedicated flows. |
 | `POST` | `/auth/forgot-password` | None | Request a Supabase password-reset email. |
-| `PUT` | `/auth/reset-password` | Reset access token in request body | Establish a Supabase session from the supplied reset access token and update the password. |
 
 #### Notes / Tags
 
@@ -312,11 +318,13 @@ Persisted notes
 
 ### Authentication and Token Lifecycle
 
-**Current / Implemented:** Sign-up and login call Supabase Auth, then the backend signs a separate access token and refresh token using its own JWT utility. The access token is returned to the frontend and used as a Bearer token for authenticated requests; the refresh token is issued as an HTTP-only cookie.
+**Current / Implemented:** Sign-up calls Supabase Auth. When the result contains no Supabase session, it returns `verificationRequired` without creating a profile, issuing backend JWTs, or setting a refresh cookie. A successful login preserves an existing application profile or creates a missing one, then the backend signs separate access and refresh JWTs. The access token is returned to the frontend and used as a Bearer token for authenticated requests; the refresh token is issued as an HTTP-only cookie.
 
 **Current / Implemented:** The Axios client enables credentials, attaches the stored access token for authenticated calls, and intercepts 401 responses. A request marked for retry is refreshed once; a module-level limit stops repeated refresh attempts and removes the local access token after exhaustion or refresh failure.
 
 **Current / Implemented:** Frontend logout clears the locally stored access token and redirects to login. The associated server logout request is commented out in the current AuthContext.
+
+**Current / Implemented:** The reset-password page creates a non-persistent browser Supabase client with public configuration, requires an implicit-flow fragment containing `access_token`, `refresh_token`, and `type=recovery`, updates the password through Supabase Auth, clears that local session, and redirects to login. It does not send recovery tokens or a new password to the backend.
 
 **Open Question:** No mounted logout endpoint, server-side access-token revocation list, refresh-token rotation, or refresh-token invalidation mechanism was found in the inspected code. Production session invalidation behavior therefore remains unverified.
 
@@ -325,7 +333,7 @@ Persisted notes
 | Area | Status | Current validation boundary |
 | --- | --- | --- |
 | Auth sign-up, login, and profile update | **Current / Implemented** | `authService` checks required fields, email format, and minimum password length where applicable. |
-| Password reset | **Current / Implemented** | `authService` checks for a reset access token and a non-empty password with minimum length. |
+| Browser password recovery | **Current / Implemented** | The reset page requires a Supabase implicit recovery fragment, confirms a temporary recovery session, checks password confirmation, and calls Supabase Auth from the browser. |
 | Note path and range dates | **Current / Implemented** | `noteService` has no dedicated date-format validator; it passes `:date`, `start`, and `end` to Supabase queries. Malformed direct-request behavior beyond that boundary is not verified. |
 | Notes payload | **Current / Implemented** | `saveNote` accepts `note`, `exercises`, and `tags`; nested exercises are normalized by `noteExercisesValidation`. A complete schema for note text and tags is not enforced in the inspected service. |
 | Nested exercises and effort | **Current / Implemented** | Backend utility accepts an array or JSON string, safely falls back to `[]`, preserves valid set fields, accepts finite RPE 1-10 and RIR 0-10, and accepts boolean or `"true"`/`"false"` failure values. Invalid optional effort values are omitted before save. |
@@ -370,7 +378,7 @@ Persisted notes
 - **Open Question:** Rate limiting is not present in the inspected Express middleware or weekly-summary service.
 - **Open Question:** The weekly-summary input may need backend reconstruction from user-scoped notes before external provider use.
 - **Open Question:** The JavaScript backend currently does not reuse the shared TypeScript weekly-summary utilities at runtime.
-- **Open Question:** Live Supabase schema, RLS policy, and multi-user isolation behavior require production verification.
+- **Future Direction:** Apply the repository target migrations to an isolated new Supabase project, run validation SQL, and verify RLS and multi-user isolation through end-to-end tests.
 - **Open Question:** Resend-verification route mapping and its authentication requirement are unresolved.
 
 ## 6. Async Jobs
@@ -421,7 +429,7 @@ Persisted notes
 | Deterministic analytics | **Current / Implemented** | Numeric derivation requires finite values; missing effort is unknown, and sparse or empty range data renders data-quality or unknown states rather than an effort conclusion. | The Analytics page reports a range-load error, but no separate diagnostics distinguish fetch, parsing, and individual metric-derivation failures. |
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
-| Schema integrity | **Verified Infrastructure Fact** | The reviewed backup declares `PRIMARY KEY (date)` together with `UNIQUE (date, userid)` for `notes`. | The potential conflict with the application model remains unresolved; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
+| Schema integrity | **Current Design Decision** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The target schema is not yet applied to a new Supabase project; run migration validation SQL and multi-user end-to-end tests before importing legacy data. See [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
 | Deployment and proxy mapping | **Open Question** | Internal Express mounts and the direct weekly-summary client path are visible in the repository. | No repository-visible production proxy or rewrite proves the `/api/*` public mappings; see [API Path Clarification](#api-path-clarification). |
 
 ### Current Recovery Behavior
@@ -438,12 +446,12 @@ Persisted notes
 
 | Multi-step operation | Status | Observed order | Consistency risk |
 | --- | --- | --- | --- |
-| Sign-up | **Current / Implemented** | The service creates a Supabase Auth user, then upserts the application `users` row, then creates backend tokens. | If the application-row upsert fails after Auth user creation, the handler returns an error; no rollback or compensation is visible. |
-| User profile update | **Current / Implemented** | The service attempts Supabase Auth email/password updates before updating the application `users` row. | The code does not expose a transaction, rollback, or compensation path across the two systems. Returned Supabase Auth update errors are not explicitly checked before the application-row update. |
+| Sign-up | **Current / Implemented** | When Supabase sign-up returns a session, the service creates the Supabase Auth user, then upserts the application `users` row, then creates backend tokens. A sessionless sign-up returns `verificationRequired` before profile creation. | If the application-row upsert fails after Auth user creation in the session-backed path, the handler returns an error; no rollback or compensation is visible. The first successful login can create a profile left absent by a sessionless sign-up. |
+| User profile update | **Current / Implemented** | `PUT /auth/update-user` verifies the backend JWT, reads the current `public.users` profile through the Admin/DB client, accepts a same-email form submission, and updates only `username`. A changed email or an actual password value returns `400`; no Supabase Auth email/password update is attempted. | The former cross-system Auth/profile partial failure does not occur in this username-only path. A failed single profile update is returned as an error. |
 | Tag deletion | **Current / Implemented** | The service deletes the `user_tags` row, then invokes `remove_tag_from_notes`. | If the RPC fails after catalog deletion, the handler returns `500` with the first change already applied; no compensation is visible. |
 | Daily note save | **Current / Implemented** | The service normalizes nested exercises before a single Supabase upsert. | There is no multi-write database transaction in this handler, but malformed exercise input is converted to an empty serialized array before persistence rather than rejected. |
 
-**Open Question:** The Supabase RPC definition, database-side transaction behavior, and production error semantics are not included in the reviewed schema material. Repository code alone cannot establish whether database-level safeguards compensate for any of these sequences.
+**Open Question:** The target `remove_tag_from_notes` definition is present in the repository, but it has not been applied to a new Supabase project. Database-side runtime behavior after migration application and any historical legacy transaction safeguards remain unverified.
 
 ### Retry Policy
 
@@ -465,7 +473,7 @@ Persisted notes
 
 ### Known Critical Risks
 
-- **Open Question:** Verify the live daily-note key and multi-user behavior described in [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
+- **Current Design Decision:** The repository target migration defines the composite daily-note key. Apply it to a new Supabase project, run [validation SQL](../supabase/validation/validate_initial_schema.sql), and complete multi-user end-to-end tests before legacy data import; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
 - **Open Question:** Verify deployed `/api/*` mapping before relying on the internal paths described in [API Path Clarification](#api-path-clarification).
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
@@ -517,7 +525,7 @@ Persisted notes
 - **Open Question:** Where are runtime logs collected, who can access them, and how long are they retained?
 - **Open Question:** Who owns alerts, on-call response, escalation, and deployment rollback?
 - **Open Question:** How will health checks, readiness checks, secret rotation, and backup/restore verification be integrated?
-- **Open Question:** How will the live Supabase schema, RLS configuration, and daily-note key be monitored and verified over time?
+- **Open Question:** How will the applied new-project schema, RLS configuration, and daily-note key be monitored and verified over time?
 
 ## References
 
@@ -538,7 +546,7 @@ Persisted notes
 
 **Future Direction:** Prioritize the following confirmed design and operational gaps before expanding the product surface:
 
-1. Verify the live Supabase schema and the daily-note primary-key behavior.
+1. Create an isolated new Supabase project, apply the repository migrations, run validation SQL, and complete signup, login, browser password recovery, note, and tag end-to-end checks before importing legacy application data.
 2. Verify production API proxy or rewrite behavior for the frontend `/api/*` paths.
 3. Resolve resend-verification route mapping and authentication-wrapper behavior.
 4. Define production-safe logging and remove or reduce sensitive debug output.

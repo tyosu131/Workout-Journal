@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Box, Input, Button, useToast, Center, Text } from "@chakra-ui/react";
 import { useRouter } from "next/router";
-import { useResendVerification } from "../hooks/useResendVerification";
 
 import { apiRequest } from "../../../lib/apiClient";
 import { setToken } from "../../../../shared/utils/tokenUtils";
@@ -11,18 +10,16 @@ import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 type SignupResponse = {
   token?: string;
   user?: any;
+  verificationRequired?: boolean;
 };
 
 const SignUp: React.FC = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isVerificationSent, setIsVerificationSent] = useState(false);
-  const [canResend, setCanResend] = useState(true);
+  const [verificationRequired, setVerificationRequired] = useState(false);
   const toast = useToast();
   const router = useRouter();
-
-  const { resendVerification } = useResendVerification(email, username, password);
 
   const handleSignUp = async () => {
     try {
@@ -32,21 +29,28 @@ const SignUp: React.FC = () => {
         { email, username, password }
       );
 
-      // サーバーがトークンを返していれば保存
-      if (result.token) {
-        setToken(result.token);
+      if (result.verificationRequired || !result.token) {
+        setVerificationRequired(true);
+        toast({
+          title: "Confirm your email",
+          description: "Check your inbox, then log in after confirming your email address.",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
       }
 
-      setIsVerificationSent(true);
-      setCanResend(false);
+      setToken(result.token);
 
       toast({
         title: "Signup successful!",
-        description: "A verification email has been sent to your email address.",
+        description: "Your account is ready to use.",
         status: "success",
         duration: 5000,
         isClosable: true,
       });
+      router.push("/top");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -58,7 +62,7 @@ const SignUp: React.FC = () => {
     }
   };
 
-  if (isVerificationSent) {
+  if (verificationRequired) {
     return (
       <Center height={{ base: 'auto', md: '100vh' }}>
         <Box width={{ base: '90%', md: '400px' }} textAlign="center">
@@ -66,13 +70,10 @@ const SignUp: React.FC = () => {
             Email Verification Required
           </Text>
           <Text mt={4}>
-            A verification email has been sent to your email address. Please check your inbox and verify your account.
+            Confirm your email address before logging in. Verification resend is not available yet.
           </Text>
-          <Button mt={4} onClick={() => setIsVerificationSent(false)}>
+          <Button mt={4} onClick={() => setVerificationRequired(false)}>
             Back to Sign Up
-          </Button>
-          <Button mt={4} onClick={resendVerification} isDisabled={!canResend}>
-            Resend Verification Email
           </Button>
         </Box>
       </Center>
