@@ -1,5 +1,7 @@
 /// <reference types="jest" />
 
+export {};
+
 const createClient = jest.fn();
 
 jest.mock("@supabase/supabase-js", () => ({ createClient }));

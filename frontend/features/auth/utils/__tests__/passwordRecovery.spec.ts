@@ -1,5 +1,7 @@
 /// <reference types="jest" />
 
+export {};
+
 const createClient = () => ({
   auth: {
     setSession: jest.fn(),
