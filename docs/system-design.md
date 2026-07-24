@@ -2,7 +2,7 @@
 
 ## Scope and Status Language
 
-This document is a concise system-design overview for Workout-Journal. It describes five completed sections in this revision: Requirements, High-level Architecture, Data Model, Component Responsibilities, and API Design.
+This document is a concise system-design overview for Workout-Journal. It describes eight completed sections in this revision: Requirements, High-level Architecture, Data Model, Component Responsibilities, API Design, Async Jobs, Failure Handling, and Observability.
 
 Every claim below is labelled as one of the following:
 
@@ -373,6 +373,152 @@ Persisted notes
 - **Open Question:** Live Supabase schema, RLS policy, and multi-user isolation behavior require production verification.
 - **Open Question:** Resend-verification route mapping and its authentication requirement are unresolved.
 
+## 6. Async Jobs
+
+### Current Execution Model
+
+**Current / Implemented:** No application-runtime queue, scheduler, cron process, worker, or job runner was found in the inspected backend, frontend, or shared runtime sources. The current application work is performed in HTTP request paths or in browser-side calculations.
+
+| Operation | Status | Current execution | Async decision |
+| --- | --- | --- | --- |
+| Daily note save | **Current / Implemented** | Note editing handlers update local state and immediately invoke the authenticated save API. The Express request normalizes the exercise payload and awaits one Supabase upsert. | This client-triggered request is not a queue or worker. No debounce, queue, or server-side ordering control was found in the inspected hook. |
+| Note range retrieval | **Current / Implemented** | The Analytics page awaits an authenticated range request, then normalizes and aggregates the returned notes in the browser. | It is a request followed by foreground UI calculation, not a background job. |
+| Tag creation and deletion | **Current / Implemented** | The note service awaits Supabase reads/writes and, for deletion, the tag-removal RPC in the request path. | No asynchronous post-processing is implemented. |
+| Authentication and token refresh | **Current / Implemented** | Sign-up, login, session lookup, and refresh are HTTP handlers. The Axios interceptor can request a new access token after a `401`, then retry the original request. | No authentication job queue or server-side refresh worker is implemented. |
+| Deterministic analytics | **Current / Implemented** | The Analytics page invokes shared pure utilities after range data arrives. Request IDs prevent stale browser requests from updating current UI state. | This is foreground client computation; the request IDs are not job or correlation IDs. |
+| Weekly-summary request | **Current / Implemented** | The authenticated endpoint validates input, constructs prompt messages, awaits the current provider adapter, validates the response, and returns an AI-labelled mock result or fallback in the same request. | The endpoint is synchronous from the caller's perspective and has no persisted job status. |
+| Local mock provider | **Current / Implemented** | The default provider adapter returns a local JSON string through its asynchronous interface. | It does not make a network call or enqueue background work. |
+| Password-reset email request | **Current / Implemented** | The backend invokes Supabase Auth's password-reset API and returns its HTTP result. | Delivery is delegated to Supabase Auth; the repository does not establish an application-owned mail worker or delivery queue. |
+| GitHub Actions verification | **Current / Implemented** | The CI workflow installs dependencies and runs lint, build, and test commands on push and pull-request events. | CI is not an application-runtime background job. |
+
+### What Should Remain Synchronous
+
+**Current Design Decision:** At the current scope, authentication, daily note reads and writes, tag operations, request validation, lightweight deterministic analytics, and the weekly-summary fallback remain request- or UI-synchronous. They provide immediate results and do not currently require stored job state, delayed delivery, or a separate worker boundary.
+
+**Current Design Decision:** A fallback summary remains synchronous even if a future provider operation becomes asynchronous, because it is the deterministic response available from the already-supplied aggregate input.
+
+### Future Async Candidates
+
+**Future Direction:** Consider asynchronous execution only when a demonstrated requirement makes synchronous completion unsuitable. Candidates include expensive external-provider summary generation, refresh of a persisted summary or cache, large historical analytics recomputation, and optional notifications or scheduled reports. Notifications and scheduled reports are not current product requirements.
+
+**Future Direction:** Any future job boundary should define a job identifier, authenticated user ownership, an idempotency key, deduplication, retry limits with exponential backoff, timeout handling, job status, terminal-failure or dead-letter handling, cancellation, result retention, stale-result invalidation, and restrictions on secret or payload logging. The repository does not select a queue product, cloud service, or job-storage schema today.
+
+### Async Decision Boundary
+
+**Future Direction:** A request should not become asynchronous merely because it might be slow. The decision should consider request latency, external-provider timeout risk, repeated-computation cost, payload size, whether the user must wait for the result, retryability, duplicate-execution risk, and whether persistence is required to expose later status or results.
+
+## 7. Failure Handling
+
+### Failure Domains
+
+| Failure domain | Status | Current behavior | Risk or gap |
+| --- | --- | --- | --- |
+| Frontend and network | **Current / Implemented** | The Axios interceptor rejects network errors and removes the locally stored token. Feature API wrappers log an Axios response payload or message and rethrow. | Network failures are not retried. Some wrappers log server-provided error data, whose production sensitivity depends on each endpoint response. |
+| Authentication and token refresh | **Current / Implemented** | A `401` can trigger one retry for the original request after refresh; refresh failures or an exhausted module-level refresh-attempt limit remove the local token. AuthContext redirects to login when no token exists and logs out after failed refresh during session lookup. | No server-side revocation, rotation, or invalidation mechanism is confirmed; see [Authentication and Token Lifecycle](#authentication-and-token-lifecycle). |
+| Request validation | **Current / Implemented** | Auth handlers, tag handlers, and the weekly-summary validator return `400` for selected invalid inputs. Invalid weekly-summary range or raw-note-content fields do not reach the provider boundary. | Notes date/range values do not have a dedicated service-side format validator; see [Request Validation](#request-validation). |
+| Note and tag persistence | **Current / Implemented** | Note and tag service handlers catch Supabase errors, log an error message, and generally return `500`. Note saving is one normalized-payload upsert. | The note service includes `error.message` in some client responses. Tag deletion performs two writes without a visible transaction; see [Partial Failure and Consistency Risks](#partial-failure-and-consistency-risks). |
+| Malformed historical exercise data | **Current / Implemented** | Backend save normalization accepts an array or JSON string, converts invalid or non-array exercise input to an empty array, and omits invalid optional effort values. Shared analytics normalization likewise treats missing or invalid numeric values as unavailable. | A malformed exercise payload submitted to save can be serialized as `[]`; no rejected-payload response or original-payload preservation is implemented at that boundary. |
+| Deterministic analytics | **Current / Implemented** | Numeric derivation requires finite values; missing effort is unknown, and sparse or empty range data renders data-quality or unknown states rather than an effort conclusion. | The Analytics page reports a range-load error, but no separate diagnostics distinguish fetch, parsing, and individual metric-derivation failures. |
+| Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
+| Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
+| Schema integrity | **Verified Infrastructure Fact** | The reviewed backup declares `PRIMARY KEY (date)` together with `UNIQUE (date, userid)` for `notes`. | The potential conflict with the application model remains unresolved; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
+| Deployment and proxy mapping | **Open Question** | Internal Express mounts and the direct weekly-summary client path are visible in the repository. | No repository-visible production proxy or rewrite proves the `/api/*` public mappings; see [API Path Clarification](#api-path-clarification). |
+
+### Current Recovery Behavior
+
+**Current / Implemented:** The Axios client does not retry an `ERR_NETWORK` failure. It removes the local access token and rejects the request. For a `401`, it marks that request for a single retry after requesting a refreshed access token; the module-level refresh failure count is capped at three before the token is removed.
+
+**Current / Implemented:** AuthContext redirects users to login when no token is available and clears local authentication state when a session-refresh path fails. This is client-session recovery, not confirmation that the backend session is revoked.
+
+**Current / Implemented:** Backend services commonly return `400` for explicit validation failures, `401` for missing or invalid Bearer tokens, endpoint-specific `500` responses for caught failures, and global `404` or `500` responses for unhandled paths or errors. The shapes vary by endpoint; see [Response and Error Boundaries](#response-and-error-boundaries).
+
+**Current / Implemented:** Weekly-summary provider errors and invalid response shapes use the deterministic rule-based fallback instead of returning a provider failure. Malformed exercise input normalizes to a safe serializable form, while missing effort values remain unknown rather than being inferred as low effort. Empty and sparse analytics inputs remain renderable through existing empty, unknown, and data-quality states.
+
+### Partial Failure and Consistency Risks
+
+| Multi-step operation | Status | Observed order | Consistency risk |
+| --- | --- | --- | --- |
+| Sign-up | **Current / Implemented** | The service creates a Supabase Auth user, then upserts the application `users` row, then creates backend tokens. | If the application-row upsert fails after Auth user creation, the handler returns an error; no rollback or compensation is visible. |
+| User profile update | **Current / Implemented** | The service attempts Supabase Auth email/password updates before updating the application `users` row. | The code does not expose a transaction, rollback, or compensation path across the two systems. Returned Supabase Auth update errors are not explicitly checked before the application-row update. |
+| Tag deletion | **Current / Implemented** | The service deletes the `user_tags` row, then invokes `remove_tag_from_notes`. | If the RPC fails after catalog deletion, the handler returns `500` with the first change already applied; no compensation is visible. |
+| Daily note save | **Current / Implemented** | The service normalizes nested exercises before a single Supabase upsert. | There is no multi-write database transaction in this handler, but malformed exercise input is converted to an empty serialized array before persistence rather than rejected. |
+
+**Open Question:** The Supabase RPC definition, database-side transaction behavior, and production error semantics are not included in the reviewed schema material. Repository code alone cannot establish whether database-level safeguards compensate for any of these sequences.
+
+### Retry Policy
+
+| Operation or failure | Status | Current retry behavior |
+| --- | --- | --- |
+| Axios `401` response | **Current / Implemented** | Refresh is attempted subject to a module-level limit of three failed attempts; after a successful refresh, the marked original request is retried once. |
+| Axios network error | **Current / Implemented** | No retry; the client removes the local token and rejects. |
+| Supabase Auth or database failure | **Current / Implemented** | No explicit application retry was found in the inspected service handlers. |
+| Weekly-summary provider failure | **Current / Implemented** | No retry; the service returns the deterministic rule-based fallback. |
+| External AI provider call | **Future Direction** | No provider is integrated. Any retry policy must be designed together with timeout, idempotency, cost, and duplicate-execution controls. |
+
+**Future Direction:** Retry only failures that are demonstrably transient. Do not apply blind retries to non-idempotent writes; establish user-scoped idempotency and duplicate prevention before adding automated write retries.
+
+### Failure Response Principles
+
+**Current Design Decision:** The weekly-summary boundary distinguishes a valid provider-shaped result from a rule-based fallback and keeps the fallback response structured. Validation failures are handled before the provider call rather than retried there.
+
+**Future Direction:** Client-facing failures should omit secrets and internal provider details, distinguish fallback from hard failure, avoid retrying validation errors, and limit automated retries to transient operations with safe duplicate controls. Error logs should avoid raw request bodies, raw workout content, prompts, and provider responses. Partial failures should be surfaced accurately rather than reported as complete success.
+
+### Known Critical Risks
+
+- **Open Question:** Verify the live daily-note key and multi-user behavior described in [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
+- **Open Question:** Verify deployed `/api/*` mapping before relying on the internal paths described in [API Path Clarification](#api-path-clarification).
+- **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
+- **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
+- **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
+
+## 8. Observability
+
+### Current Observability
+
+| Signal | Status | Current implementation | Limitation |
+| --- | --- | --- | --- |
+| Express route activity | **Current / Implemented** | A server middleware logs the HTTP method and request URL for each request. | It is unstructured console output without request or correlation IDs; URLs can include query parameters. |
+| Configuration presence | **Current / Implemented** | Server startup and Supabase initialization log boolean configuration presence and whether the Supabase client initialized. | These are startup diagnostics, not secret rotation, configuration validation, or production health signals. |
+| Backend service failures | **Current / Implemented** | Auth, note, token, and weekly-summary handlers use `console.error` in caught failure paths. | Logs are endpoint-specific console output with no common schema, level policy, or centralized destination in the repository. |
+| Frontend diagnostics | **Current / Implemented** | API, authentication, note, tag, and page code emits browser console logs for selected successes and failures. | Client logs are not a production monitoring system; some paths log server response data or error objects. |
+| Weekly-summary boundary | **Current / Implemented** | The service avoids logging prompt messages and provider-response text; it logs only the caught endpoint error message in its outer failure path. | The boundary is local and mocked, so it does not demonstrate production provider monitoring. |
+| CI verification output | **Current / Implemented** | GitHub Actions emits build, lint, backend syntax, and Jest output on push and pull request. | CI output is pre-merge verification, not runtime application observability. |
+| Automated tests | **Current / Implemented** | The repository's CI baseline runs the root Jest suite alongside frontend lint/build and backend build checks. | Tests do not provide runtime metrics, alerts, or live dependency health. |
+
+### Logging and Privacy
+
+**Current / Implemented:** Server startup logs whether required environment values are configured without printing their values. Supabase initialization logs configuration presence, and authentication middleware logs token presence as a boolean.
+
+**Current / Implemented:** The backend logs request method and path, and the auth-route debug middleware logs request-body keys rather than request-body values. Auth-related code also logs decoded user IDs and full Supabase query-result objects in selected paths. The latter may contain personal data and is not a production-safe logging guarantee.
+
+**Current / Implemented:** Frontend API wrappers can log response data or messages on error. Because selected backend error responses include details derived from Supabase errors, browser-console output can expose more internal or user-related context than a minimal public error message.
+
+**Current Design Decision:** The weekly-summary request validator rejects named raw-note-content fields, and its service boundary does not log prompt messages, provider response text, tokens, or workout payloads. This narrow boundary does not establish a repository-wide logging policy.
+
+**Open Question:** Production log collection, access control, retention, redaction, and audit practices are not represented in this repository. The current console logging should be reviewed before treating it as suitable for production personal-data handling.
+
+### Missing Production Signals
+
+**Open Question:** The repository does not show structured logs, standardized log levels, request or correlation IDs, centralized log storage, metrics, distributed tracing, health or readiness endpoints, dashboards, alerting, error tracking, audit logs, or a log-retention policy. A hosting platform may provide some of these capabilities, but that is not verifiable here.
+
+**Current / Implemented:** Analytics request IDs exist only as in-browser stale-update guards. They do not create backend request correlation or tracing.
+
+### Future Metrics
+
+**Future Direction:** Before production operations depend on the service, define useful metrics without assigning unsupported SLO values. Candidate signals include API request count and latency by route, `4xx` and `5xx` rates, authentication and refresh failures, Supabase query failures, note-save failures, weekly-summary fallback and invalid-provider-response rates, weekly-summary validation failures, and analytics data-quality warning counts.
+
+### Alerting Boundary
+
+**Future Direction:** Alerts should identify sustained operational conditions rather than routine user input errors. Candidates include sustained server `5xx` responses, persistent Supabase connectivity failures, repeated note-save failures, abnormal refresh failures, and, only after an external provider is integrated, provider outages or a fallback-rate spike. A single local validation failure is not a production alert condition.
+
+### Operational Open Questions
+
+- **Open Question:** Which production hosting environment runs the frontend and backend?
+- **Open Question:** Where are runtime logs collected, who can access them, and how long are they retained?
+- **Open Question:** Who owns alerts, on-call response, escalation, and deployment rollback?
+- **Open Question:** How will health checks, readiness checks, secret rotation, and backup/restore verification be integrated?
+- **Open Question:** How will the live Supabase schema, RLS configuration, and daily-note key be monitored and verified over time?
+
 ## References
 
 - [README](../README.md)
@@ -388,10 +534,14 @@ Persisted notes
 - [Verification baseline](./verification.md)
 - [Quality improvements](./quality-improvements.md)
 
-## Future Sections
+## Next Engineering Follow-ups
 
-### 6. Async Jobs
+**Future Direction:** Prioritize the following confirmed design and operational gaps before expanding the product surface:
 
-### 7. Failure Handling
-
-### 8. Observability
+1. Verify the live Supabase schema and the daily-note primary-key behavior.
+2. Verify production API proxy or rewrite behavior for the frontend `/api/*` paths.
+3. Resolve resend-verification route mapping and authentication-wrapper behavior.
+4. Define production-safe logging and remove or reduce sensitive debug output.
+5. Define common API error envelopes.
+6. Define production health checks and operational monitoring.
+7. Add external-provider timeout, rate-limit, and observability design only before real provider integration.
