@@ -30,22 +30,11 @@ The reviewed backup verifies the historical `notes` column types and its foreign
 
 ## RLS and Backend Access Boundary
 
-**Current implementation:** `backend/utils/supabaseClient.js` creates one server-side client from `SUPABASE_URL` and `SUPABASE_KEY`. The repository does not establish whether the current key is a service-role key, a secret key, or a publishable/anon key.
+**Current implementation:** the backend has separate client boundaries. Request-local Auth clients use `SUPABASE_PUBLISHABLE_KEY` for `signUp`, `signInWithPassword`, and password-reset email requests. A singleton Admin/DB client uses backend-only `SUPABASE_SECRET_KEY` for `public.users`, `public.notes`, `public.user_tags`, and `remove_tag_from_notes`.
 
-**Target design decision:** the new project's backend-only `SUPABASE_KEY` must be a service-role or secret key. RLS is enabled on all application tables, and this draft creates no `anon` or `authenticated` policies because browser code does not directly access the database. The server keeps enforcing its existing backend-JWT user scope before each database operation.
+Both clients disable session persistence, automatic refresh, and URL session detection. The backend continues to enforce its own JWT user scope before Admin/DB operations. RLS is enabled on all application tables, and this draft creates no `anon` or `authenticated` policies because browser code does not directly access those tables.
 
-### Required Backend Client Split Before Application Connection
-
-The current single client is used for both Supabase Auth calls and public-schema database calls. If it is initialized with a secret or service-role key, a sign-up or sign-in operation can replace that client's `Authorization` context with a user session. The subsequent database call can then be evaluated under policy-less RLS instead of service-role access and fail.
-
-Before connecting the migrated application to the new project, a follow-up backend change must separate:
-
-- an Auth client for `signUp`, `signInWithPassword`, password reset, and later `auth.updateUser` work; and
-- an Admin/DB client for `public.users`, `public.notes`, `public.user_tags`, and `remove_tag_from_notes`.
-
-The Admin/DB client must use the backend-only service-role or secret key with `persistSession: false`, `autoRefreshToken: false`, and `detectSessionInUrl: false`. This migration does not change backend code. The exact migration of `auth.updateUser` and related Auth calls belongs to that follow-up task.
-
-Do not expose an Admin/DB key to the frontend. Do not point the current single-client backend at this RLS-enabled schema until the client split is complete. If the product later adds browser-side Supabase database access, add least-privilege RLS policies in a new migration; do not weaken these table boundaries.
+Password recovery is the exception to the no-browser-session rule: the reset page creates a temporary browser client with the publishable key, establishes the Supabase recovery session from the redirect, updates the password, and clears the session. The secret key is never exposed to the frontend. Email changes and logged-in password changes remain future work because they require dedicated confirmation and security flows.
 
 ### Known Partial Failure: Tag Deletion
 
@@ -57,7 +46,7 @@ The current backend deletes the `user_tags` row and then invokes `remove_tag_fro
 2. Apply `20260724000000_create_workout_journal_schema.sql` to an empty new project.
 3. Apply `20260724000100_create_remove_tag_from_notes.sql`.
 4. Run the read-only checks in `validation/validate_initial_schema.sql`.
-5. Complete the backend Auth/Admin client split and configure the backend-only Admin/DB key before the application connects to this schema.
+5. Configure `SUPABASE_PUBLISHABLE_KEY`, backend-only `SUPABASE_SECRET_KEY`, and the registered password-reset redirect URL before the application connects to this schema.
 6. Complete the user-ID remap and application-data import described in [Legacy Data Migration](./legacy-data-migration.md).
 7. Repeat validation and run application-level signup, note save, tag deletion, and analytics checks before cutover.
 
@@ -70,6 +59,6 @@ Before application cutover, keep the legacy deployment and a protected legacy ba
 ## Open Questions
 
 - The historical `users` and `user_tags` DDL, constraints, indexes, RLS policies, and triggers are not in the reviewed backup material.
-- The role represented by the current `SUPABASE_KEY` is not visible in the repository.
+- The legacy project's key roles and live configuration remain unverified. The reconstructed application boundary uses `SUPABASE_PUBLISHABLE_KEY` for Auth operations and backend-only `SUPABASE_SECRET_KEY` for database/RPC operations.
 - The live legacy schema, actual RLS configuration, and `remove_tag_from_notes` definition remain unverified.
 - A one-off import must confirm that every imported legacy application user has a new Auth UUID before notes or tags are written.

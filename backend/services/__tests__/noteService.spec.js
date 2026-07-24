@@ -2,16 +2,16 @@
 
 const verifyToken = jest.fn();
 const from = jest.fn();
+const rpc = jest.fn();
+const getAdminDbClient = jest.fn(() => ({ from, rpc }));
 
 jest.mock("../../utils/authUtils", () => ({
   verifyToken,
 }));
 
-jest.mock("../../utils/supabaseClient", () => ({
-  from,
-}));
+jest.mock("../../utils/supabaseAdminClient", () => ({ getAdminDbClient }));
 
-const { getNotes, saveNote, createTag, getNotesByTags } = require("../noteService");
+const { getNotes, saveNote, createTag, deleteTag, getNotesByTags } = require("../noteService");
 
 const createResponse = () => {
   const res = {
@@ -76,6 +76,7 @@ describe("noteService", () => {
       await getNotes(req, res);
 
       expect(from).toHaveBeenCalledWith("notes");
+      expect(getAdminDbClient).toHaveBeenCalled();
       expect(select).toHaveBeenCalledWith("*");
       expect(eqDate).toHaveBeenCalledWith("date", "2024-06-01");
       expect(eqUserId).toHaveBeenCalledWith("userid", "user-123");
@@ -219,6 +220,31 @@ describe("noteService", () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ notes: [] });
       expect(from).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteTag", () => {
+    it("uses the Admin/DB client for the tag catalog and user-scoped RPC", async () => {
+      const eqTag = jest.fn().mockResolvedValue({ error: null });
+      const eqUser = jest.fn(() => ({ eq: eqTag }));
+      const remove = jest.fn(() => ({ eq: eqUser }));
+      from.mockReturnValue({ delete: remove });
+      rpc.mockResolvedValue({ error: null });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const res = createResponse();
+
+      await deleteTag(
+        { headers: { authorization: "Bearer valid-token" }, params: { tagName: "push" } },
+        res
+      );
+
+      expect(getAdminDbClient).toHaveBeenCalled();
+      expect(from).toHaveBeenCalledWith("user_tags");
+      expect(rpc).toHaveBeenCalledWith("remove_tag_from_notes", {
+        _user_id: "user-123",
+        _tag: "push",
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 });

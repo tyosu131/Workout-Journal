@@ -1,34 +1,64 @@
 // portfolio real\frontend\features\auth\components\reset-password-page.tsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { Center, Box, Text, Input, Button, useToast } from "@chakra-ui/react";
-import { apiRequest } from "../../../lib/apiClient";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createRecoveryAuthClient } from "../../../lib/supabaseAuthClient";
+import {
+  establishPasswordRecoverySession,
+  startPasswordRecoveryInitialization,
+  updateRecoveredPassword,
+} from "../utils/passwordRecovery";
 
 const ResetPasswordPage: React.FC = () => {
   const router = useRouter();
   const toast = useToast();
-  const [accessToken, setAccessToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const recoveryClientRef = useRef<SupabaseClient | null>(null);
+  const recoveryInitializationStartedRef = useRef(false);
+  const recoveryInitializationPromiseRef = useRef<Promise<void> | null>(null);
 
-  // ハッシュからトークン取得
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.startsWith("#")) {
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get("access_token");
-      if (token) {
-        setAccessToken(token);
+    let cancelled = false;
+
+    const recoveryInitialization = startPasswordRecoveryInitialization(
+      recoveryInitializationStartedRef,
+      recoveryInitializationPromiseRef,
+      async () => {
+        const client = createRecoveryAuthClient();
+        recoveryClientRef.current = client;
+        await establishPasswordRecoverySession(client, window.location);
       }
-    }
+    );
+
+    if (!recoveryInitialization) return;
+    recoveryInitialization
+      .then(() => {
+        if (cancelled) return;
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setRecoveryReady(true);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setRecoveryError(
+          error instanceof Error ? error.message : "Unable to verify the password recovery link."
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSave = async () => {
-    if (!accessToken) {
+    if (!recoveryReady || !recoveryClientRef.current) {
       toast({
         title: "Error",
-        description: "Missing or invalid reset token.",
+        description: recoveryError || "The password recovery link is invalid or expired.",
         status: "error",
         duration: 4000,
         isClosable: true,
@@ -57,10 +87,7 @@ const ResetPasswordPage: React.FC = () => {
     }
 
     try {
-      await apiRequest("/auth/reset-password", "put", {
-        accessToken,
-        newPassword,
-      });
+      await updateRecoveredPassword(recoveryClientRef.current, newPassword);
 
       toast({
         title: "Success!",
@@ -71,10 +98,9 @@ const ResetPasswordPage: React.FC = () => {
       });
       router.push("/login");
     } catch (error: any) {
-      console.error("Failed to reset password:", error);
       toast({
         title: "Error",
-        description: error?.response?.data?.error || "Failed to reset password.",
+        description: error instanceof Error ? error.message : "Failed to reset password.",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -96,7 +122,7 @@ const ResetPasswordPage: React.FC = () => {
           Reset Your Password
         </Text>
         <Text fontSize="sm" color="gray.500" mb={6}>
-          Please choose a new password
+          {recoveryError || "Please choose a new password"}
         </Text>
 
         <Input
@@ -114,7 +140,7 @@ const ResetPasswordPage: React.FC = () => {
           onChange={(e) => setConfirmPass(e.target.value)}
         />
 
-        <Button colorScheme="blue" width="100%" onClick={handleSave}>
+        <Button colorScheme="blue" width="100%" onClick={handleSave} isDisabled={!recoveryReady}>
           Save
         </Button>
       </Box>

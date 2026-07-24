@@ -1,6 +1,6 @@
 // portfolio real\backend\services\noteService.js
 
-const supabase = require("../utils/supabaseClient");
+const { getAdminDbClient } = require("../utils/supabaseAdminClient");
 const { verifyToken } = require("../utils/authUtils");
 const {
   normalizeExercisesPayloadForSave,
@@ -21,7 +21,7 @@ async function getNotes(req, res) {
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-    const { data, error } = await supabase
+    const { data, error } = await getAdminDbClient()
       .from("notes")
       .select("*")
       .eq("date", date)
@@ -52,7 +52,7 @@ async function saveNote(req, res) {
     }
     const { note, exercises, tags } = req.body;
     const normalizedExercises = normalizeExercisesPayloadForSave(exercises);
-    const { error } = await supabase
+    const { error } = await getAdminDbClient()
       .from("notes")
       .upsert(
         [
@@ -91,7 +91,7 @@ async function getNotesInRange(req, res) {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getAdminDbClient()
       .from("notes")
       .select("*")
       .gte("date", start)
@@ -121,7 +121,7 @@ async function getAllTags(req, res) {
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-    const { data, error } = await supabase
+    const { data, error } = await getAdminDbClient()
       .from("user_tags")
       .select("tag")
       .eq("user_id", user.id);
@@ -155,7 +155,7 @@ async function getNotesByTags(req, res) {
       return res.status(200).json({ notes: [] });
     }
     const tagArray = tags.split(",").map((t) => t.trim());
-    const { data, error } = await supabase
+    const { data, error } = await getAdminDbClient()
       .from("notes")
       .select("*")
       .eq("userid", user.id)
@@ -189,7 +189,7 @@ async function createTag(req, res) {
     }
 
     // まず重複チェック
-    const { data: existing, error: selError } = await supabase
+    const { data: existing, error: selError } = await getAdminDbClient()
       .from("user_tags")
       .select("id")
       .eq("user_id", user.id)
@@ -203,7 +203,7 @@ async function createTag(req, res) {
       return res.status(200).json({ message: "Tag already exists" });
     }
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await getAdminDbClient()
       .from("user_tags")
       .insert({ user_id: user.id, tag });
     if (insertError) {
@@ -237,14 +237,14 @@ async function deleteTag(req, res) {
     }
     const decodedTag = decodeURIComponent(tagName);
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await getAdminDbClient()
       .from("user_tags")
       .delete()
       .eq("user_id", user.id)
       .eq("tag", decodedTag);
     if (deleteError) throw deleteError;
 
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
+    const { error: rpcError } = await getAdminDbClient().rpc(
       "remove_tag_from_notes",
       {
         _user_id: user.id,

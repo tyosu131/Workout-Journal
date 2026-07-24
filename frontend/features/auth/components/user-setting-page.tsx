@@ -19,7 +19,7 @@ import axios from "axios";
 import { useUserEdit } from "../hooks/useUserEdit";
 
 const UserSettings: React.FC = () => {
-  const { isEditing, handleEdit, handleSave, userData, setUserData, resetEditing } = useUserEdit();
+  const { isEditingUsername, handleEdit, handleSave, userData, setUserData } = useUserEdit();
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const toast = useToast();
@@ -76,52 +76,6 @@ const UserSettings: React.FC = () => {
     fetchUserData();
   }, [setUserData, toast, router]);
 
-  const saveUserData = async (updatedUserData: any) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No valid session found. Please log in again.");
-      }
-
-      const response = await axios.put(
-        "/api/auth/update-user",
-        updatedUserData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 200) {
-        toast({
-          title: "Success",
-          description: "User data updated successfully.",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-        setUserData({
-          ...updatedUserData,
-          password: "******",
-        });
-      } else {
-        throw new Error(response.data.error || "Failed to update user data.");
-      }
-    } catch (error: any) {
-      console.error("Error updating user data:", error.message);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update user data.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      resetEditing();
-    }
-  };
-
   const handleClose = () => {
     router.push("/top");
   };
@@ -155,7 +109,7 @@ const UserSettings: React.FC = () => {
       <FormControl mb={8}>
         <Flex alignItems="center">
           <FormLabel fontSize="lg" w="40%">User Name</FormLabel>
-          {isEditing.username ? (
+          {isEditingUsername ? (
             <>
               <Input
                 value={userData.username}
@@ -174,7 +128,7 @@ const UserSettings: React.FC = () => {
               <IconButton
                 icon={<FaEdit />}
                 aria-label="Edit username"
-                onClick={() => handleEdit("username")}
+                onClick={handleEdit}
               />
             </>
           )}
@@ -185,62 +139,18 @@ const UserSettings: React.FC = () => {
       <FormControl mb={8}>
         <Flex alignItems="center">
           <FormLabel fontSize="lg" w="40%">E-Mail</FormLabel>
-          {isEditing.email ? (
-            <>
-              <Input
-                value={userData.email}
-                onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-                fontSize="lg"
-                w="60%"
-              />
-              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <Box flex="1">{userData.email}</Box>
-              <Spacer />
-              <IconButton
-                icon={<FaEdit />}
-                aria-label="Edit email"
-                onClick={() => handleEdit("email")}
-              />
-            </>
-          )}
+          <Box flex="1">{userData.email}</Box>
         </Flex>
+        <Box fontSize="sm" color="gray.500" mt={2}>Email changes are not implemented.</Box>
         <Divider mt={2} />
       </FormControl>
 
       <FormControl mb={8}>
         <Flex alignItems="center">
           <FormLabel fontSize="lg" w="40%">Password</FormLabel>
-          {isEditing.password ? (
-            <>
-              <Input
-                type="password"
-                value={userData.password}
-                onChange={(e) => setUserData({ ...userData, password: e.target.value })}
-                fontSize="lg"
-                w="60%"
-                placeholder="Enter new password"
-              />
-              <Button onClick={() => handleSave(userData)} ml={3} colorScheme="blue">
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <Box flex="1">******</Box>
-              <Spacer />
-              <IconButton
-                icon={<FaEdit />}
-                aria-label="Edit password"
-                onClick={() => handleEdit("password")}
-              />
-            </>
-          )}
+          <Box flex="1">******</Box>
         </Flex>
+        <Box fontSize="sm" color="gray.500" mt={2}>Password changes are not implemented.</Box>
         <Divider mt={2} />
       </FormControl>
     </Box>

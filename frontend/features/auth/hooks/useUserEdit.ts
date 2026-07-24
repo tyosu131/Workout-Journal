@@ -4,11 +4,7 @@ import axios from "axios";
 import { useToast } from "@chakra-ui/react";
 
 export const useUserEdit = () => {
-  const [isEditing, setIsEditing] = useState({
-    username: false,
-    email: false,
-    password: false,
-  });
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
 
   const [userData, setUserData] = useState({
     username: "",
@@ -18,24 +14,13 @@ export const useUserEdit = () => {
 
   const toast = useToast();
 
-  const handleEdit = (field: keyof typeof isEditing) => {
-    setIsEditing((prevState) => ({ ...prevState, [field]: true }));
-    if (field === "password") {
-      setUserData((prevState) => ({ ...prevState, password: "" }));
-    }
-  };
+  const handleEdit = () => setIsEditingUsername(true);
 
-  const resetEditing = () => {
-    setIsEditing({
-      username: false,
-      email: false,
-      password: false,
-    });
-  };
+  const resetEditing = () => setIsEditingUsername(false);
 
-  const handleSave: (data: { username: string; email: string; password: string }) => void =
-    debounce(async (data: { username: string; email: string; password: string }) => {
-      const { username, email, password } = data;
+  const handleSave: (data: { username: string; email: string }) => void =
+    debounce(async (data: { username: string; email: string }) => {
+      const { username, email } = data;
       try {
         const token = localStorage.getItem("token");
         if (!token) {
@@ -43,7 +28,7 @@ export const useUserEdit = () => {
         }
         const response = await axios.put(
           "/api/auth/update-user",
-          { username, email, password },
+          { username, email },
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -53,24 +38,13 @@ export const useUserEdit = () => {
         if (response.status !== 200) {
           throw new Error("Failed to update user.");
         }
-        const result = response.data;
-        if (result.message === "Password updated successfully. Please log in again.") {
-          toast({
-            title: "Password Updated",
-            description: "Please log in again with the new password.",
-            status: "warning",
-            duration: 4000,
-            isClosable: true,
-          });
-        } else {
-          toast({
-            title: "Saved!",
-            description: `User data has been updated.`,
-            status: "success",
-            duration: 2000,
-            isClosable: true,
-          });
-        }
+        toast({
+          title: "Saved!",
+          description: "Username has been updated.",
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
       } catch (error) {
         let errorMsg = "An unexpected error occurred.";
         if (axios.isAxiosError(error)) {
@@ -97,7 +71,7 @@ export const useUserEdit = () => {
     }, 1000);
 
   return {
-    isEditing,
+    isEditingUsername,
     handleEdit,
     handleSave,
     userData,

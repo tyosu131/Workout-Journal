@@ -24,12 +24,10 @@ console.log("PORT configured:", Boolean(process.env.PORT));
 console.log("ACCESS_TOKEN_EXPIRES configured:", Boolean(process.env.ACCESS_TOKEN_EXPIRES));
 console.log("REFRESH_TOKEN_EXPIRES configured:", Boolean(process.env.REFRESH_TOKEN_EXPIRES));
 console.log("SUPABASE_URL configured:", Boolean(process.env.SUPABASE_URL));
-console.log("SUPABASE_KEY configured:", Boolean(process.env.SUPABASE_KEY));
+console.log("SUPABASE_PUBLISHABLE_KEY configured:", Boolean(process.env.SUPABASE_PUBLISHABLE_KEY));
+console.log("SUPABASE_SECRET_KEY configured:", Boolean(process.env.SUPABASE_SECRET_KEY));
+console.log("PASSWORD_RESET_REDIRECT_URL configured:", Boolean(process.env.PASSWORD_RESET_REDIRECT_URL));
 console.log("JWT_SECRET configured:", Boolean(process.env.JWT_SECRET));
-
-// Supabase関連の初期化部分
-const supabaseClient = require("./utils/supabaseClient");
-console.log("Supabase client initialized:", supabaseClient ? "Yes" : "No");
 
 // CORS設定
 const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_ORIGIN || "http://localhost:3000";
