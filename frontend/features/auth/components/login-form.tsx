@@ -1,10 +1,10 @@
 // portfolio real\frontend\features\auth\components\login-form.tsx
 import React, { useState } from "react";
 import { Box, Input, Button, useToast } from "@chakra-ui/react";
-import axios from "axios";
 import { useRouter } from "next/router";
 import { setToken } from "../../../../shared/utils/tokenUtils";
 import { validateEmail } from "../../../../shared/utils/validationUtils";
+import { loginUser } from "../api";
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -27,8 +27,8 @@ const LoginForm: React.FC = () => {
     }
 
     try {
-      const response = await axios.post("/api/auth/login", { email, password });
-      setToken(response.data.token);
+      const response = await loginUser(email, password);
+      setToken(response.token);
       toast({
         title: "Login Successful",
         description: "You have successfully logged in.",

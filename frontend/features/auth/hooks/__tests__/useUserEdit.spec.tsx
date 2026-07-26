@@ -3,15 +3,17 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-const put = jest.fn();
+const apiRequestWithAuth = jest.fn();
 const toast = jest.fn();
+const getToken = jest.fn();
 
-jest.mock("axios", () => ({
+jest.mock("../../../../lib/apiClient", () => ({
   __esModule: true,
-  default: {
-    put,
-    isAxiosError: () => false,
-  },
+  apiRequestWithAuth,
+}));
+
+jest.mock("../../../../../shared/utils/tokenUtils", () => ({
+  getToken,
 }));
 
 jest.mock("lodash.debounce", () => ({
@@ -39,10 +41,10 @@ describe("useUserEdit", () => {
 
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-    put.mockReset();
+    apiRequestWithAuth.mockReset();
     toast.mockReset();
+    getToken.mockReturnValue("backend-access-token");
     currentHook = null;
-    localStorage.setItem("token", "backend-access-token");
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -53,11 +55,10 @@ describe("useUserEdit", () => {
       root.unmount();
     });
     container.remove();
-    localStorage.clear();
   });
 
   it("sends only the username and the displayed email when saving", async () => {
-    put.mockResolvedValue({ status: 200 });
+    apiRequestWithAuth.mockResolvedValue({});
 
     await act(async () => {
       root.render(React.createElement(HookHost));
@@ -73,11 +74,11 @@ describe("useUserEdit", () => {
       });
     });
 
-    expect(put).toHaveBeenCalledWith(
-      "/api/auth/update-user",
-      { username: "Renamed", email: "user@example.com" },
-      { headers: { Authorization: "Bearer backend-access-token" } }
+    expect(apiRequestWithAuth).toHaveBeenCalledWith(
+      "/auth/update-user",
+      "put",
+      { username: "Renamed", email: "user@example.com" }
     );
-    expect(put.mock.calls[0][1]).not.toHaveProperty("password");
+    expect(apiRequestWithAuth.mock.calls[0][2]).not.toHaveProperty("password");
   });
 });

@@ -25,8 +25,7 @@ export async function fetchNotesInRangeAPI(
   start: string,
   end: string
 ): Promise<NoteData[]> {
-  // フロントからは `/api/notes/range?start=...&end=...` を呼ぶ
-  const url = `/api/notes/range?start=${start}&end=${end}`;
+  const url = API_ENDPOINTS.NOTES_RANGE(start, end);
   const response = await apiRequestWithAuth<{ notes: NoteData[] }>(url, "get");
   const notes = response.notes || [];
   notes.forEach((note) => parseNoteFields(note));
@@ -76,7 +75,7 @@ export async function fetchNotesByTagsAPI(tags: string[]): Promise<NoteData[]> {
 
 /**
  * タグを新規作成（DBに保存）API
- * POST /api/notes/tag
+ * POST /notes/tag
  */
 export async function createTagAPI(tag: string): Promise<void> {
   await apiRequestWithAuth(API_ENDPOINTS.NOTES_TAG, "post", { tag });
@@ -84,7 +83,7 @@ export async function createTagAPI(tag: string): Promise<void> {
 
 /**
  * タグを削除（DBから削除）API
- * DELETE /api/notes/tag/:tagName
+ * DELETE /notes/tag/:tagName
  */
 export async function deleteTagAPI(tag: string): Promise<void> {
   const encodedTag = encodeURIComponent(tag);

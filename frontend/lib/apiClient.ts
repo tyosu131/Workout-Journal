@@ -16,6 +16,12 @@ const apiClient = axios.create({
 // --- リフレッシュ再試行回数の管理 ---
 let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
+const PUBLIC_AUTH_ENDPOINTS = new Set([
+  API_ENDPOINTS.LOGIN,
+  API_ENDPOINTS.SIGNUP,
+  API_ENDPOINTS.FORGOT_PASSWORD,
+  API_ENDPOINTS.REFRESH,
+]);
 
 // 型ガード
 function isAxiosError(error: unknown): error is import('axios').AxiosError {
@@ -26,6 +32,33 @@ function isAxiosRequestConfig(
   config: unknown
 ): config is import('axios').InternalAxiosRequestConfig<any> {
   return typeof config === 'object' && config !== null && 'headers' in config;
+}
+
+function getRequestPath(url: unknown): string | null {
+  if (typeof url !== 'string') {
+    return null;
+  }
+
+  try {
+    return new URL(url).pathname;
+  } catch {
+    try {
+      return new URL(url, baseURL).pathname;
+    } catch {
+      const path = url.split(/[?#]/, 1)[0];
+      return path.startsWith('/') ? path : `/${path}`;
+    }
+  }
+}
+
+function isPublicAuthEndpoint(url: unknown): boolean {
+  const path = getRequestPath(url);
+  return path !== null && PUBLIC_AUTH_ENDPOINTS.has(path);
+}
+
+function clearTokenAndRefreshAttempts() {
+  refreshAttempts = 0;
+  removeToken();
 }
 
 // 401エラー時のリフレッシュ処理
@@ -40,19 +73,22 @@ apiClient.interceptors.response.use(
     // ネットワークエラーの場合、サーバー接続ができなければすぐにトークン削除してリトライを中断
     if (error.code === 'ERR_NETWORK') {
       console.error('[apiClient] ネットワークエラー発生。トークンを削除して終了');
-      removeToken();
+      clearTokenAndRefreshAttempts();
       return Promise.reject(error);
     }
 
     const originalRequest = error.config;
     if (
       isAxiosRequestConfig(originalRequest) &&
-      error.response?.status === 401 &&
-      !originalRequest.headers._retry
+      error.response?.status === 401
     ) {
+      if (isPublicAuthEndpoint(originalRequest.url) || originalRequest.headers._retry) {
+        return Promise.reject(error);
+      }
+
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
         console.error(`[apiClient] リフレッシュ再試行が ${MAX_REFRESH_ATTEMPTS} 回を超えました。トークン削除`);
-        removeToken();
+        clearTokenAndRefreshAttempts();
         return Promise.reject(error);
       }
 
@@ -65,7 +101,7 @@ apiClient.interceptors.response.use(
         const newAccessToken = data.access_token;
         console.log('[apiClient] トークンリフレッシュ成功:', Boolean(newAccessToken));
         setToken(newAccessToken);
-        refreshAttempts = 0; // 成功したらリトライ回数をリセット
+        refreshAttempts = 0;
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
@@ -76,7 +112,7 @@ apiClient.interceptors.response.use(
             refreshError.response?.data || refreshError.message
           );
         }
-        removeToken();
+        clearTokenAndRefreshAttempts();
         return Promise.reject(refreshError);
       }
     }

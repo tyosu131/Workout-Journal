@@ -15,8 +15,10 @@ import {
 } from "@chakra-ui/react";
 import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/router";
-import axios from "axios";
 import { useUserEdit } from "../hooks/useUserEdit";
+import { apiRequestWithAuth } from "../../../lib/apiClient";
+import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
+import { getToken } from "../../../../shared/utils/tokenUtils";
 
 const UserSettings: React.FC = () => {
   const { isEditingUsername, handleEdit, handleSave, userData, setUserData } = useUserEdit();
@@ -28,20 +30,17 @@ const UserSettings: React.FC = () => {
     setIsClient(true);
 
     const fetchUserData = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
+      if (!getToken()) {
         console.error("No token found. Redirecting to login.");
         router.push("/login");
         return;
       }
 
       try {
-        const { data } = await axios.get("/api/auth/get-user", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const data = await apiRequestWithAuth<{ name?: string; email?: string }>(
+          API_ENDPOINTS.GET_USER,
+          "get"
+        );
 
         if (data) {
           setUserData({
