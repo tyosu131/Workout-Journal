@@ -121,10 +121,10 @@ flowchart TD
 | Path layer | Status | Observed behavior |
 | --- | --- | --- |
 | Express internal mounts | **Current / Implemented** | `backend/server.js` mounts `authRoutes` at `/auth`, `noteRoutes` at `/notes`, and `analyticsRoutes` at `/analytics`. The weekly-summary route is therefore `POST /analytics/weekly-summary` inside Express. |
-| Frontend API base | **Current / Implemented** | Axios uses `NEXT_PUBLIC_API_URL`, defaulting to `http://localhost:3001`. The weekly-summary client calls `/analytics/weekly-summary`, matching the Express mount when this base points directly at Express. |
-| Frontend `/api/*` calls | **Current / Implemented** | Existing auth and notes clients commonly call `/api/auth/*` and `/api/notes/*`. |
-| Production/public proxy mapping | **Open Question** | No Next.js rewrite, frontend API route, or hosting proxy configuration is present in this repository to show how `/api/auth/*` or `/api/notes/*` map to Express `/auth/*` or `/notes/*`. The deployed public route mapping must be verified in hosting configuration. |
-| Weekly-summary public route | **Open Question** | The repository confirms the internal `POST /analytics/weekly-summary` route and the frontend call with that path. Whether production also exposes an `/api/analytics/weekly-summary` alias is not established here. |
+| Frontend API base | **Current / Implemented** | Axios uses `NEXT_PUBLIC_API_URL`, defaulting to `http://localhost:3001`, and frontend runtime clients call the Express paths directly: `/auth/*`, `/notes/*`, and `/analytics/*`. |
+| Next.js API routing | **Current / Implemented** | No Next.js API routes, rewrites, or proxy configuration are used for backend requests. Frontend runtime calls rely on `NEXT_PUBLIC_API_URL` resolving to the Express service. |
+| Production/public API origin | **Open Question** | The repository does not define the deployed value of `NEXT_PUBLIC_API_URL` or its hosting/network configuration. Production must make the Express service reachable at that configured origin; no `/api/*` alias is required by the frontend runtime. |
+| Weekly-summary public route | **Current / Implemented** | The frontend calls `POST /analytics/weekly-summary` through the same API base, matching the Express mount. |
 
 ## 3. Data Model
 
@@ -310,11 +310,11 @@ Persisted notes
 | --- | --- | --- | --- |
 | `POST` | `/analytics/weekly-summary` | Bearer token | Validate range and structured input, invoke the local mock provider boundary, validate its response, and return an `ai` or `rule_based_fallback` source. |
 
-**Open Question:** Frontend auth and notes clients commonly use `/api/auth/*` and `/api/notes/*`, while the weekly-summary client uses `/analytics/weekly-summary`. No rewrite, Next.js API route, or hosting proxy definition in this repository proves how these public paths map to the internal Express mounts.
+**Current / Implemented:** Frontend runtime clients use the `NEXT_PUBLIC_API_URL` base with the Express paths `/auth/*`, `/notes/*`, and `/analytics/*`; no Next.js API route, rewrite, or proxy is required for those calls.
 
-**Current / Implemented:** `frontend/features/auth/hooks/useResendVerification.ts` calls `/api/signup` through `apiRequestWithAuth`. That wrapper requires a stored access token and throws before making an HTTP request when no access token exists. The mounted Express signup route is `POST /auth/signup`.
+**Current / Implemented:** `frontend/features/auth/hooks/useResendVerification.ts` calls `/auth/signup` through `apiRequestWithAuth`. That wrapper requires a stored access token and throws before making an HTTP request when no access token exists. The mounted Express signup route is `POST /auth/signup`.
 
-**Open Question:** No repository-visible proxy or rewrite proves that `/api/signup` reaches `POST /auth/signup`. Verification resend is expected to be usable around an unauthenticated signup flow, but the authenticated wrapper may prevent the request from being sent when no access token exists. The intended endpoint, authentication requirement, and deployed reachability need confirmation.
+**Open Question:** Verification resend is expected to be usable around an unauthenticated signup flow, but the current authenticated wrapper may prevent the request from being sent when no access token exists. The intended dedicated endpoint and authentication requirement need confirmation.
 
 ### Authentication and Token Lifecycle
 

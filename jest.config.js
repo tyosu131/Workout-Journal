@@ -6,6 +6,7 @@ module.exports = {
       {
         tsconfig: {
           esModuleInterop: true,
+          jsx: "react-jsx",
         },
       },
     ],

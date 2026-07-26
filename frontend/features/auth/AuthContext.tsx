@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ================================
   const logout = async () => {
     try {
-      // await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`);
+      // await apiClient.post('/auth/logout');
     } catch (error: any) {
       console.error("Logout request failed (non-critical):", error?.message);
     } finally {
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // fetchSession(token) で /api/auth/session を呼ぶ
+      // fetchSession(token) で /auth/session を呼ぶ
       const sessionRes = await fetchSession(token);
       if (sessionRes.user) {
         setUser(sessionRes.user);

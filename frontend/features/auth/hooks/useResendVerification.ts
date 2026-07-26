@@ -1,5 +1,6 @@
 import { useToast } from '@chakra-ui/react';
 import { apiRequestWithAuth } from '../../../lib/apiClient';
+import { API_ENDPOINTS } from '../../../../shared/constants/endpoints';
 
 export const useResendVerification = (email: string, name: string, password: string) => {
   const toast = useToast();
@@ -7,7 +8,7 @@ export const useResendVerification = (email: string, name: string, password: str
   const resendVerification = async () => {
     try {
       const result = await apiRequestWithAuth(
-        '/api/signup',
+        API_ENDPOINTS.SIGNUP,
         'post',
         { email, name, password }
       );

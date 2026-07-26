@@ -1,8 +1,9 @@
 // portfolio real\frontend\features\auth\components\forgot-password-page.tsx
 import React, { useState } from 'react';
 import { Box, Input, Button, Center, Text, Link } from '@chakra-ui/react';
-import axios from 'axios';
 import { useRouter } from 'next/router';
+import { apiRequest } from '../../../lib/apiClient';
+import { API_ENDPOINTS } from '../../../../shared/constants/endpoints';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,7 +11,7 @@ const ForgotPassword: React.FC = () => {
 
   const handlePasswordReset = async () => {
     try {
-      await axios.post('/api/auth/forgot-password', { email });
+      await apiRequest(API_ENDPOINTS.FORGOT_PASSWORD, 'post', { email });
     } catch (error) {
     }
   };

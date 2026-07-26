@@ -1,7 +1,9 @@
 import { useState } from "react";
 import debounce from "lodash.debounce";
-import axios from "axios";
 import { useToast } from "@chakra-ui/react";
+import { apiRequestWithAuth } from "../../../lib/apiClient";
+import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
+import { getToken } from "../../../../shared/utils/tokenUtils";
 
 export const useUserEdit = () => {
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -22,22 +24,10 @@ export const useUserEdit = () => {
     debounce(async (data: { username: string; email: string }) => {
       const { username, email } = data;
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
+        if (!getToken()) {
           throw new Error("No valid session found. Please log in again.");
         }
-        const response = await axios.put(
-          "/api/auth/update-user",
-          { username, email },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        if (response.status !== 200) {
-          throw new Error("Failed to update user.");
-        }
+        await apiRequestWithAuth(API_ENDPOINTS.UPDATE_USER, "put", { username, email });
         toast({
           title: "Saved!",
           description: "Username has been updated.",
@@ -47,12 +37,16 @@ export const useUserEdit = () => {
         });
       } catch (error) {
         let errorMsg = "An unexpected error occurred.";
-        if (axios.isAxiosError(error)) {
-          const serverError = error.response?.data?.error;
-          if (serverError) {
+        if (typeof error === "object" && error !== null) {
+          const responseError = error as {
+            response?: { data?: { error?: unknown } };
+            message?: unknown;
+          };
+          const serverError = responseError.response?.data?.error;
+          if (typeof serverError === "string") {
             errorMsg = serverError;
-          } else if (error.message) {
-            errorMsg = error.message;
+          } else if (typeof responseError.message === "string") {
+            errorMsg = responseError.message;
           }
         } else if (error instanceof Error) {
           errorMsg = error.message;

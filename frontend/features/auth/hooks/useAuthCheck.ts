@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { apiRequestWithAuth } from "../../../lib/apiClient";
+import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 
 export const useAuthCheck = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,7 +11,7 @@ export const useAuthCheck = () => {
     const checkUser = async () => {
       try {
         const sessionRes = await apiRequestWithAuth<{ user?: any }>(
-          "/api/auth/session",
+          API_ENDPOINTS.SESSION,
           "get"
         );
         if (sessionRes?.user) {
