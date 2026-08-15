@@ -203,6 +203,152 @@ describe("noteService", () => {
       expect(res.json).toHaveBeenCalledWith({ error: "Tag is required" });
       expect(from).not.toHaveBeenCalled();
     });
+
+    it("returns 400 when tag is not a string", async () => {
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        headers: { authorization: "Bearer valid-token" },
+        body: { tag: 123 },
+      };
+      const res = createResponse();
+
+      await createTag(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: "Tag is required" });
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when tag contains only whitespace", async () => {
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        headers: { authorization: "Bearer valid-token" },
+        body: { tag: "   " },
+      };
+      const res = createResponse();
+
+      await createTag(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: "Tag is required" });
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it("uses the trimmed tag for the user-scoped duplicate check and insert", async () => {
+      const eqTag = jest.fn().mockResolvedValue({ data: [], error: null });
+      const eqUser = jest.fn(() => ({ eq: eqTag }));
+      const select = jest.fn(() => ({ eq: eqUser }));
+      const insert = jest.fn().mockResolvedValue({ error: null });
+      from.mockReturnValueOnce({ select }).mockReturnValueOnce({ insert });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        headers: { authorization: "Bearer valid-token" },
+        body: { tag: " upper " },
+      };
+      const res = createResponse();
+
+      await createTag(req, res);
+
+      expect(from).toHaveBeenNthCalledWith(1, "user_tags");
+      expect(from).toHaveBeenNthCalledWith(2, "user_tags");
+      expect(eqUser).toHaveBeenCalledWith("user_id", "user-123");
+      expect(eqTag).toHaveBeenCalledWith("tag", "upper");
+      expect(insert).toHaveBeenCalledWith({ user_id: "user-123", tag: "upper" });
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({ message: "Tag created" });
+    });
+
+    it("returns idempotent success without inserting an existing exact tag", async () => {
+      const eqTag = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+      const eqUser = jest.fn(() => ({ eq: eqTag }));
+      const select = jest.fn(() => ({ eq: eqUser }));
+      from.mockReturnValueOnce({ select });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        headers: { authorization: "Bearer valid-token" },
+        body: { tag: "upper" },
+      };
+      const res = createResponse();
+
+      await createTag(req, res);
+
+      expect(eqTag).toHaveBeenCalledWith("tag", "upper");
+      expect(from).toHaveBeenCalledTimes(1);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: "Tag already exists" });
+    });
+
+    it.each(["Upper", "ｕｐｐｅｒ"])(
+      "preserves case and Unicode form when checking %s",
+      async (tag) => {
+        const eqTag = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+        const eqUser = jest.fn(() => ({ eq: eqTag }));
+        const select = jest.fn(() => ({ eq: eqUser }));
+        from.mockReturnValueOnce({ select });
+        verifyToken.mockResolvedValue({ id: "user-123" });
+        const req = {
+          headers: { authorization: "Bearer valid-token" },
+          body: { tag },
+        };
+        const res = createResponse();
+
+        await createTag(req, res);
+
+        expect(eqTag).toHaveBeenCalledWith("tag", tag);
+        expect(res.status).toHaveBeenCalledWith(200);
+      }
+    );
+
+    it("normalizes a concurrent unique violation to idempotent success", async () => {
+      const eqTag = jest.fn().mockResolvedValue({ data: [], error: null });
+      const eqUser = jest.fn(() => ({ eq: eqTag }));
+      const select = jest.fn(() => ({ eq: eqUser }));
+      const insert = jest.fn().mockResolvedValue({
+        error: { code: "23505", message: "duplicate key value violates unique constraint" },
+      });
+      from.mockReturnValueOnce({ select }).mockReturnValueOnce({ insert });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const req = {
+        headers: { authorization: "Bearer valid-token" },
+        body: { tag: "upper" },
+      };
+      const res = createResponse();
+
+      await createTag(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: "Tag already exists" });
+    });
+
+    it("returns 500 for insert errors other than a unique violation", async () => {
+      const eqTag = jest.fn().mockResolvedValue({ data: [], error: null });
+      const eqUser = jest.fn(() => ({ eq: eqTag }));
+      const select = jest.fn(() => ({ eq: eqUser }));
+      const insert = jest.fn().mockResolvedValue({
+        error: { code: "XX000", message: "database unavailable" },
+      });
+      from.mockReturnValueOnce({ select }).mockReturnValueOnce({ insert });
+      verifyToken.mockResolvedValue({ id: "user-123" });
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      const req = {
+        headers: { authorization: "Bearer valid-token" },
+        body: { tag: "upper" },
+      };
+      const res = createResponse();
+
+      await createTag(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Failed to create tag",
+        details: "database unavailable",
+      });
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to create tag:",
+        "database unavailable"
+      );
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe("getNotesByTags", () => {

@@ -171,7 +171,7 @@ async function getNotesByTags(req, res) {
 
 /**
  * POST /api/notes/tag
- * タグを新規作成（DBに保存）
+ * Create a new tag and persist it to the database
  */
 async function createTag(req, res) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -183,17 +183,21 @@ async function createTag(req, res) {
     if (!user || !user.id) {
       return res.status(401).json({ error: "Invalid token" });
     }
-    const { tag } = req.body;
-    if (!tag) {
+    const tag = req.body?.tag;
+    if (typeof tag !== "string") {
+      return res.status(400).json({ error: "Tag is required" });
+    }
+    const normalizedTag = tag.trim();
+    if (!normalizedTag) {
       return res.status(400).json({ error: "Tag is required" });
     }
 
-    // まず重複チェック
+    // Check for duplicates first
     const { data: existing, error: selError } = await getAdminDbClient()
       .from("user_tags")
       .select("id")
       .eq("user_id", user.id)
-      .eq("tag", tag);
+      .eq("tag", normalizedTag);
 
     if (selError) {
       throw selError;
@@ -205,8 +209,11 @@ async function createTag(req, res) {
 
     const { error: insertError } = await getAdminDbClient()
       .from("user_tags")
-      .insert({ user_id: user.id, tag });
+      .insert({ user_id: user.id, tag: normalizedTag });
     if (insertError) {
+      if (insertError.code === "23505") {
+        return res.status(200).json({ message: "Tag already exists" });
+      }
       throw insertError;
     }
 

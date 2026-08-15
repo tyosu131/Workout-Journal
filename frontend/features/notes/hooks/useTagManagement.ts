@@ -38,12 +38,12 @@ export function useTagManagement() {
     tag.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // タグ作成
+  // Create tag
   const handleCreateTag = useCallback(async () => {
     const trimmed = newTag.trim();
     if (!trimmed) return;
 
-    // 既存チェック（フロント側での重複防止）
+    // Check for duplicates on the frontend
     if (tags.includes(trimmed)) {
       toast({
         title: "Duplicate tag",
@@ -56,8 +56,8 @@ export function useTagManagement() {
     }
 
     try {
-      await createTagAPI(trimmed); // サーバーへ作成リクエスト
-      // 成功したらタグ一覧を再取得
+      await createTagAPI(trimmed); // Request creation from the server
+      // Refetch the tag list after success
       const updated = await fetchAllTagsAPI();
       setTags(updated);
       setNewTag("");
@@ -70,27 +70,14 @@ export function useTagManagement() {
         isClosable: true,
       });
     } catch (err: any) {
-      // ここで 409 は「すでに存在するタグ」を示す
-      if (err?.response?.status === 409) {
-        // console.error は出さずに、トーストなどで「既に存在」と伝える
-        toast({
-          title: "Duplicate tag",
-          description: `Tag "${trimmed}" already exists.`,
-          status: "warning",
-          duration: 2000,
-          isClosable: true,
-        });
-      } else {
-        // 409以外は本当のエラーなのでコンソールエラーを出す
-        console.error("Failed to create tag", err);
-        toast({
-          title: "Error",
-          description: err.message || "Failed to create tag.",
-          status: "error",
-          duration: 2000,
-          isClosable: true,
-        });
-      }
+      console.error("Failed to create tag", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create tag.",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
     }
   }, [newTag, tags, toast]);
 

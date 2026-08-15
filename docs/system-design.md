@@ -337,7 +337,7 @@ Persisted notes
 | Note path and range dates | **Current / Implemented** | `noteService` has no dedicated date-format validator; it passes `:date`, `start`, and `end` to Supabase queries. Malformed direct-request behavior beyond that boundary is not verified. |
 | Notes payload | **Current / Implemented** | `saveNote` accepts `note`, `exercises`, and `tags`; nested exercises are normalized by `noteExercisesValidation`. A complete schema for note text and tags is not enforced in the inspected service. |
 | Nested exercises and effort | **Current / Implemented** | Backend utility accepts an array or JSON string, safely falls back to `[]`, preserves valid set fields, accepts finite RPE 1-10 and RIR 0-10, and accepts boolean or `"true"`/`"false"` failure values. Invalid optional effort values are omitted before save. |
-| Tags | **Current / Implemented** | Tag creation rejects a falsy `tag`; deletion rejects a missing route parameter. Length, character, and normalization rules beyond that are not present in the inspected service. |
+| Tags | **Current / Implemented** | Tag creation requires a string, trims it, and rejects an empty normalized value. Duplicate identity remains case-sensitive without Unicode normalization. Deletion rejects a missing route parameter. |
 | Weekly-summary request | **Current / Implemented** | Backend utility requires an object, valid ordered `YYYY-MM-DD` bounds within 183 days, an object `summaryInput`, and rejects named raw-note-content fields recursively. |
 | Provider-shaped summary response | **Current / Implemented** | Backend utility requires the six structured summary fields, string arrays, bounded lengths/counts, and uses a normalized fallback on parse or shape failure. |
 
@@ -345,7 +345,7 @@ Persisted notes
 
 **Current / Implemented:** `POST /notes/:date` normalizes exercises and uses Supabase upsert with `(date, userid)` as the conflict target. The daily-key risk in the reviewed backup is documented in [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
 
-**Current / Implemented:** Tag creation first checks for an existing user-scoped tag, returning success without a new row when one exists. Tag deletion removes the catalog row and calls `remove_tag_from_notes` for the matching user and tag, so it has a note-record side effect.
+**Current / Implemented:** Tag creation first checks for an existing user-scoped tag, returning success without a new row when one exists. A concurrent insert that reaches the database unique constraint is normalized to the same idempotent success. Tag deletion removes the catalog row and calls `remove_tag_from_notes` for the matching user and tag, so it has a note-record side effect.
 
 **Current Design Decision:** `POST /analytics/weekly-summary` performs no database write. Generated summaries are returned on demand and are not persisted.
 
