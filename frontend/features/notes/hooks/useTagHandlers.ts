@@ -39,16 +39,14 @@ const useTagHandlers = (
     [noteData, setNoteData]
   );
 
-  // タグ追加（DB保存も含む）
+  // Add a tag, including database persistence
   const handleAddTagAndSave = useCallback(
     async (tag: string) => {
       if (!noteData) return;
       try {
         await createTagAPI(tag);
       } catch (err: any) {
-        if (err?.response?.status !== 409) {
-          console.error("Failed to create tag in user_tags:", err);
-        }
+        console.error("Failed to create tag in user_tags:", err);
       }
       handleAddTag(tag);
     },
