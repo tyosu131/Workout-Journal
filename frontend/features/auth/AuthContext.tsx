@@ -16,6 +16,8 @@ type AuthProviderProps = {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+const PUBLIC_AUTH_PATHNAMES = new Set(["/forgot-password", "/reset-password"]);
+
 const getErrorSummary = (error: any) => ({
   status: error?.response?.status,
   message: error?.message,
@@ -25,6 +27,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+  const isPublicAuthRoute = PUBLIC_AUTH_PATHNAMES.has(router.pathname);
 
   // ================================
   // ログアウト処理
@@ -102,9 +105,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // ================================
-  // マウント時の初期化処理
+  // Initialize on mount
   // ================================
   useEffect(() => {
+    if (isPublicAuthRoute) {
+      setLoading(false);
+      return;
+    }
+
     const token = getToken();
     if (!token) {
       console.log("No token found, skipping session check");
@@ -119,7 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [isPublicAuthRoute, router.pathname, user]);
 
   // ================================
   // ログイン処理
