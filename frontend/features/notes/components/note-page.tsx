@@ -43,6 +43,10 @@ import {
 import useNoteHandlers from "../hooks/useNoteHandlers";
 import useTagHandlers from "../hooks/useTagHandlers";
 import { useTagColor } from "../contexts/TagColorContext";
+import {
+  createNoteQuery,
+  resolveNoteReturnMonth,
+} from "../../../../shared/utils/calendarNavigation";
 
 const RPE_OPTIONS = Array.from({ length: 19 }, (_, index) => (
   Number((1 + index * 0.5).toFixed(1))
@@ -119,7 +123,11 @@ const NotePage: React.FC = () => {
 
   useEffect(() => {
     if (noteData && noteData.note.trim().length > 0 && router.asPath.includes("new")) {
-      router.replace(`/note/${noteData.date}`);
+      const returnMonth = resolveNoteReturnMonth(router.query.month, noteData.date);
+      router.replace({
+        pathname: `/note/${noteData.date}`,
+        query: createNoteQuery(router.query, returnMonth),
+      });
     }
   }, [noteData, router]);
 
