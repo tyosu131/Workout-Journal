@@ -38,6 +38,8 @@ jest.mock("@chakra-ui/react", () => {
     MenuButton: Button,
     MenuList: Container,
     MenuItem: Button,
+    MenuDivider: () => React.createElement("hr"),
+    Portal: Container,
     Tag: Container,
     TagLabel: Text,
   };
@@ -152,6 +154,41 @@ describe("TopPage calendar navigation", () => {
     await renderTopPage();
 
     expect(container.textContent).toContain("Jul 2026");
+  });
+
+  it("keeps the navigation routes available from the navigation menu", async () => {
+    await renderTopPage();
+
+    expect(container.querySelector('[aria-label="Open navigation"]')).not.toBeNull();
+
+    const navigationItems = [
+      ["Analytics", "/analytics"],
+      ["User", "/user"],
+      ["Contact", "/contact"],
+      ["Tag Management", "/tag-management"],
+    ] as const;
+
+    for (const [label, path] of navigationItems) {
+      const item = Array.from(container.querySelectorAll("button")).find(
+        (button) => button.textContent === label
+      ) as HTMLButtonElement;
+
+      await act(async () => item.click());
+      expect(push).toHaveBeenLastCalledWith(path);
+    }
+  });
+
+  it("removes the token and navigates to login when logging out", async () => {
+    await renderTopPage();
+
+    const logOut = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Log Out"
+    ) as HTMLButtonElement;
+
+    await act(async () => logOut.click());
+
+    expect(localStorage.getItem("token")).toBeNull();
+    expect(push).toHaveBeenLastCalledWith("/login");
   });
 
   it("uses replace for adjacent-month navigation and 今月", async () => {
