@@ -16,6 +16,10 @@ import {
   normalizeRpe,
 } from "../../../../shared/utils/setIntensityValidation";
 import { saveNoteAPI } from "../api";
+import {
+  createNoteQuery,
+  resolveNoteReturnMonth,
+} from "../../../../shared/utils/calendarNavigation";
 
 /**
  * ノート操作（エクササイズ、セット操作）をまとめたフック
@@ -124,7 +128,11 @@ const useNoteHandlers = (
 
   const handleDateChange = useCallback(
     (newDate: string) => {
-      router.push(`/note/${newDate}`);
+      const returnMonth = resolveNoteReturnMonth(router.query.month, newDate);
+      router.push({
+        pathname: `/note/${newDate}`,
+        query: createNoteQuery(router.query, returnMonth),
+      });
     },
     [router]
   );

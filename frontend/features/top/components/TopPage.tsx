@@ -1,6 +1,6 @@
 // portfolio real\frontend\features\top\components\TopPage.tsx
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Box,
   Stack,
@@ -25,23 +25,56 @@ import {
 import { useRouter } from "next/router";
 import { URLS } from "../../../../shared/constants/urls";
 import { generateCalendarDates } from "../../../../shared/utils/calendarUtils";
+import {
+  createNoteQuery,
+  formatCalendarMonth,
+  formatLocalDate,
+  getCalendarMonthRange,
+  getCurrentCalendarMonth,
+  isSameCalendarMonth,
+  resolveCalendarMonth,
+  shiftCalendarMonth,
+  type CalendarMonth,
+} from "../../../../shared/utils/calendarNavigation";
 import { fetchNotesInRangeAPI } from "../../../features/notes/api";
 import { useTagColor } from "../../../features/notes/contexts/TagColorContext";
+import { CalendarMonthPicker } from "./CalendarMonthPicker";
+
+const useCurrentLocalDate = () => {
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+    const timeoutId = setTimeout(
+      () => setCurrentDate(new Date()),
+      nextMidnight.getTime() - now.getTime()
+    );
+
+    return () => clearTimeout(timeoutId);
+  }, [currentDate]);
+
+  return currentDate;
+};
 
 const Top: React.FC = () => {
   const router = useRouter();
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [token, setToken] = useState<string | null>(null);
+  const currentDate = useCurrentLocalDate();
 
-  // 各日付の状態（tags, hasContent）を管理
+  // Manage each date's state (tags and hasContent)
   const [notesByDate, setNotesByDate] = useState<{
     [date: string]: { tags: string[]; hasContent: boolean };
   }>({});
 
-  // グローバルタグ色管理から getTagColor を取得
+  // Get getTagColor from global tag color management
   const { getTagColor } = useTagColor();
 
-  // トークンチェック
+  // Check token
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {
@@ -51,22 +84,28 @@ const Top: React.FC = () => {
     setToken(storedToken);
   }, [router]);
 
-  // 現在の年・月・最終日数を取得
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1;
-  const daysInMonth = new Date(year, month, 0).getDate();
+  // The URL query is the source of truth for the displayed month.
+  const displayedMonth = useMemo(
+    () => resolveCalendarMonth(router.isReady ? router.query.month : undefined, currentDate),
+    [currentDate, router.isReady, router.query.month]
+  );
+  const { year, monthIndex } = displayedMonth;
+  const month = monthIndex + 1;
+  const { daysInMonth, startDate, endDate } = useMemo(
+    () => getCalendarMonthRange(displayedMonth),
+    [displayedMonth]
+  );
+  const currentMonth = getCurrentCalendarMonth(currentDate);
+  const isCurrentMonth = isSameCalendarMonth(displayedMonth, currentMonth);
 
   useEffect(() => {
     async function fetchNotesForMonth() {
-      // 月初・月末
-      const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
-      const endDateStr = `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`;
-
+      // Start and end of the month
       try {
-        // 1回のAPI呼び出しで月内すべてのノートを取得
-        const notes = await fetchNotesInRangeAPI(startDateStr, endDateStr);
+        // Fetch all notes in the month with one API call
+        const notes = await fetchNotesInRangeAPI(startDate, endDate);
 
-        // 日付をキーとしたオブジェクトを作る
+        // Create an object keyed by date
         const newNotesByDate: {
           [date: string]: { tags: string[]; hasContent: boolean };
         } = {};
@@ -78,7 +117,7 @@ const Top: React.FC = () => {
           };
         });
 
-        // 月内の日付でノートが無い場合は空を入れておく
+        // Initialize dates without notes to empty values
         for (let d = 1; d <= daysInMonth; d++) {
           const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           if (!newNotesByDate[dateStr]) {
@@ -93,51 +132,66 @@ const Top: React.FC = () => {
     }
 
     fetchNotesForMonth();
-  }, [year, month, daysInMonth]);
+  }, [year, month, daysInMonth, startDate, endDate]);
 
-  // カレンダー表示に必要な日付配列を生成
+  // Generate the date array needed for the calendar
   const calendarDates = useMemo(
-    () => generateCalendarDates(year, currentDate.getMonth()),
-    [year, currentDate]
+    () => generateCalendarDates(year, monthIndex),
+    [year, monthIndex]
   );
 
-  // 当日の日付文字列
-  const todayString = useMemo(() => new Date().toISOString().split("T")[0], []);
+  // Current date string
+  const todayString = formatLocalDate(currentDate);
 
-  // 曜日表示用
+  // Weekday labels
   const daysOfWeek = useMemo(
     () => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     []
   );
 
-  // 指定日付をクリックしたとき
+  // Handle a specified date click
   const handleDateClick = (dateStr: string) => {
-    router.push(`/note/${dateStr}`);
+    router.push({
+      pathname: `/note/${dateStr}`,
+      query: createNoteQuery(router.query, displayedMonth),
+    });
   };
 
-  // 前の月へ
+  const updateDisplayedMonth = useCallback(
+    (nextMonth: CalendarMonth, historyMode: "push" | "replace") => {
+      router[historyMode](
+        {
+          pathname: URLS.TOP_PAGE,
+          query: { ...router.query, month: formatCalendarMonth(nextMonth) },
+        },
+        undefined,
+        { shallow: true }
+      );
+    },
+    [router]
+  );
+
+  // Go to the previous month
   const handlePrevMonth = () => {
-    const prevMonthDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() - 1,
-      1
-    );
-    setCurrentDate(prevMonthDate);
+    updateDisplayedMonth(shiftCalendarMonth(displayedMonth, -1), "replace");
   };
 
-  // 次の月へ
+  // Go to the next month
   const handleNextMonth = () => {
-    const nextMonthDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      1
-    );
-    setCurrentDate(nextMonthDate);
+    updateDisplayedMonth(shiftCalendarMonth(displayedMonth, 1), "replace");
+  };
+
+  const handleToday = () => {
+    updateDisplayedMonth(currentMonth, "replace");
+  };
+
+  const handleMonthSelection = (selectedMonth: CalendarMonth) => {
+    updateDisplayedMonth(selectedMonth, "push");
   };
 
   return token ? (
     <Box>
-      {/* 右上のメニュー */}
+      {/* Top-right menu */}
       <Box position="absolute" top="10px" right="10px">
         <Menu>
           <MenuButton
@@ -184,11 +238,11 @@ const Top: React.FC = () => {
         </Menu>
       </Box>
 
-      {/* タイトル部 */}
+      {/* Title section */}
       <Box mt={4} textAlign="center">
         <Stack direction="column" align="center" justify="center" mb={6} spacing={4}>
           <Stack direction="row" align="center" justify="center">
-            {/* 前の月 */}
+            {/* Previous month */}
             <IconButton
               icon={<ChevronLeftIcon />}
               aria-label="Previous Month"
@@ -197,10 +251,13 @@ const Top: React.FC = () => {
               transition="all 0.2s"
               _active={{ transform: "scale(0.95)" }}
             />
-            <Text fontSize="2xl" mx={2}>
-              {year}年 {month}月
-            </Text>
-            {/* 次の月 */}
+            <CalendarMonthPicker
+              displayedMonth={displayedMonth}
+              currentMonth={currentMonth}
+              onSelectMonth={handleMonthSelection}
+              onSelectCurrentMonth={handleToday}
+            />
+            {/* Next month */}
             <IconButton
               icon={<ChevronRightIcon />}
               aria-label="Next Month"
@@ -211,14 +268,23 @@ const Top: React.FC = () => {
             />
           </Stack>
 
-          {/* 作成ボタン */}
+          <Stack direction={{ base: "column", sm: "row" }} align="center" spacing={3}>
+            <Button onClick={handleToday} isDisabled={isCurrentMonth}>
+              今月
+            </Button>
+          </Stack>
+
+          {/* Create button */}
           <Button
             onClick={() => {
-              const todayStr = new Date().toISOString().split("T")[0];
+              const todayStr = formatLocalDate(new Date());
               if (notesByDate[todayStr]?.hasContent) {
-                router.push(`/note/${todayStr}`);
+                handleDateClick(todayStr);
               } else {
-                router.push(URLS.NOTE_NEW(todayStr));
+                router.push({
+                  pathname: "/note/new",
+                  query: { ...createNoteQuery(router.query, displayedMonth), date: todayStr },
+                });
               }
             }}
             width="200px"
@@ -233,10 +299,10 @@ const Top: React.FC = () => {
         </Stack>
       </Box>
 
-      {/* カレンダー表示 */}
+      {/* Calendar display */}
       <Box mt={4} textAlign="center" w="100%">
         <Grid templateColumns="repeat(7, 1fr)" gap={0} border="1px solid" borderColor="gray.200">
-          {/* 曜日ヘッダー */}
+          {/* Weekday header */}
           {daysOfWeek.map((day, index) => (
             <GridItem
               key={day}
@@ -253,7 +319,7 @@ const Top: React.FC = () => {
             </GridItem>
           ))}
 
-          {/* 日付セル */}
+          {/* Date cells */}
           {calendarDates.map((dateObj, index) => (
             <GridItem
               key={index}
@@ -295,7 +361,7 @@ const Top: React.FC = () => {
                   >
                     {new Date(dateObj.date).getDate()}
                   </Text>
-                  {/* 当日分のタグ表示 */}
+                  {/* Tags for the current date */}
                   {notesByDate[dateObj.date] && notesByDate[dateObj.date].tags.length > 0 && (
                     <Box
                       position="absolute"
