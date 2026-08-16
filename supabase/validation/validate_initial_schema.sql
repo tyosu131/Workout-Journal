@@ -98,7 +98,7 @@ select
   pg_get_function_identity_arguments(pg_proc.oid) as arguments,
   pg_proc.prosecdef as is_security_definer,
   coalesce((
-    select setting = 'search_path='
+    select setting in ('search_path=', 'search_path=""')
     from unnest(coalesce(pg_proc.proconfig, array[]::text[])) as setting
     where setting like 'search_path=%'
   ), false) as has_empty_search_path,
