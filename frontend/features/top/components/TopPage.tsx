@@ -13,6 +13,8 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  MenuDivider,
+  Portal,
   Tag,
   TagLabel,
 } from "@chakra-ui/react";
@@ -193,48 +195,43 @@ const Top: React.FC = () => {
     <Box>
       {/* Top-right menu */}
       <Box position="absolute" top="10px" right="10px">
-        <Menu>
+        <Menu placement="bottom-end" isLazy>
           <MenuButton
             as={IconButton}
-            aria-label="Options"
+            aria-label="Open navigation"
             icon={<HamburgerIcon boxSize="1.5em" />}
             variant="outline"
             _hover={{ bg: "gray.200", cursor: "pointer" }}
             transition="all 0.2s"
             _active={{ transform: "scale(0.95)" }}
           />
-          <MenuList>
-            <MenuItem onClick={() => router.push(URLS.ANALYTICS_PAGE)}>
-              <Box fontSize="lg" py={4}>
+          <Portal>
+            <MenuList p={2} borderRadius="lg" boxShadow="lg">
+              <MenuItem py={3} borderRadius="md" onClick={() => router.push(URLS.ANALYTICS_PAGE)}>
                 Analytics
-              </Box>
-            </MenuItem>
-            <MenuItem onClick={() => router.push(URLS.USER_PAGE)}>
-              <Box fontSize="lg" py={4}>
+              </MenuItem>
+              <MenuItem py={3} borderRadius="md" onClick={() => router.push(URLS.USER_PAGE)}>
                 User
-              </Box>
-            </MenuItem>
-            <MenuItem onClick={() => router.push(URLS.CONTACT_PAGE)}>
-              <Box fontSize="lg" py={4}>
+              </MenuItem>
+              <MenuItem py={3} borderRadius="md" onClick={() => router.push(URLS.CONTACT_PAGE)}>
                 Contact
-              </Box>
-            </MenuItem>
-            <MenuItem onClick={() => router.push("/tag-management")}>
-              <Box fontSize="lg" py={4}>
+              </MenuItem>
+              <MenuItem py={3} borderRadius="md" onClick={() => router.push("/tag-management")}>
                 Tag Management
-              </Box>
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                localStorage.removeItem("token");
-                router.push("/login");
-              }}
-            >
-              <Box fontSize="lg" py={4}>
+              </MenuItem>
+              <MenuDivider />
+              <MenuItem
+                py={3}
+                borderRadius="md"
+                onClick={() => {
+                  localStorage.removeItem("token");
+                  router.push("/login");
+                }}
+              >
                 Log Out
-              </Box>
-            </MenuItem>
-          </MenuList>
+              </MenuItem>
+            </MenuList>
+          </Portal>
         </Menu>
       </Box>
 
