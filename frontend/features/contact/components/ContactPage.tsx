@@ -20,9 +20,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const contactSchema = z.object({
-  name: z.string().min(1, "名前は必須です"),
-  email: z.string().email("無効なメールアドレスです"),
-  message: z.string().min(1, "メッセージは必須です"),
+  name: z.string().min(1, "Name is required."),
+  email: z.string().email("Enter a valid email address."),
+  message: z.string().min(1, "Message is required."),
 });
 
 type ContactFormInputs = z.infer<typeof contactSchema>;

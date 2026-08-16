@@ -33,6 +33,20 @@ type CalendarMonthPickerProps = {
 };
 
 const MONTH_INDEXES = Array.from({ length: 12 }, (_, index) => index);
+const MONTH_LABELS = [
+  { short: "Jan", full: "January" },
+  { short: "Feb", full: "February" },
+  { short: "Mar", full: "March" },
+  { short: "Apr", full: "April" },
+  { short: "May", full: "May" },
+  { short: "Jun", full: "June" },
+  { short: "Jul", full: "July" },
+  { short: "Aug", full: "August" },
+  { short: "Sep", full: "September" },
+  { short: "Oct", full: "October" },
+  { short: "Nov", full: "November" },
+  { short: "Dec", full: "December" },
+] as const;
 const YEARS_PER_PAGE = 12;
 const YEAR_PAGE_ANCHOR = 2020;
 
@@ -64,6 +78,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
     ? displayedMonth.monthIndex
     : 0;
   const initialYear = yearRange.includes(browsedYear) ? browsedYear : yearRange[0];
+  const displayedMonthLabel = MONTH_LABELS[displayedMonth.monthIndex];
 
   useEffect(() => {
     if (!isOpen) {
@@ -128,13 +143,13 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
           ref={triggerRef}
           variant="ghost"
           rightIcon={<ChevronDownIcon />}
-          aria-label={`年月を選択: ${displayedMonth.year}年 ${displayedMonth.monthIndex + 1}月`}
+          aria-label={`Select calendar month: ${displayedMonthLabel.full} ${displayedMonth.year}`}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           _focusVisible={{ boxShadow: "outline" }}
           onClick={handleOpen}
         >
-          {displayedMonth.year}年 {displayedMonth.monthIndex + 1}月
+          {displayedMonthLabel.short} {displayedMonth.year}
         </Button>
       </PopoverTrigger>
 
@@ -149,21 +164,21 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
             <PopoverHeader>
               <HStack justify="space-between">
                 <IconButton
-                  aria-label="前年"
+                  aria-label="Previous year"
                   icon={<ChevronLeftIcon />}
                   variant="ghost"
                   onClick={() => setBrowsedYear((year) => year - 1)}
                 />
                 <Button
-                  aria-label="年を選択"
+                  aria-label="Select year"
                   variant="ghost"
                   onClick={handleYearMode}
                   _focusVisible={{ boxShadow: "outline" }}
                 >
-                  {browsedYear}年
+                  {browsedYear}
                 </Button>
                 <IconButton
-                  aria-label="翌年"
+                  aria-label="Next year"
                   icon={<ChevronRightIcon />}
                   variant="ghost"
                   onClick={() => setBrowsedYear((year) => year + 1)}
@@ -171,16 +186,17 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
               </HStack>
             </PopoverHeader>
             <PopoverBody>
-              <SimpleGrid columns={3} spacing={2} aria-label={`${browsedYear}年の月を選択`}>
+              <SimpleGrid columns={3} spacing={2} aria-label={`Select a month in ${browsedYear}`}>
                 {MONTH_INDEXES.map((monthIndex) => {
                   const month = { year: browsedYear, monthIndex };
+                  const monthLabel = MONTH_LABELS[monthIndex];
                   const isDisplayed = isSameCalendarMonth(month, displayedMonth);
                   const isCurrent = isSameCalendarMonth(month, currentMonth);
                   const isCurrentOnly = isCurrent && !isDisplayed;
                   const labelSuffix = isDisplayed
-                    ? "（表示中）"
+                    ? " (Displayed)"
                     : isCurrentOnly
-                    ? "（現在の月）"
+                    ? " (Current month)"
                     : "";
 
                   return (
@@ -189,7 +205,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
                       ref={monthIndex === initialMonthIndex ? monthFocusRef : undefined}
                       variant={isDisplayed ? "solid" : "outline"}
                       colorScheme="blue"
-                      aria-label={`${browsedYear}年 ${monthIndex + 1}月${labelSuffix}`}
+                      aria-label={`${monthLabel.full} ${browsedYear}${labelSuffix}`}
                       aria-current={isDisplayed ? "date" : undefined}
                       aria-pressed={isDisplayed}
                       data-current-month={isCurrentOnly ? "true" : undefined}
@@ -199,7 +215,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
                       _focusVisible={{ boxShadow: "outline" }}
                       onClick={() => handleMonthSelect(monthIndex)}
                     >
-                      {monthIndex + 1}月
+                      {monthLabel.short}
                     </Button>
                   );
                 })}
@@ -211,16 +227,16 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
             <PopoverHeader>
               <HStack justify="space-between">
                 <IconButton
-                  aria-label="前の12年"
+                  aria-label="Previous 12 years"
                   icon={<ChevronLeftIcon />}
                   variant="ghost"
                   onClick={() => setYearPageStart((year) => year - YEARS_PER_PAGE)}
                 />
                 <Text aria-live="polite">
-                  {yearPageStart}年 - {yearPageStart + YEARS_PER_PAGE - 1}年
+                  {yearPageStart}–{yearPageStart + YEARS_PER_PAGE - 1}
                 </Text>
                 <IconButton
-                  aria-label="次の12年"
+                  aria-label="Next 12 years"
                   icon={<ChevronRightIcon />}
                   variant="ghost"
                   onClick={() => setYearPageStart((year) => year + YEARS_PER_PAGE)}
@@ -228,16 +244,16 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
               </HStack>
             </PopoverHeader>
             <PopoverBody>
-              <SimpleGrid columns={3} spacing={2} aria-label="年を選択">
+              <SimpleGrid columns={3} spacing={2} aria-label="Select a year">
                 {yearRange.map((year) => {
                   const isSelected = year === browsedYear;
                   const isCurrent = year === currentMonth.year;
                   const labelSuffix = isSelected && isCurrent
-                    ? "（選択中・現在年）"
+                    ? " (Selected, current year)"
                     : isSelected
-                    ? "（選択中）"
+                    ? " (Selected)"
                     : isCurrent
-                    ? "（現在年）"
+                    ? " (Current year)"
                     : "";
 
                   return (
@@ -246,7 +262,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
                       ref={year === initialYear ? yearFocusRef : undefined}
                       variant={isSelected ? "solid" : "outline"}
                       colorScheme="blue"
-                      aria-label={`${year}年を選択${labelSuffix}`}
+                      aria-label={`Select ${year}${labelSuffix}`}
                       aria-pressed={isSelected}
                       data-current-year={isCurrent ? "true" : undefined}
                       borderWidth={isCurrent ? "2px" : undefined}
@@ -255,7 +271,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
                       _focusVisible={{ boxShadow: "outline" }}
                       onClick={() => handleYearSelect(year)}
                     >
-                      {year}年
+                      {year}
                     </Button>
                   );
                 })}
@@ -266,7 +282,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
         <PopoverFooter>
           <Box display="flex" justifyContent="flex-end">
             <Button variant="outline" onClick={handleCurrentMonth} _focusVisible={{ boxShadow: "outline" }}>
-              今月
+              This Month
             </Button>
           </Box>
         </PopoverFooter>
