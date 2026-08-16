@@ -71,8 +71,8 @@ const Top: React.FC = () => {
     [date: string]: { tags: string[]; hasContent: boolean };
   }>({});
 
-  // Get getTagColor from global tag color management
-  const { getTagColor } = useTagColor();
+  // Get tag styles from global tag color management
+  const { getTagStyle } = useTagColor();
 
   // Check token
   useEffect(() => {
@@ -373,9 +373,9 @@ const Top: React.FC = () => {
                       flexWrap="wrap"
                     >
                       {notesByDate[dateObj.date].tags.map((tag, idx) => {
-                        const colorScheme = getTagColor(tag);
+                        const tagStyle = getTagStyle(tag);
                         return (
-                          <Tag key={idx} size="sm" colorScheme={colorScheme}>
+                          <Tag key={idx} size="sm" {...tagStyle}>
                             <TagLabel>{tag}</TagLabel>
                           </Tag>
                         );

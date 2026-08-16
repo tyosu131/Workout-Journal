@@ -34,7 +34,7 @@ const TagManagement: React.FC = () => {
     handleDeleteTag,
   } = useTagManagement();
 
-  const { getTagColor } = useTagColor();
+  const { getTagStyle } = useTagColor();
 
   const handleClose = () => {
     router.push("/top");
@@ -103,18 +103,18 @@ const TagManagement: React.FC = () => {
       {filteredTags.length > 0 ? (
         <Flex gap={2} wrap="wrap">
           {filteredTags.map((tag) => {
-            const colorScheme = getTagColor(tag);
+            const tagStyle = getTagStyle(tag);
             return (
               <Tag
                 key={tag}
                 size="md"
-                colorScheme={colorScheme}
+                {...tagStyle}
                 borderRadius="full"
                 py={1}
                 px={3}
               >
                 <TagLabel fontSize="md">{tag}</TagLabel>
-                <TagCloseButton onClick={() => handleDeleteTag(tag)} ml={1} />
+                <TagCloseButton onClick={() => handleDeleteTag(tag)} ml={1} opacity={0.8} />
               </Tag>
             );
           })}
