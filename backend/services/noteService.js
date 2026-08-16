@@ -8,7 +8,7 @@ const {
 
 /**
  * GET /api/notes/:date
- * ユーザーの特定日付のノートを取得
+ * Get a user's note for a specific date
  */
 async function getNotes(req, res) {
   const { date } = req.params;
@@ -37,7 +37,7 @@ async function getNotes(req, res) {
 
 /**
  * POST /api/notes/:date
- * ノートをアップサート（作成/更新）
+ * Upsert a note (create or update)
  */
 async function saveNote(req, res) {
   const { date } = req.params;
@@ -77,7 +77,7 @@ async function saveNote(req, res) {
 
 /**
  * GET /api/notes/range?start=YYYY-MM-DD&end=YYYY-MM-DD
- * 指定した日付範囲のノートをまとめて取得
+ * Get all notes within a specified date range
  */
 async function getNotesInRange(req, res) {
   const { start, end } = req.query;
@@ -109,7 +109,7 @@ async function getNotesInRange(req, res) {
 
 /**
  * GET /api/notes/all-tags
- * ユーザーが持つすべてのタグを返す
+ * Return all tags belonging to a user
  */
 async function getAllTags(req, res) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -127,7 +127,7 @@ async function getAllTags(req, res) {
       .eq("user_id", user.id);
     if (error) throw error;
 
-    // user_tags テーブルの "tag" カラムを配列化
+    // Convert the user_tags table's "tag" column into an array
     const allTags = data.map((row) => row.tag);
     res.status(200).json({ tags: allTags });
   } catch (error) {
@@ -138,7 +138,7 @@ async function getAllTags(req, res) {
 
 /**
  * GET /api/notes/by-tags?tags=tag1,tag2
- * 指定したタグを含むノート一覧を取得
+ * Get notes containing a specified tag
  */
 async function getNotesByTags(req, res) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -226,7 +226,7 @@ async function createTag(req, res) {
 
 /**
  * DELETE /api/notes/tag/:tagName
- * タグを削除: user_tagsテーブルから削除 → RPCでnotes.tagsからも一括削除
+ * Delete a tag from user_tags and remove it from notes.tags through RPC
  */
 async function deleteTag(req, res) {
   const token = req.headers.authorization?.split(" ")[1];

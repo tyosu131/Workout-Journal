@@ -3,18 +3,18 @@ import React from "react";
 import { useBreakpointValue } from "@chakra-ui/react";
 
 /**
- * PC (lg以上) では 1行=16列 (Exercise + 5セット × (Weight, Reps, Rest))
- * モバイル/タブレット (lg未満) は表示しない
+ * Desktop (lg and above) uses 16 columns per row (Exercise + 5 sets × Weight, Reps, Rest).
+ * Hidden on mobile and tablet (below lg).
  */
 const TableHeader: React.FC = () => {
   const screenSize = useBreakpointValue({ base: "mobile", md: "tablet", lg: "pc" });
 
   if (screenSize !== "pc") {
-    // モバイル/タブレットは非表示
+    // Hidden on mobile and tablet
     return null;
   }
 
-  // PC: 従来の横長ヘッダー
+  // Desktop: traditional wide header
   return (
     <thead>
       <tr>

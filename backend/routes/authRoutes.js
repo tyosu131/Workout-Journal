@@ -11,13 +11,13 @@ const {
 
 const router = express.Router();
 
-// ログ用ミドルウェア
+// Logging middleware
 router.use((req, res, next) => {
   console.log(`[${req.method}] ${req.originalUrl} - Body keys:`, Object.keys(req.body || {}));
   next();
 });
 
-// エンドポイント
+// Endpoints
 router.get("/session", handleSession);
 router.post("/refresh", handleRefresh);
 router.post("/signup", handleSignUp);

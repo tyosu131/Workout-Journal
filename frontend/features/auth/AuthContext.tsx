@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isPublicAuthRoute = PUBLIC_AUTH_PATHNAMES.has(router.pathname);
 
   // ================================
-  // ログアウト処理
+  // Logout
   // ================================
   const logout = async () => {
     try {
@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // ================================
-  // セッションの取得処理
+  // Fetch session
   // ================================
   const getSession = async () => {
     console.log("getSession called");
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // fetchSession(token) で /auth/session を呼ぶ
+      // Call /auth/session through fetchSession(token)
       const sessionRes = await fetchSession(token);
       if (sessionRes.user) {
         setUser(sessionRes.user);
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // ================================
-  // トークンのリフレッシュ処理
+  // Refresh token
   // ================================
   const handleTokenRefresh = async () => {
     try {
@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isPublicAuthRoute, router.pathname, user]);
 
   // ================================
-  // ログイン処理
+  // Log in
   // ================================
   const login = async (email: string, password: string) => {
     try {
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(data.token);
       router.push("/top");
 
-      // ログイン直後にもセッション取得して最新情報を反映
+      // Fetch the latest session information immediately after login
       await getSession();
     } catch (error: any) {
       console.error("Login failed:", getErrorSummary(error));

@@ -60,7 +60,7 @@ const Contact: React.FC<ContactProps> = ({ isOpen, onClose }) => {
 
   return (
     <Box
-      /* ★ レスポンシブ: モバイルは幅90% */
+      /* Responsive: 90% width on mobile */
       maxW={{ base: "90%", lg: "5xl" }}
       mx="auto"
       mt={10}

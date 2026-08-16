@@ -1,6 +1,6 @@
 /**
- * - validator ライブラリを使った入力値チェック
- * - 既存 Supabase 連携ロジック
+ * - Input validation using the validator library
+ * - Existing Supabase integration logic
  */
 
 const { getAdminDbClient } = require("../utils/supabaseAdminClient");
@@ -13,7 +13,7 @@ const {
 const validator = require("validator");
 
 /**
- * セッション取得
+ * Get session
  */
 const handleSession = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -47,7 +47,7 @@ const handleSession = async (req, res) => {
 };
 
 /**
- * リフレッシュトークンでアクセストークン再発行
+ * Reissue an access token with a refresh token
  */
 const handleRefresh = async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
@@ -70,7 +70,7 @@ const handleRefresh = async (req, res) => {
 };
 
 /**
- * サインアップ
+ * Sign up
  */
 const handleSignUp = async (req, res) => {
   const { username, email, password } = req.body;
@@ -136,7 +136,7 @@ const handleSignUp = async (req, res) => {
 };
 
 /**
- * ログイン
+ * Log in
  */
 const handleLogin = async (req, res) => {
   const { email, password } = req.body;
@@ -206,7 +206,7 @@ const handleLogin = async (req, res) => {
 };
 
 /**
- * ユーザー情報の取得
+ * Get user information
  */
 const handleGetUser = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -246,7 +246,7 @@ const handleGetUser = async (req, res) => {
 };
 
 /**
- * ユーザー情報の更新
+ * Update user information
  */
 const handleUpdateUser = async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -314,7 +314,7 @@ const handleUpdateUser = async (req, res) => {
 };
 
 /**
- * パスワードリセット (Forgot Password)
+ * Password reset (Forgot Password)
  */
 const handleForgotPassword = async (req, res) => {
   const { email } = req.body;

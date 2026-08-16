@@ -9,7 +9,7 @@ import {
 } from "../api";
 
 /**
- * Tag管理ロジックをまとめたフック
+ * Hook that groups tag management logic
  */
 export function useTagManagement() {
   const toast = useToast();
@@ -17,7 +17,7 @@ export function useTagManagement() {
   const [newTag, setNewTag] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 初回読み込み時にタグ一覧取得
+  // Fetch the tag list on initial load
   useEffect(() => {
     fetchAllTagsAPI()
       .then((fetched) => setTags(fetched))
@@ -33,7 +33,7 @@ export function useTagManagement() {
       });
   }, [toast]);
 
-  // 検索後のタグ一覧
+  // Tag list after filtering
   const filteredTags = tags.filter((tag) =>
     tag.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -81,7 +81,7 @@ export function useTagManagement() {
     }
   }, [newTag, tags, toast]);
 
-  // タグ削除
+  // Delete tag
   const handleDeleteTag = useCallback(async (tagToDelete: string) => {
     try {
       await deleteTagAPI(tagToDelete);

@@ -171,7 +171,7 @@ const NotePage: React.FC = () => {
     }
   };
 
-  // onClickでポップオーバー表示することで、再フォーカスで閉じる現象を防止
+  // Open the popover on click to prevent it from closing after refocus
   const handleTagInputClick = () => {
     setIsTagPopoverOpen(true);
     fetchAllTagsAPI()

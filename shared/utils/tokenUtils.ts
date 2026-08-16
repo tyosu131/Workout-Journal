@@ -1,6 +1,6 @@
 const TOKEN_KEY = "token";
 
-// トークンを保存する関数
+// Save a token
 export const setToken = (token: string) => {
   try {
     if (typeof window !== "undefined") {
@@ -12,7 +12,7 @@ export const setToken = (token: string) => {
   }
 };
 
-// トークンを取得する関数
+// Get a token
 export const getToken = (): string | null => {
   try {
     if (typeof window !== "undefined") {
@@ -27,7 +27,7 @@ export const getToken = (): string | null => {
   }
 };
 
-// トークンを削除する関数
+// Remove a token
 export const removeToken = () => {
   try {
     if (typeof window !== "undefined") {

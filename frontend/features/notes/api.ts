@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 import { NoteData } from "../../types/types";
 
 /**
- * ノート一覧 or 1件取得 API
+ * API for fetching a note list or one note
  */
 export async function fetchNotesAPI(date: string): Promise<NoteData[]> {
   const response = await apiRequestWithAuth<{ notes: NoteData[] }>(
@@ -33,7 +33,7 @@ export async function fetchNotesInRangeAPI(
 }
 
 /**
- * ノートを保存（作成/更新）API
+ * API for saving a note (create or update)
  */
 export async function saveNoteAPI(noteData: NoteData): Promise<void> {
   const saveData = {
@@ -46,7 +46,7 @@ export async function saveNoteAPI(noteData: NoteData): Promise<void> {
 }
 
 /**
- * すべてのタグ一覧を取得する API
+ * API for fetching all tags
  */
 export async function fetchAllTagsAPI(): Promise<string[]> {
   const response = await apiRequestWithAuth<{ tags: string[] }>(
@@ -57,7 +57,7 @@ export async function fetchAllTagsAPI(): Promise<string[]> {
 }
 
 /**
- * 指定したタグを含むノート一覧を取得する API
+ * API for fetching notes containing a specified tag
  */
 export async function fetchNotesByTagsAPI(tags: string[]): Promise<NoteData[]> {
   const tagString = tags.join(",");
@@ -74,7 +74,7 @@ export async function fetchNotesByTagsAPI(tags: string[]): Promise<NoteData[]> {
 }
 
 /**
- * タグを新規作成（DBに保存）API
+ * API for creating and persisting a new tag
  * POST /notes/tag
  */
 export async function createTagAPI(tag: string): Promise<void> {
@@ -82,7 +82,7 @@ export async function createTagAPI(tag: string): Promise<void> {
 }
 
 /**
- * タグを削除（DBから削除）API
+ * API for deleting a tag from the database
  * DELETE /notes/tag/:tagName
  */
 export async function deleteTagAPI(tag: string): Promise<void> {
@@ -90,7 +90,7 @@ export async function deleteTagAPI(tag: string): Promise<void> {
   await apiRequestWithAuth(`${API_ENDPOINTS.NOTES_TAG}/${encodedTag}`, "delete");
 }
 
-/** exercises / tags が文字列の場合にパースする共通関数 */
+/** Shared helper for parsing exercises or tags when they are strings */
 function parseNoteFields(note: NoteData) {
   if (typeof note.exercises === "string") {
     try {
