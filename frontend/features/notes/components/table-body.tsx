@@ -31,7 +31,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   }
 
   // ============================
-  // PC (lg以上): 従来の横長テーブル
+  // Desktop (lg and above): traditional wide table
   // ============================
   if (screenSize === "pc") {
     return (
@@ -39,7 +39,7 @@ const TableBody: React.FC<TableBodyProps> = ({
         {exercises.map((exercise, exerciseIndex) => (
           <React.Fragment key={exerciseIndex}>
             <Tr>
-              {/* Exerciseセル */}
+              {/* Exercise cell */}
               <Td border="1px solid #000">
                 <Input
                   value={exercise.exercise}
@@ -112,13 +112,13 @@ const TableBody: React.FC<TableBodyProps> = ({
   }
 
   // ============================
-  // モバイル/タブレット
+  // Mobile and tablet
   // ============================
   return (
     <tbody>
       {exercises.map((exercise, eIndex) => (
         <React.Fragment key={eIndex}>
-          {/* Exercise行 */}
+          {/* Exercise row */}
           <Tr>
             <Td border="1px solid #000" colSpan={3} style={{ fontWeight: "bold" }}>
               <label>Exercise:</label>
@@ -131,7 +131,7 @@ const TableBody: React.FC<TableBodyProps> = ({
             </Td>
           </Tr>
 
-          {/* #, Weight, Reps のヘッダー行 */}
+          {/* Header row for #, Weight, and Reps */}
           <Tr>
             <Td border="1px solid #000" textAlign="center" fontWeight="bold">
               #
@@ -144,7 +144,7 @@ const TableBody: React.FC<TableBodyProps> = ({
             </Td>
           </Tr>
 
-          {/* セット行 */}
+          {/* Set row */}
           {exercise.sets.map((set, sIndex) => (
             <Tr key={sIndex}>
               {/* # */}
@@ -170,7 +170,7 @@ const TableBody: React.FC<TableBodyProps> = ({
             </Tr>
           ))}
 
-          {/* +Add set ボタン行 */}
+          {/* Add-set button row */}
           <Tr>
             <Td border="1px solid #000" colSpan={3} textAlign="center">
               <Button size="sm" onClick={() => onAddSet(eIndex)}>

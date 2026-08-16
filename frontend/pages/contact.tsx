@@ -6,7 +6,7 @@ const ContactPage: React.FC = () => {
   const router = useRouter();
 
   const handleClose = () => {
-    router.push("/top");  // 修正: topページにリダイレクトする
+    router.push("/top");  // Redirect to the top page
   };
 
   return <Contact isOpen={true} onClose={handleClose} />;

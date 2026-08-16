@@ -5,13 +5,13 @@ import { NoteData } from "../../../types/types";
 import { saveNoteAPI, createTagAPI } from "../api";
 
 /**
- * タグ操作をまとめたフック
+ * Hook that groups tag operations
  */
 const useTagHandlers = (
   noteData: NoteData | null,
   setNoteData: React.Dispatch<React.SetStateAction<NoteData | null>>
 ) => {
-  // タグをローカルに追加してノートを保存
+  // Add a tag locally and save the note
   const handleAddTag = useCallback(
     (newTag: string) => {
       if (!noteData) return;
@@ -26,7 +26,7 @@ const useTagHandlers = (
     [noteData, setNoteData]
   );
 
-  // タグをローカルから削除してノートを保存
+  // Remove a tag locally and save the note
   const handleRemoveTag = useCallback(
     (tagIndex: number) => {
       if (!noteData || !noteData.tags) return;
@@ -53,12 +53,12 @@ const useTagHandlers = (
     [noteData, handleAddTag]
   );
 
-  // タグ削除（DB保存も含む）
+  // Delete a tag, including database persistence
   const handleRemoveTagAndSave = useCallback(
     async (tagIndex: number) => {
       if (!noteData || !noteData.tags) return;
       handleRemoveTag(tagIndex);
-      // DB側の user_tags からの削除はバックエンドの deleteTag API が担当
+      // The backend deleteTag API removes the entry from user_tags
     },
     [noteData, handleRemoveTag]
   );

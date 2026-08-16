@@ -13,7 +13,7 @@ const apiClient = axios.create({
   },
 });
 
-// --- リフレッシュ再試行回数の管理 ---
+// --- Refresh retry count management ---
 let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
 const PUBLIC_AUTH_ENDPOINTS = new Set([
@@ -23,7 +23,7 @@ const PUBLIC_AUTH_ENDPOINTS = new Set([
   API_ENDPOINTS.REFRESH,
 ]);
 
-// 型ガード
+// Type guard
 function isAxiosError(error: unknown): error is import('axios').AxiosError {
   return typeof error === 'object' && error !== null && 'isAxiosError' in error;
 }
@@ -61,7 +61,7 @@ function clearTokenAndRefreshAttempts() {
   removeToken();
 }
 
-// 401エラー時のリフレッシュ処理
+// Refresh handling after a 401 error
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
@@ -70,7 +70,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ネットワークエラーの場合、サーバー接続ができなければすぐにトークン削除してリトライを中断
+    // On a network error, remove the token and stop retrying when the server is unreachable
     if (error.code === 'ERR_NETWORK') {
       console.error('[apiClient] ネットワークエラー発生。トークンを削除して終了');
       clearTokenAndRefreshAttempts();
@@ -96,7 +96,7 @@ apiClient.interceptors.response.use(
       refreshAttempts++;
 
       try {
-        // リフレッシュAPI呼び出し（bodyは空オブジェクト）
+        // Call the refresh API with an empty request body
         const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, {});
         const newAccessToken = data.access_token;
         console.log('[apiClient] トークンリフレッシュ成功:', Boolean(newAccessToken));
@@ -120,7 +120,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-// トークン付きリクエスト (認証済み用)
+// Authenticated request with a token
 export const apiRequestWithAuth = async <TResponse, TData = any>(
   url: string,
   method: 'get' | 'post' | 'put' | 'delete',
@@ -151,7 +151,7 @@ export const apiRequestWithAuth = async <TResponse, TData = any>(
   }
 };
 
-// トークンなしリクエスト (ログイン等用)
+// Unauthenticated request for login and similar flows
 export const apiRequest = async <TResponse, TData = any>(
   url: string,
   method: 'get' | 'post' | 'put' | 'delete',

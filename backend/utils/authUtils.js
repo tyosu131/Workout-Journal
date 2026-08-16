@@ -1,12 +1,12 @@
 const jwt = require("jsonwebtoken");
 
-// メールアドレスの形式を検証する関数
+// Validate an email address format
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 };
 
-// アクセストークン発行関数
+// Issue an access token
 const generateAccessToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRETが設定されていません。");
@@ -18,7 +18,7 @@ const generateAccessToken = (user) => {
   );
 };
 
-// リフレッシュトークン発行関数
+// Issue a refresh token
 const generateRefreshToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRETが設定されていません。");
@@ -30,7 +30,7 @@ const generateRefreshToken = (user) => {
   );
 };
 
-// JWTのトークンを検証する関数
+// Verify a JWT token
 const verifyToken = async (token) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -44,7 +44,7 @@ const verifyToken = async (token) => {
   }
 };
 
-// リフレッシュトークンを使用してアクセストークンを更新する関数
+// Refresh an access token using a refresh token
 const refreshAccessToken = async (refreshToken) => {
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
@@ -53,7 +53,7 @@ const refreshAccessToken = async (refreshToken) => {
       throw new Error("Audience mismatch");
     }
 
-    // 新しいアクセストークンを発行
+    // Issue a new access token
     return generateAccessToken({ id: decoded.id, email: decoded.email });
   } catch (error) {
     console.error("アクセストークンのリフレッシュに失敗しました:", error.message);
@@ -66,5 +66,5 @@ module.exports = {
   generateAccessToken,
   generateRefreshToken,
   verifyToken,
-  refreshAccessToken, // 新たにエクスポート
+  refreshAccessToken, // Newly exported
 };

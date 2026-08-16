@@ -22,7 +22,7 @@ import {
 } from "../../../../shared/utils/calendarNavigation";
 
 /**
- * ノート操作（エクササイズ、セット操作）をまとめたフック
+ * Hook that groups note, exercise, and set operations
  */
 const useNoteHandlers = (
   noteData: NoteData | null,
@@ -38,7 +38,7 @@ const useNoteHandlers = (
     }
   }, []);
 
-  // ノート保存
+  // Save note
   const saveNote = useCallback(async (data: NoteData) => {
     try {
       await saveNoteAPI(data);
@@ -47,7 +47,7 @@ const useNoteHandlers = (
     }
   }, []);
 
-  // --- Exercises/Set 操作 ---
+  // --- Exercise and set operations ---
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<HTMLInputElement>,

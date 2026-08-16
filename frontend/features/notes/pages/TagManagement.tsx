@@ -42,7 +42,7 @@ const TagManagement: React.FC = () => {
 
   return (
     <Box
-      /* ★ モバイル:幅90%, PC:5xl */
+      /* Mobile: 90% width; desktop: 5xl */
       maxW={{ base: "90%", lg: "5xl" }}
       mx="auto"
       mt={10}
@@ -99,7 +99,7 @@ const TagManagement: React.FC = () => {
 
       <Divider mb={4} />
 
-      {/* タグ一覧 */}
+      {/* Tag list */}
       {filteredTags.length > 0 ? (
         <Flex gap={2} wrap="wrap">
           {filteredTags.map((tag) => {

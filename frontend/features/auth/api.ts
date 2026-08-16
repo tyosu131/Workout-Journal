@@ -7,7 +7,7 @@ interface LoginResponse {
 }
 
 /**
- * ログイン API
+ * Login API
  */
 export async function loginUser(email: string, password: string): Promise<LoginResponse> {
   return await apiRequest<LoginResponse>(
@@ -18,7 +18,7 @@ export async function loginUser(email: string, password: string): Promise<LoginR
 }
 
 /**
- * セッション情報を取得 (get-user 相当)
+ * Get session information (equivalent to get-user)
  */
 export async function fetchSession(token: string) {
   return await apiRequestWithAuth<{ user?: any }>(
@@ -28,7 +28,7 @@ export async function fetchSession(token: string) {
 }
 
 /**
- * リフレッシュトークンでアクセストークンを更新
+ * Refresh an access token with a refresh token
  */
 export async function refreshAccessToken() {
   return await apiRequestWithAuth<{ access_token: string }>(

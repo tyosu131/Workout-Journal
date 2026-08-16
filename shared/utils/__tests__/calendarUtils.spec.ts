@@ -3,43 +3,43 @@ import { generateCalendarDates } from '../calendarUtils';
 describe('generateCalendarDates', () => {
   it('与えられた月と年に対して正しいカレンダーの日付を生成するべき', () => {
     const year = 2024;
-    const month = 5; // 6月 (0から始まるインデックス)
+    const month = 5; // June (zero-based index)
     const dates = generateCalendarDates(year, month);
 
-    expect(dates).toHaveLength(42); // 2024年6月はカレンダーに表示される日数（空のスロットを含む）が42日ある
+    expect(dates).toHaveLength(42); // June 2024 has 42 displayed calendar slots, including empty slots
 
-    // 月の最初の日をチェック
-    expect(dates[0]).toBeNull(); // 2024年5月26日は日曜日なので、最初の日は空
+    // Check the first day of the month
+    expect(dates[0]).toBeNull(); // May 26, 2024 is Sunday, so the first slot is empty
     expect(dates[6]).toEqual({ date: '2024-06-01' });
 
-    // 月の最後の日をチェック
-    expect(dates[41]).toBeNull(); // 2024年7月6日は土曜日なので、最後の日は空
+    // Check the last day of the month
+    expect(dates[41]).toBeNull(); // July 6, 2024 is Saturday, so the last slot is empty
 
-    // 月の中間の日をチェック
+    // Check a day in the middle of the month
     expect(dates[10]).toEqual({ date: '2024-06-05' });
   });
 
   it('週の始めに空のスロットを正しく生成するべき', () => {
     const year = 2024;
-    const month = 1; // 2月 (0から始まるインデックス)
+    const month = 1; // February (zero-based index)
     const dates = generateCalendarDates(year, month);
 
-    expect(dates).toHaveLength(42); // 2024年2月はカレンダーに表示される日数（空のスロットを含む）が42日ある
+    expect(dates).toHaveLength(42); // February 2024 has 42 displayed calendar slots, including empty slots
 
-    // 月の最初の日をチェック
-    expect(dates[0]).toBeNull(); // 2024年1月28日は日曜日なので、最初の日は空
+    // Check the first day of the month
+    expect(dates[0]).toBeNull(); // January 28, 2024 is Sunday, so the first slot is empty
     expect(dates[4]).toEqual({ date: '2024-02-01' });
   });
 
   it('週の終わりに空のスロットを正しく生成するべき', () => {
     const year = 2024;
-    const month = 9; // 10月 (0から始まるインデックス)
+    const month = 9; // October (zero-based index)
     const dates = generateCalendarDates(year, month);
 
-    expect(dates).toHaveLength(42); // 2024年10月はカレンダーに表示される日数（空のスロットを含む）が42日ある
+    expect(dates).toHaveLength(42); // October 2024 has 42 displayed calendar slots, including empty slots
 
-    // 月の最後の日をチェック
-    expect(dates[41]).toBeNull(); // 2024年11月3日は日曜日なので、最後の日は空
-    expect(dates[32]).toEqual({ date: '2024-10-31' }); // 10月31日は正しい位置にある
+    // Check the last day of the month
+    expect(dates[41]).toBeNull(); // November 3, 2024 is Sunday, so the last slot is empty
+    expect(dates[32]).toEqual({ date: '2024-10-31' }); // October 31 is in the correct position
   });
 });
