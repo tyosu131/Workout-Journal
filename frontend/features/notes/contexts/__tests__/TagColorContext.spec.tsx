@@ -2,31 +2,65 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { theme } from "@chakra-ui/theme";
 import { TagColorProvider, useTagColor } from "../TagColorContext";
 
-const VALID_COLOR_SCHEMES = new Set([
-  "blue",
-  "green",
-  "red",
-  "purple",
-  "yellow",
-  "pink",
-  "cyan",
-  "teal",
-  "orange",
-]);
-
-const INVALID_SOCIAL_SCHEMES = new Set([
-  "messenger",
-  "facebook",
-  "whatsapp",
-  "linkedin",
-  "twitter",
-]);
+type TagStyle = {
+  bg: string;
+  color: string;
+  borderColor?: string;
+  borderWidth?: string;
+};
 
 const ColorProbe = ({ tags }: { tags: string[] }) => {
-  const { getTagColor } = useTagColor();
-  return <div data-colors={JSON.stringify(tags.map(getTagColor))} />;
+  const { getTagStyle } = useTagColor();
+  return <div data-styles={JSON.stringify(tags.map(getTagStyle))} />;
+};
+
+const ResolverProbe = ({ resolvers }: { resolvers: Array<(tag: string) => TagStyle> }) => {
+  const { getTagStyle } = useTagColor();
+  resolvers.push(getTagStyle);
+  return null;
+};
+
+const getThemeColor = (token: string) => {
+  if (token === "white") {
+    return theme.colors.white;
+  }
+
+  const [hue, shade] = token.split(".");
+  const colors = theme.colors as unknown as Record<string, Record<string, string>>;
+  const color = colors[hue]?.[shade];
+  if (!color) {
+    throw new Error(`Unknown Chakra color token: ${token}`);
+  }
+  return color;
+};
+
+const toRelativeLuminance = (hex: string) => {
+  const normalized = hex.replace("#", "");
+  const expanded = normalized.length === 3
+    ? normalized.split("").map((value) => value + value).join("")
+    : normalized;
+  const channels = expanded.match(/.{2}/g)?.map((value) => parseInt(value, 16) / 255);
+
+  if (!channels || channels.length !== 3) {
+    throw new Error(`Expected a hex color, received: ${hex}`);
+  }
+
+  const [red, green, blue] = channels.map((value) => (
+    value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  ));
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+};
+
+const contrastRatio = (foreground: string, background: string) => {
+  const foregroundLuminance = toRelativeLuminance(foreground);
+  const backgroundLuminance = toRelativeLuminance(background);
+
+  return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+    / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
 };
 
 describe("TagColorContext", () => {
@@ -50,7 +84,7 @@ describe("TagColorContext", () => {
     jest.restoreAllMocks();
   });
 
-  const renderColors = async (tags: string[]) => {
+  const renderStyles = async (tags: string[]) => {
     await act(async () => {
       root.render(
         <React.StrictMode>
@@ -61,51 +95,109 @@ describe("TagColorContext", () => {
       );
     });
 
-    const serializedColors = container.firstElementChild?.getAttribute("data-colors");
-    if (!serializedColors) {
-      throw new Error("ColorProbe did not render colors");
+    const serializedStyles = container.firstElementChild?.getAttribute("data-styles");
+    if (!serializedStyles) {
+      throw new Error("ColorProbe did not render styles");
     }
-    return JSON.parse(serializedColors) as string[];
+    return JSON.parse(serializedStyles) as TagStyle[];
   };
 
-  it("returns the same valid color for repeated tags", async () => {
-    const colors = await renderColors(["bench", "bench"]);
+  it("returns deep-equal styles for repeated tags", async () => {
+    const [firstStyle, secondStyle] = await renderStyles(["bench", "bench"]);
 
-    expect(colors[0]).toBe(colors[1]);
-    expect(VALID_COLOR_SCHEMES.has(colors[0])).toBe(true);
-    expect(colors[0]).not.toBe("");
+    expect(firstStyle).toEqual(secondStyle);
   });
 
-  it("returns only valid colors for multiple tags beyond the palette size", async () => {
-    const tags = Array.from({ length: 30 }, (_, index) => `tag-${index}`);
-    const colors = await renderColors(tags);
+  it("returns all 18 predefined styles for a wide range of tags", async () => {
+    const tags = Array.from({ length: 400 }, (_, index) => `tag-${index}`);
+    const styles = await renderStyles(tags);
+    const uniqueStyles = Array.from(
+      new Map(styles.map((style) => [JSON.stringify(style), style])).values()
+    );
 
-    expect(colors).toHaveLength(tags.length);
-    colors.forEach((color) => {
-      expect(VALID_COLOR_SCHEMES.has(color)).toBe(true);
-      expect(INVALID_SOCIAL_SCHEMES.has(color)).toBe(false);
-      expect(color).not.toBe("");
+    expect(styles).toHaveLength(tags.length);
+    expect(uniqueStyles).toHaveLength(18);
+
+    uniqueStyles.forEach((style) => {
+      expect(style.bg).not.toBe("");
+      expect(style.color).not.toBe("");
+      expect(getThemeColor(style.bg)).not.toBe("");
+      expect(getThemeColor(style.color)).not.toBe("");
+
+      if (style.borderColor) {
+        expect(style.borderWidth).toBe("1px");
+        expect(getThemeColor(style.borderColor)).not.toBe("");
+      } else {
+        expect(style.borderWidth).toBeUndefined();
+      }
     });
   });
 
-  it("ignores old localStorage assignments and remains stable after remount", async () => {
+  it("meets foreground and light-border contrast contracts", async () => {
+    const styles = await renderStyles(Array.from({ length: 400 }, (_, index) => `contrast-${index}`));
+    const uniqueStyles = Array.from(
+      new Map(styles.map((style) => [JSON.stringify(style), style])).values()
+    );
+    const lightStyles = uniqueStyles.filter((style) => style.borderColor);
+
+    expect(uniqueStyles).toHaveLength(18);
+    expect(lightStyles).toHaveLength(9);
+
+    uniqueStyles.forEach((style) => {
+      expect(contrastRatio(getThemeColor(style.color), getThemeColor(style.bg))).toBeGreaterThanOrEqual(4.5);
+    });
+
+    lightStyles.forEach((style) => {
+      expect(contrastRatio(getThemeColor(style.borderColor!), getThemeColor(style.bg))).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  it("remains stable without localStorage or random allocation", async () => {
     const oldColorMap = JSON.stringify({ bench: "messenger", squat: "" });
     localStorage.setItem("tagColorMap", oldColorMap);
+    const getItemSpy = jest.spyOn(Storage.prototype, "getItem");
     const setItemSpy = jest.spyOn(Storage.prototype, "setItem");
+    const randomSpy = jest.spyOn(Math, "random");
     const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const firstColors = await renderColors(["bench", "squat"]);
+    const firstStyles = await renderStyles(["bench", "squat", ""]);
 
     await act(async () => {
       root.unmount();
     });
     root = createRoot(container);
-    const remountedColors = await renderColors(["bench", "squat"]);
+    const remountedStyles = await renderStyles(["bench", "squat", ""]);
 
-    expect(remountedColors).toEqual(firstColors);
-    expect(firstColors.every((color) => VALID_COLOR_SCHEMES.has(color))).toBe(true);
-    expect(localStorage.getItem("tagColorMap")).toBe(oldColorMap);
+    expect(remountedStyles).toEqual(firstStyles);
+    expect(getItemSpy).not.toHaveBeenCalled();
     expect(setItemSpy).not.toHaveBeenCalled();
+    expect(randomSpy).not.toHaveBeenCalled();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps the context resolver reference stable across renders", async () => {
+    const resolvers: Array<(tag: string) => TagStyle> = [];
+
+    await act(async () => {
+      root.render(
+        <React.StrictMode>
+          <TagColorProvider>
+            <ResolverProbe resolvers={resolvers} />
+          </TagColorProvider>
+        </React.StrictMode>
+      );
+    });
+    await act(async () => {
+      root.render(
+        <React.StrictMode>
+          <TagColorProvider>
+            <ResolverProbe resolvers={resolvers} />
+          </TagColorProvider>
+        </React.StrictMode>
+      );
+    });
+
+    expect(resolvers.length).toBeGreaterThan(1);
+    expect(resolvers.every((resolver) => resolver === resolvers[0])).toBe(true);
   });
 });

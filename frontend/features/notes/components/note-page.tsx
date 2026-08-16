@@ -74,7 +74,7 @@ const NotePage: React.FC = () => {
   const previousPopupRef = useRef<HTMLDivElement | null>(null);
   const [previousNote, setPreviousNote] = useState<NoteData | null>(null);
 
-  const { getTagColor } = useTagColor();
+  const { getTagStyle } = useTagColor();
 
   const [token, setToken] = useState<string | null>(null);
   useEffect(() => {
@@ -248,11 +248,11 @@ const NotePage: React.FC = () => {
         <Box display="flex" gap={4} alignItems="center" flexWrap="wrap" mb={2}>
           <Box display="flex" gap={2} flexWrap="wrap">
             {noteData.tags?.map((tag: string, idx: number) => {
-              const colorScheme = getTagColor(tag);
+              const tagStyle = getTagStyle(tag);
               return (
-                <Tag key={idx} size="md" colorScheme={colorScheme} borderRadius="full">
+                <Tag key={idx} size="md" {...tagStyle} borderRadius="full">
                   <TagLabel>{tag}</TagLabel>
-                  <TagCloseButton onClick={() => handleRemoveTagAndSave(idx)} />
+                  <TagCloseButton onClick={() => handleRemoveTagAndSave(idx)} opacity={0.8} />
                 </Tag>
               );
             })}
@@ -281,7 +281,7 @@ const NotePage: React.FC = () => {
                   Select an option or create one
                 </Text>
                 {allTags.map((tagOption) => {
-                  const colorScheme = getTagColor(tagOption);
+                  const tagStyle = getTagStyle(tagOption);
                   return (
                     <Flex
                       key={tagOption}
@@ -291,7 +291,7 @@ const NotePage: React.FC = () => {
                       _hover={{ bg: "gray.100", cursor: "pointer" }}
                       onClick={() => handleTagOptionClick(tagOption)}
                     >
-                      <Tag colorScheme={colorScheme} borderRadius="full">
+                      <Tag {...tagStyle} borderRadius="full">
                         <TagLabel>{tagOption}</TagLabel>
                       </Tag>
                     </Flex>

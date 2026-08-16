@@ -86,7 +86,7 @@ jest.mock("../../hooks/useTagHandlers", () => () => ({
 }));
 
 jest.mock("../../contexts/TagColorContext", () => ({
-  useTagColor: () => ({ getTagColor: () => "gray" }),
+  useTagColor: () => ({ getTagStyle: () => ({ bg: "gray.100", color: "gray.800" }) }),
 }));
 
 jest.mock("../header", () => () => null);

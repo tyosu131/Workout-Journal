@@ -55,7 +55,7 @@ jest.mock("../../../notes/api", () => ({
 }));
 
 jest.mock("../../../notes/contexts/TagColorContext", () => ({
-  useTagColor: () => ({ getTagColor: () => "gray" }),
+  useTagColor: () => ({ getTagStyle: () => ({ bg: "gray.100", color: "gray.800" }) }),
 }));
 
 jest.mock("../CalendarMonthPicker", () => {
