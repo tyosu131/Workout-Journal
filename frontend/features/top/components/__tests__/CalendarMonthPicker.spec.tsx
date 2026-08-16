@@ -101,15 +101,15 @@ describe("CalendarMonthPicker", () => {
 
   const openPicker = async () => {
     await act(async () => {
-      findButton(container, "年月を選択: 2026年 7月").click();
+      findButton(container, "Select calendar month: July 2026").click();
     });
   };
 
   it("opens from the displayed-month trigger without a native month input", async () => {
     await renderPicker();
 
-    const trigger = findButton(container, "年月を選択: 2026年 7月");
-    expect(trigger.textContent).toBe("2026年 7月");
+    const trigger = findButton(container, "Select calendar month: July 2026");
+    expect(trigger.textContent).toBe("Jul 2026");
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
     expect(container.querySelector('input[type="month"]')).toBeNull();
@@ -118,28 +118,28 @@ describe("CalendarMonthPicker", () => {
 
     expect(container.querySelector('[role="dialog"]')).not.toBeNull();
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    expect(document.activeElement).toBe(findButton(container, "2026年 7月（表示中）"));
+    expect(document.activeElement).toBe(findButton(container, "July 2026 (Displayed)"));
   });
 
   it("browses years in month mode and distinguishes displayed and current months", async () => {
     await renderPicker();
     await openPicker();
 
-    const displayedMonth = findButton(container, "2026年 7月（表示中）");
-    const currentMonth = findButton(container, "2026年 8月（現在の月）");
+    const displayedMonth = findButton(container, "July 2026 (Displayed)");
+    const currentMonth = findButton(container, "August 2026 (Current month)");
     expect(displayedMonth.getAttribute("aria-current")).toBe("date");
     expect(displayedMonth.getAttribute("aria-pressed")).toBe("true");
     expect(currentMonth.getAttribute("data-current-month")).toBe("true");
 
     await act(async () => {
-      findButton(container, "翌年").click();
+      findButton(container, "Next year").click();
     });
-    expect(findButton(container, "2027年 1月")).not.toBeNull();
+    expect(findButton(container, "January 2027")).not.toBeNull();
 
     await act(async () => {
-      findButton(container, "前年").click();
+      findButton(container, "Previous year").click();
     });
-    expect(findButton(container, "2026年 1月")).not.toBeNull();
+    expect(findButton(container, "January 2026")).not.toBeNull();
   });
 
   it("keeps twelve-year pages stable after selecting a year without navigating", async () => {
@@ -147,48 +147,48 @@ describe("CalendarMonthPicker", () => {
     await openPicker();
 
     await act(async () => {
-      findButton(container, "年を選択").click();
+      findButton(container, "Select year").click();
     });
-    expect(container.textContent).toContain("2020年 - 2031年");
-    expect(findButton(container, "2020年を選択")).not.toBeNull();
-    expect(findButton(container, "2031年を選択")).not.toBeNull();
+    expect(container.textContent).toContain("2020–2031");
+    expect(findButton(container, "Select 2020")).not.toBeNull();
+    expect(findButton(container, "Select 2031")).not.toBeNull();
     expect(
       Array.from(container.querySelectorAll("button")).filter((button) =>
-        button.getAttribute("aria-label")?.includes("年を選択")
+        /^Select \d{4}/.test(button.getAttribute("aria-label") || "")
       )
     ).toHaveLength(12);
-    expect(findButton(container, "2026年を選択（選択中・現在年）").getAttribute("data-current-year")).toBe("true");
+    expect(findButton(container, "Select 2026 (Selected, current year)").getAttribute("data-current-year")).toBe("true");
 
     await act(async () => {
-      findButton(container, "次の12年").click();
+      findButton(container, "Next 12 years").click();
     });
-    expect(container.textContent).toContain("2032年 - 2043年");
-    expect(findButton(container, "2032年を選択")).not.toBeNull();
-    expect(findButton(container, "2043年を選択")).not.toBeNull();
-    expect(findButton(container, "2031年を選択")).toBeUndefined();
+    expect(container.textContent).toContain("2032–2043");
+    expect(findButton(container, "Select 2032")).not.toBeNull();
+    expect(findButton(container, "Select 2043")).not.toBeNull();
+    expect(findButton(container, "Select 2031")).toBeUndefined();
 
     await act(async () => {
-      findButton(container, "2032年を選択").click();
+      findButton(container, "Select 2032").click();
     });
 
-    expect(findButton(container, "2032年 1月")).not.toBeNull();
+    expect(findButton(container, "January 2032")).not.toBeNull();
     expect(onSelectMonth).not.toHaveBeenCalled();
 
     await act(async () => {
-      findButton(container, "年を選択").click();
+      findButton(container, "Select year").click();
     });
-    expect(container.textContent).toContain("2032年 - 2043年");
+    expect(container.textContent).toContain("2032–2043");
 
     await act(async () => {
-      findButton(container, "前の12年").click();
+      findButton(container, "Previous 12 years").click();
     });
-    expect(container.textContent).toContain("2020年 - 2031年");
-    expect(findButton(container, "2032年を選択")).toBeUndefined();
+    expect(container.textContent).toContain("2020–2031");
+    expect(findButton(container, "Select 2032")).toBeUndefined();
 
     await act(async () => {
-      findButton(container, "次の12年").click();
+      findButton(container, "Next 12 years").click();
     });
-    expect(container.textContent).toContain("2032年 - 2043年");
+    expect(container.textContent).toContain("2032–2043");
   });
 
   it("selects a month with the callback, closes the popover, and returns focus to the trigger", async () => {
@@ -196,12 +196,12 @@ describe("CalendarMonthPicker", () => {
     await openPicker();
 
     await act(async () => {
-      findButton(container, "2026年 11月").click();
+      findButton(container, "November 2026").click();
     });
 
     expect(onSelectMonth).toHaveBeenCalledWith({ year: 2026, monthIndex: 10 });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
-    expect(document.activeElement).toBe(findButton(container, "年月を選択: 2026年 7月"));
+    expect(document.activeElement).toBe(findButton(container, "Select calendar month: July 2026"));
   });
 
   it("closes on Escape and routes the picker 今月 action through its callback", async () => {
@@ -218,7 +218,7 @@ describe("CalendarMonthPicker", () => {
     await openPicker();
     await act(async () => {
       Array.from(container.querySelectorAll("button")).find(
-        (button) => button.textContent === "今月"
+        (button) => button.textContent === "This Month"
       )?.click();
     });
 

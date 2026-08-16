@@ -270,7 +270,7 @@ const Top: React.FC = () => {
 
           <Stack direction={{ base: "column", sm: "row" }} align="center" spacing={3}>
             <Button onClick={handleToday} isDisabled={isCurrentMonth}>
-              今月
+              This Month
             </Button>
           </Stack>
 
@@ -294,7 +294,7 @@ const Top: React.FC = () => {
             transition="all 0.2s"
             leftIcon={<AddIcon />}
           >
-            作成
+            Create
           </Button>
         </Stack>
       </Box>

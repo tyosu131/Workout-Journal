@@ -64,7 +64,7 @@ export function useTagManagement() {
 
       toast({
         title: "Tag created",
-        description: `Tag "${trimmed}" was added to DB.`,
+        description: `Tag "${trimmed}" was created.`,
         status: "success",
         duration: 2000,
         isClosable: true,
@@ -90,7 +90,7 @@ export function useTagManagement() {
 
       toast({
         title: "Tag deleted",
-        description: `Tag "${tagToDelete}" was removed from DB.`,
+        description: `Tag "${tagToDelete}" was deleted.`,
         status: "info",
         duration: 2000,
         isClosable: true,
