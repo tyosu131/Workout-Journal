@@ -103,11 +103,13 @@ The same `CANDIDATE_ID` identifies the paired Frontend and Backend attempt becau
 
 After deploying Backend, record its exact tagged URL and the revision to which the tag points. Set only the new paired Frontend candidate's `BACKEND_INTERNAL_URL` to that exact URL; an existing production or rollback-eligible Frontend revision keeps its previously recorded Backend URL. Once any Frontend revision references a Backend traffic tag, do not reassign that tag to another Backend revision and do not remove it while the Frontend revision remains known-good or rollback eligible. Retiring and cleaning up a tag is a separate operation performed only after its entire pair is no longer a rollback candidate; this runbook does not automate tag cleanup.
 
-## First deployment and candidate revisions
+## Brand-new service bootstrap
 
-Bind each runtime service account to only its approved secrets/resources. Inject secrets by Secret Manager version; do not place secret values in command arguments or tracked files.
+`--no-traffic` creates a new revision without changing traffic on an existing service. Do not use it when creating a brand-new Cloud Run service.
 
-Deploy Backend first as a candidate and keep existing production traffic unchanged:
+Before deploying, confirm that both service names do not yet exist. Bind each runtime service account to only its approved secrets/resources. Inject secrets by Secret Manager version; do not place secret values in command arguments or tracked files. Use the unique `CANDIDATE_ID` and tag from the candidate identity contract, but do not describe this bootstrap pair as a safe 0% candidate: there is no existing production revision whose traffic can be preserved. The approved v1 bootstrap public-access mechanism is `--no-invoker-iam-check` for both services; Backend public invocation remains the v1 decision.
+
+Deploy Backend first without `--no-traffic`:
 
 ```bash
 gcloud run deploy approved-backend-service \
@@ -115,23 +117,29 @@ gcloud run deploy approved-backend-service \
   --region="$REGION" \
   --image="$BACKEND_IMAGE@sha256:approved-backend-digest" \
   --service-account=approved-backend-service-account \
-  --allow-unauthenticated \
+  --no-invoker-iam-check \
   --max-instances=approved-max-instances \
-  --no-traffic \
   --tag="$CANDIDATE_TAG" \
   --set-env-vars=NODE_ENV=production,SUPABASE_URL=approved-public-url,SUPABASE_PUBLISHABLE_KEY=approved-publishable-key,PASSWORD_RESET_REDIRECT_URL=https://approved-frontend-url/reset-password,ACCESS_TOKEN_EXPIRES=1h,REFRESH_TOKEN_EXPIRES=7d \
   --set-secrets=SUPABASE_SECRET_KEY=approved-supabase-secret:approved-version,JWT_SECRET=approved-jwt-secret:approved-version
 ```
 
-For a brand-new service, explicitly confirm Cloud Run's initial traffic result before continuing. Do not assume `--no-traffic` produced an unreachable revision.
+The first revision receives the service's initial traffic. Immediately inspect and record the created service, revision, tag, and traffic allocation:
 
-Record the exact tagged URL returned for this Backend candidate and verify that its tag points to the newly created Backend revision:
+```bash
+gcloud run services describe approved-backend-service --project=approved-project-id --region="$REGION"
+gcloud run revisions describe approved-backend-revision --project=approved-project-id --region="$REGION"
+```
+
+Use the revision name returned by the deployment in the second command. Treat both the service URL and tagged URL as unvalidated bootstrap endpoints: do not announce the service or begin normal use before the pair passes smoke.
+
+Record the exact Backend tagged URL returned by Cloud Run and verify that its tag points to the created Backend revision:
 
 ```bash
 BACKEND_CANDIDATE_URL="https://exact-backend-tagged-url"
 ```
 
-Use that exact Backend candidate URL as the paired Frontend candidate's runtime target, then deploy Frontend without production traffic:
+Use that exact URL as the Frontend revision's runtime target, then deploy Frontend without `--no-traffic`:
 
 ```bash
 gcloud run deploy approved-frontend-service \
@@ -139,12 +147,63 @@ gcloud run deploy approved-frontend-service \
   --region="$REGION" \
   --image="$FRONTEND_IMAGE@sha256:approved-frontend-digest" \
   --service-account=approved-frontend-service-account \
-  --allow-unauthenticated \
+  --no-invoker-iam-check \
+  --max-instances=approved-max-instances \
+  --tag="$CANDIDATE_TAG" \
+  --set-env-vars=BACKEND_INTERNAL_URL="$BACKEND_CANDIDATE_URL"
+```
+
+Immediately inspect and record the Frontend service, revision, tag, and initial traffic allocation:
+
+```bash
+gcloud run services describe approved-frontend-service --project=approved-project-id --region="$REGION"
+gcloud run revisions describe approved-frontend-revision --project=approved-project-id --region="$REGION"
+```
+
+Use the revision name returned by the deployment in the second command. Verify that the revision's `BACKEND_INTERNAL_URL` is the recorded exact Backend tagged URL. Smoke the initial pair through its tagged Frontend URL. Because both first revisions already receive initial traffic, do not run a separate promotion step. Only after smoke passes, record the pair as the initial known-good production pair and begin normal use of the service URL.
+
+## Existing-service candidate revisions
+
+Use this path only after confirming that both Cloud Run services already exist. Bind each runtime service account to only its approved secrets/resources. Inject secrets by Secret Manager version; do not place secret values in command arguments or tracked files. Do not add either `--allow-unauthenticated` or `--no-invoker-iam-check` to subsequent candidate deploy commands; preserve each existing service's approved public-access configuration.
+
+Choose a new, never-used `CANDIDATE_ID`, then deploy Backend first at 0% while preserving the existing production revision's traffic:
+
+```bash
+gcloud run deploy approved-backend-service \
+  --project=approved-project-id \
+  --region="$REGION" \
+  --image="$BACKEND_IMAGE@sha256:approved-backend-digest" \
+  --service-account=approved-backend-service-account \
+  --max-instances=approved-max-instances \
+  --no-traffic \
+  --tag="$CANDIDATE_TAG" \
+  --set-env-vars=NODE_ENV=production,SUPABASE_URL=approved-public-url,SUPABASE_PUBLISHABLE_KEY=approved-publishable-key,PASSWORD_RESET_REDIRECT_URL=https://approved-frontend-url/reset-password,ACCESS_TOKEN_EXPIRES=1h,REFRESH_TOKEN_EXPIRES=7d \
+  --set-secrets=SUPABASE_SECRET_KEY=approved-supabase-secret:approved-version,JWT_SECRET=approved-jwt-secret:approved-version
+```
+
+Record the exact tagged URL returned for this Backend candidate and verify that its tag points to the newly created 0% Backend revision:
+
+```bash
+BACKEND_CANDIDATE_URL="https://exact-backend-tagged-url"
+```
+
+Use that exact Backend candidate URL as the paired Frontend candidate's runtime target, then create the Frontend revision at 0%:
+
+```bash
+gcloud run deploy approved-frontend-service \
+  --project=approved-project-id \
+  --region="$REGION" \
+  --image="$FRONTEND_IMAGE@sha256:approved-frontend-digest" \
+  --service-account=approved-frontend-service-account \
   --max-instances=approved-max-instances \
   --no-traffic \
   --tag="$CANDIDATE_TAG" \
   --set-env-vars=BACKEND_INTERNAL_URL="$BACKEND_CANDIDATE_URL"
 ```
+
+Verify that the existing production revisions remain at 100% and both new candidate revisions are at 0% before smoke.
+
+## Candidate pair record
 
 Record the attempt as one candidate pair with at least:
 
@@ -173,9 +232,11 @@ Inspect Cloud Run logs for failures without searching for or printing credential
 
 The smoke owner deletes all synthetic notes, tags, users, and Auth records according to the approved cleanup procedure and records completion.
 
-## Traffic promotion
+## Existing-service traffic promotion
 
 Do not promote until the candidate pair passes smoke and the Human Gate approves public Backend invocation. Preserve the previous known-good pair before changing traffic.
+
+This promotion procedure is for the existing-service path. A brand-new bootstrap pair already receives initial traffic and becomes the initial known-good pair only after its smoke passes and its actual traffic state is recorded.
 
 Promote Backend, recheck the Frontend candidate against the promoted Backend revision/tag, then promote Frontend:
 
@@ -184,9 +245,9 @@ gcloud run services update-traffic approved-backend-service --project=approved-p
 gcloud run services update-traffic approved-frontend-service --project=approved-project-id --region="$REGION" --to-revisions=approved-frontend-revision=100
 ```
 
-Update the candidate record with the promotion result and preserve it as the new known-good pair: candidate ID, Git SHA, both image digests, both revision names and candidate tags, the Backend tagged URL stored in the Frontend revision, Secret Manager versions, public config identifiers, smoke evidence, promotion time, and approver.
+Update the candidate record with the promotion result and preserve it as the new known-good pair: candidate ID, Git SHA, both image digests, both revision names and candidate tags, the Backend tagged URL stored in the Frontend revision, Secret Manager versions, non-key public config identifiers such as the Supabase project ref, smoke evidence, promotion time, and approver. Do not record publishable key values.
 
-After promotion, perform real-browser smoke on Safari, iOS Safari, Chrome, Firefox, and Edge. The final supported-browser decision depends on this evidence, especially refresh and logout cookie behavior.
+After promotion, perform the required production browser smoke for the major v1 workflows in the Human-approved production browser and record the browser used. Broader supported-browser validation across Safari, iOS Safari, Chrome, Firefox, and Edge is a separate compatibility activity, not a v1 release gate unless the Project owner explicitly adds it to the current Completion Contract. When that broader validation is performed, pay particular attention to refresh and logout cookie behavior.
 
 ## Rollback
 
@@ -203,6 +264,6 @@ After rollback, verify again that the restored Frontend revision's `BACKEND_INTE
 
 ## Redeploy the same image digest
 
-For a runtime configuration or secret-version correction, keep the recorded Git SHA and exact image digests but choose a new, never-used `CANDIDATE_ID`. Deploy both exact digests as a new no-traffic revision pair with new Frontend and Backend candidate tags. Deploy Backend first, record its new exact tagged URL, and create the new Frontend revision with that URL as `BACKEND_INTERNAL_URL`, even when only Backend configuration changed. Repeat candidate smoke and promote the new pair through the normal process.
+For a runtime configuration or secret-version correction on the existing services, keep the recorded Git SHA and exact image digests but choose a new, never-used `CANDIDATE_ID`. Deploy both exact digests as a new no-traffic revision pair with new Frontend and Backend candidate tags. Deploy Backend first, record its new exact tagged URL, and create the new Frontend revision with that URL as `BACKEND_INTERNAL_URL`, even when only Backend configuration changed. Repeat candidate smoke and promote the new pair through the normal process.
 
 Never reuse a candidate ID or tag because the SHA or digest is unchanged, and never move a Backend tag referenced by an older rollback-eligible Frontend revision. Never rebuild merely to change Backend runtime configuration; a rebuild would produce a different artifact.
