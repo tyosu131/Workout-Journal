@@ -8,9 +8,10 @@ Every claim below is labelled as one of the following:
 
 - **Current / Implemented**: confirmed in the current repository code.
 - **Verified Infrastructure Fact**: confirmed by the reviewed Supabase backup, rather than inferred from application code.
+- **Verified Hosted Isolated Fact**: confirmed against the isolated Hosted Supabase verification project; this does not claim production configuration, deployment, or cutover.
 - **Current Design Decision**: an explicit current boundary or policy reflected in code and supporting design material.
 - **Future Direction**: a proposed next step, not an implemented capability.
-- **Open Question**: not verified from this repository or the reviewed backup.
+- **Open Question**: not verified from this repository, the reviewed backup, or the isolated Hosted evidence, as applicable.
 
 ## 1. Requirements
 
@@ -152,11 +153,23 @@ flowchart TD
 
 **Current Design Decision:** The repository's merged [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql) defines `PRIMARY KEY (date, userid)`, matching the application's upsert conflict target and the intended one-user, one-date, one-note model.
 
-**Future Direction:** The target migration has not been applied to an isolated new Supabase project. The next work is migration application, the read-only [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end verification before legacy application data is imported.
+**Verified Hosted Isolated Fact:** The target migrations have been applied to an isolated Hosted Supabase project and validated on PostgreSQL 17. Two-user same-date notes confirmed that the composite key matches the intended isolation model.
 
 **Open Question:** The historical legacy schema is verified only through the reviewed backup; its complete DDL and runtime behavior remain unverified.
 
 **Current Design Decision:** The historical legacy schema is migration evidence and is not treated as the target schema for the new project.
+
+### Hosted Isolated Verification and Deployment Boundary
+
+**Verified Hosted Isolated Fact:** Both repository migrations and the read-only [validation SQL](../supabase/validation/validate_initial_schema.sql) passed in the isolated Hosted project. The schema, constraints, indexes, RLS state, table and sequence privileges, and `remove_tag_from_notes` RPC contract matched the repository definitions.
+
+**Verified Hosted Isolated Fact:** Runtime verification covered signup, login, actual browser password recovery, two-user same-date note isolation, user-scoped tags and RPC behavior, anon and authenticated direct Data API denial, and backend privileged access.
+
+**Verified Hosted Isolated Fact:** The synthetic Auth users, profiles, notes, and tags used for verification were removed. The retained isolated project contains zero rows in each of those application/Auth aggregates while its two-entry migration history remains intact.
+
+**Current Design Decision:** The legacy environment contains only disposable test data. Legacy Auth users and application data will not be imported, and the target deployment uses a clean-start data policy. Historical backup evidence remains relevant to the target schema decisions.
+
+**Future Direction:** Hosted isolated verification is complete, but production configuration, final release-readiness verification, production deployment, and production cutover have not been completed.
 
 ### Persisted Application Shape
 
@@ -168,7 +181,7 @@ flowchart TD
 | Effort field persistence | **Current / Implemented** | The frontend serializes the exercise array. Backend save normalization accepts an array or JSON string, preserves surrounding exercise/set fields, normalizes valid RPE/RIR/failure values, and omits null/invalid optional effort fields before saving JSON text. |
 | Tags on notes | **Current / Implemented** | The save payload always supplies a tags array; the reviewed schema stores it in `notes.tags` as `text[]`. |
 | User-created tag catalog | **Current / Implemented** | Backend tag operations read and write `user_tags` rows scoped by `user_id`, and delete uses the `remove_tag_from_notes` RPC to remove a tag from note rows. |
-| `user_tags` target schema and RPC definition | **Current Design Decision** | The [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql) defines `public.user_tags` with `UNIQUE (user_id, tag)`. The [target RPC migration](../supabase/migrations/20260724000100_create_remove_tag_from_notes.sql) defines user-scoped `remove_tag_from_notes`; neither target migration has been applied to a new Supabase project. |
+| `user_tags` target schema and RPC definition | **Verified Hosted Isolated Fact** | The [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql) defines `public.user_tags` with `UNIQUE (user_id, tag)`. The [target RPC migration](../supabase/migrations/20260724000100_create_remove_tag_from_notes.sql) defines user-scoped `remove_tag_from_notes`; both migrations and the user-scoped runtime contract were verified in the isolated Hosted project. |
 
 **Open Question:** The repository target definitions do not establish complete equivalence with the historical legacy `user_tags` DDL or RPC implementation.
 
@@ -278,7 +291,7 @@ Persisted notes
 
 ### Endpoint Inventory
 
-**Current / Implemented:** The following inventory combines the Express mount in `backend/server.js` with each route module. These are internal Express paths, not an assertion about a production proxy prefix.
+**Current / Implemented:** The following inventory combines the Express mount in `backend/server.js` with each route module. Frontend runtime clients append these direct Express paths to `NEXT_PUBLIC_API_URL`.
 
 #### Authentication / User
 
@@ -371,14 +384,14 @@ Persisted notes
 
 ### API Open Questions
 
-- **Open Question:** The production mapping between frontend `/api/*` paths and Express `/auth` or `/notes` mounts is not in this repository.
+- **Open Question:** The production value of `NEXT_PUBLIC_API_URL`, the deployed Express public origin and reachability, and the required CORS, HTTPS, and frontend-to-backend connectivity are not established by this repository.
 - **Open Question:** API versioning is not present in the inspected route mounts.
 - **Open Question:** A common error-response schema is not present across the current services.
 - **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
 - **Open Question:** Rate limiting is not present in the inspected Express middleware or weekly-summary service.
 - **Open Question:** The weekly-summary input may need backend reconstruction from user-scoped notes before external provider use.
 - **Open Question:** The JavaScript backend currently does not reuse the shared TypeScript weekly-summary utilities at runtime.
-- **Future Direction:** Apply the repository target migrations to an isolated new Supabase project, run validation SQL, and verify RLS and multi-user isolation through end-to-end tests.
+- **Future Direction:** Carry the verified Supabase contract into production/release configuration, then repeat the required release-readiness checks before deployment or cutover.
 - **Open Question:** Resend-verification route mapping and its authentication requirement are unresolved.
 
 ## 6. Async Jobs
@@ -429,8 +442,8 @@ Persisted notes
 | Deterministic analytics | **Current / Implemented** | Numeric derivation requires finite values; missing effort is unknown, and sparse or empty range data renders data-quality or unknown states rather than an effort conclusion. | The Analytics page reports a range-load error, but no separate diagnostics distinguish fetch, parsing, and individual metric-derivation failures. |
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
-| Schema integrity | **Current Design Decision** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The target schema is not yet applied to a new Supabase project; run migration validation SQL and multi-user end-to-end tests before importing legacy data. See [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
-| Deployment and proxy mapping | **Open Question** | Internal Express mounts and the direct weekly-summary client path are visible in the repository. | No repository-visible production proxy or rewrite proves the `/api/*` public mappings; see [API Path Clarification](#api-path-clarification). |
+| Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project. Production release configuration and final verification remain incomplete; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
+| Production frontend-to-backend connectivity | **Open Question** | Frontend runtime clients use `NEXT_PUBLIC_API_URL` and call the Express `/auth/*`, `/notes/*`, and `/analytics/*` paths directly. | The production API-base value, deployed Express public origin and reachability, CORS policy, HTTPS behavior, and end-to-end connectivity remain unverified; see [API Path Clarification](#api-path-clarification). |
 
 ### Current Recovery Behavior
 
@@ -451,7 +464,7 @@ Persisted notes
 | Tag deletion | **Current / Implemented** | The service deletes the `user_tags` row, then invokes `remove_tag_from_notes`. | If the RPC fails after catalog deletion, the handler returns `500` with the first change already applied; no compensation is visible. |
 | Daily note save | **Current / Implemented** | The service normalizes nested exercises before a single Supabase upsert. | There is no multi-write database transaction in this handler, but malformed exercise input is converted to an empty serialized array before persistence rather than rejected. |
 
-**Open Question:** The target `remove_tag_from_notes` definition is present in the repository, but it has not been applied to a new Supabase project. Database-side runtime behavior after migration application and any historical legacy transaction safeguards remain unverified.
+**Verified Hosted Isolated Fact:** The target `remove_tag_from_notes` definition was applied and its user-scoped runtime behavior was verified in the isolated Hosted project. Any historical legacy transaction safeguards remain unverified.
 
 ### Retry Policy
 
@@ -471,10 +484,12 @@ Persisted notes
 
 **Future Direction:** Client-facing failures should omit secrets and internal provider details, distinguish fallback from hard failure, avoid retrying validation errors, and limit automated retries to transient operations with safe duplicate controls. Error logs should avoid raw request bodies, raw workout content, prompts, and provider responses. Partial failures should be surfaced accurately rather than reported as complete success.
 
-### Known Critical Risks
+### Known Critical Risks and Release Boundaries
 
-- **Current Design Decision:** The repository target migration defines the composite daily-note key. Apply it to a new Supabase project, run [validation SQL](../supabase/validation/validate_initial_schema.sql), and complete multi-user end-to-end tests before legacy data import; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
-- **Open Question:** Verify deployed `/api/*` mapping before relying on the internal paths described in [API Path Clarification](#api-path-clarification).
+- **Verified Hosted Isolated Fact:** The composite daily-note key, [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end behavior passed in the isolated Hosted project; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
+- **Current Design Decision:** Legacy test data will not be imported. Production deployment will use a clean-start data policy.
+- **Future Direction:** Production configuration, final release verification, deployment, and cutover remain separate uncompleted steps.
+- **Open Question:** Verify the production `NEXT_PUBLIC_API_URL`, deployed Express public-origin reachability, CORS policy, HTTPS behavior, and frontend-to-backend connectivity described in [API Path Clarification](#api-path-clarification).
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
 - **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
@@ -546,10 +561,12 @@ Persisted notes
 
 **Future Direction:** Prioritize the following confirmed design and operational gaps before expanding the product surface:
 
-1. Create an isolated new Supabase project, apply the repository migrations, run validation SQL, and complete signup, login, browser password recovery, note, and tag end-to-end checks before importing legacy application data.
-2. Verify production API proxy or rewrite behavior for the frontend `/api/*` paths.
-3. Resolve resend-verification route mapping and authentication-wrapper behavior.
-4. Define production-safe logging and remove or reduce sensitive debug output.
-5. Define common API error envelopes.
-6. Define production health checks and operational monitoring.
-7. Add external-provider timeout, rate-limit, and observability design only before real provider integration.
+1. Configure the production/release Supabase and application environment without committing credentials.
+2. Complete final release-readiness verification against that configuration under the clean-start data policy.
+3. Perform production deployment and cutover only after explicit release approval.
+4. Verify the production `NEXT_PUBLIC_API_URL`, deployed Express public-origin reachability, CORS and HTTPS behavior, and frontend-to-backend connectivity.
+5. Resolve resend-verification route mapping and authentication-wrapper behavior.
+6. Define production-safe logging and remove or reduce sensitive debug output.
+7. Define common API error envelopes.
+8. Define production health checks and operational monitoring.
+9. Add external-provider timeout, rate-limit, and observability design only before real provider integration.

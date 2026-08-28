@@ -1,5 +1,13 @@
 # Notes Exercises Schema Compatibility
 
+## Status
+
+**Historical point-in-time compatibility review.**
+
+This document records the persistence assumptions used before the set-level RPE/RIR/failure work was implemented. References to "current" behavior below describe that review point, not the present Repository source of truth.
+
+For current API routing and persistence architecture, refer to [System Design](./system-design.md).
+
 ## Overview
 
 Before adding set-level `rpe`, `rir`, and `failure` input, the current `notes.exercises` persistence shape needs to be documented.
@@ -10,9 +18,9 @@ This is a docs-only compatibility review. It does not introduce code, UI, API, d
 
 The main priority is preserving existing notes.
 
-## Current Persistence Flow
+## Persistence Flow at Time of Review
 
-Current save flow:
+Save flow recorded at the time:
 
 1. The note input/edit UI stores workout data in `noteData`.
 2. `noteData.exercises` is an array of exercises.
@@ -25,9 +33,9 @@ Current save flow:
 9. Frontend `parseNoteFields` parses `note.exercises` when it is a string.
 10. Analytics utilities normalize parsed notes with `normalizeWorkoutSets`.
 
-Current persistence is daily-note based. One `notes` row appears to represent one user and one date, with nested exercises and sets stored inside `notes.exercises`.
+At that review point, persistence was daily-note based. One `notes` row appeared to represent one user and one date, with nested exercises and sets stored inside `notes.exercises`.
 
-## Current Frontend Set Shape
+## Frontend Set Shape at Time of Review
 
 The current frontend type is:
 
@@ -52,7 +60,7 @@ export interface NoteData {
 }
 ```
 
-Current note UI behavior:
+Note UI behavior recorded at the time:
 
 - A new note starts with one empty exercise and one set.
 - A new set starts as `{ weight: "", reps: "", rest: "" }`.
@@ -68,7 +76,7 @@ Important compatibility implication:
 - Adding optional fields to `Set` should not require changing old set objects.
 - Old set objects without the fields should remain valid.
 
-## Current Normalized Shape
+## Normalized Shape at Time of Review
 
 `shared/utils/normalizeWorkoutSets.ts` already supports a broader input shape:
 
@@ -176,7 +184,7 @@ Conclusion:
 - Repository does not contain schema evidence for `notes.exercises`.
 - The exact column type is unknown from local code/docs.
 
-## Current Target Schema Context
+## Target Schema Context at Time of Review
 
 The repository now contains a new-project [target schema migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql), including a target `public.notes` definition. This migration is a current reconstruction target, not evidence that the historical backup or any live Supabase project has identical DDL or runtime behavior.
 

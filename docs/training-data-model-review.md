@@ -1,12 +1,20 @@
 # Training Data Model Review
 
+## Status
+
+**Historical point-in-time investigation.**
+
+This document records the repository state observed when this review was performed. Statements labelled "current" below refer to that review point and are not the current Repository source of truth.
+
+For the current architecture, Supabase status, API routing, and data-model decisions, refer to [System Design](./system-design.md) and [Supabase Rebuild](../supabase/README.md).
+
 ## Overview
 
 This document reviews the current Workout Journal data shape before adding RPE/RIR, set-level analytics, hypertrophy analysis, BIG3 analysis, graph views, AI summaries, and mobile workout input improvements.
 
 This is an investigation note only. It does not define an immediate code, API, UI, or database change.
 
-## Current Data Model Findings
+## Data Model Findings at Time of Review
 
 The current workout log is centered on a daily `notes` record.
 
@@ -50,12 +58,12 @@ Important findings:
 - On read, the frontend parses `exercises` if it is a string.
 - Sets already exist as nested objects under each exercise.
 - The database does not appear to have normalized set-level rows.
-- No SQL migration or schema file was found in the repository.
+- At the time of this review, no SQL migration or schema file had been identified in the repository.
 - The current shape can support basic exercise, weight, reps, rest, and date analysis, but deeper analytics will be easier if the nested structure is documented or normalized.
 
-## Current API / Service Findings
+## API / Service Findings at Time of Review
 
-Current note routes:
+Note routes recorded at the time:
 
 | Route | Purpose |
 | --- | --- |
@@ -82,7 +90,7 @@ API implication:
 - Analytics endpoints should probably be added later instead of overloading the existing daily-note endpoints.
 - If the DB remains JSON-based, analytics utilities must parse and normalize `exercises` in application code.
 
-## Current Frontend Input Findings
+## Frontend Input Findings at Time of Review
 
 The note page is the main workout input surface.
 
