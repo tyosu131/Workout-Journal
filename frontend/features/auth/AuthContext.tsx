@@ -17,7 +17,12 @@ type AuthProviderProps = {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-const PUBLIC_AUTH_PATHNAMES = new Set(["/forgot-password", "/reset-password"]);
+const PUBLIC_AUTH_PATHNAMES = new Set([
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+]);
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
