@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Workout Journal Frontend
 
-## Getting Started
+This is the Next.js 15 Pages Router frontend. Production browser traffic uses one public origin:
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+Browser
+-> Frontend Cloud Run
+-> same-origin /api/*
+-> Pages API proxy
+-> Backend Cloud Run
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The catch-all route at `pages/api/[...proxyPath].ts` only forwards `auth`, `notes`, and `analytics`. It reads `BACKEND_INTERNAL_URL` at server runtime. That variable must not be public, passed as a build argument, or exposed to client code.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The only browser-visible environment values are `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. They support the password-recovery update boundary; application database access remains backend-only.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Use Node 24 and install from the repository root:
 
-## Learn More
+```bash
+npm ci --prefix frontend
+npm run dev --prefix frontend
+```
 
-To learn more about Next.js, take a look at the following resources:
+For local proxy operation, set `BACKEND_INTERNAL_URL=http://localhost:3001` in `frontend/.env.local`. Open `http://localhost:3000`; do not configure browser code with a Backend base URL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Quality gates:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+```bash
+npm run lint --prefix frontend
+npm run build --prefix frontend
+npm test -- --runInBand
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Deployment and rollback instructions are in [the Cloud Run runbook](../docs/cloud-run-deployment-runbook.md).

@@ -1,6 +1,6 @@
 # Verification
 
-This project uses separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
+This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
 ## Local Commands
 
@@ -11,7 +11,9 @@ npm ci --prefix backend
 npm run lint --prefix frontend
 npm run build --prefix frontend
 npm run build --prefix backend
-npm test
+npm test -- --runInBand
+npm audit --omit=dev --audit-level=high --prefix frontend
+npm audit --omit=dev --audit-level=high --prefix backend
 ```
 
 ## CI Checks
@@ -32,6 +34,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Backend build runs a JavaScript syntax check over backend `.js` files with `node --check`.
 - Root Jest is configured in `jest.config.js` and scans `frontend`, `shared`, and `backend`.
 - Frontend API client tests under `frontend/lib/__tests__` are included in `npm test` and CI.
+- The same directory contains the Pages API proxy contract tests for namespace allow-listing, request/response preservation, independent `Set-Cookie` forwarding, and sanitized `502`/`504` behavior.
 - Shared utility tests under `shared/utils/__tests__` are included in `npm test` and CI.
 - Shared training normalization tests for `normalizeWorkoutSets` are included in `npm test` and CI.
 - Shared training metrics tests for volume load and estimated 1RM are included in `npm test` and CI.
@@ -83,8 +86,32 @@ GitHub Actions runs the same baseline on push and pull request:
 - Backend auth service validation and refresh tests under `backend/services/__tests__` are included in `npm test` and CI.
 - `--passWithNoTests` was removed after adding shared tests to the Jest baseline.
 - Test output no longer includes the old `calendarUtils` debug log or the `ts-jest` `esModuleInterop` warning.
-- Frontend build output no longer logs repeated `NEXT_PUBLIC_API_URL configured: false` messages.
+- Browser API endpoints use same-origin `/api/*`; Backend routing is server-only through `BACKEND_INTERNAL_URL`.
 - The Next.js custom font warning is resolved by loading global font links in `frontend/pages/_document.tsx`.
+
+## Cloud Run Build Verification
+
+Build both images from the repository root so the frontend can resolve `shared/`:
+
+```bash
+docker build --file backend/Dockerfile --tag workout-journal-backend:verify .
+docker build \
+  --file frontend/Dockerfile \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://public-example.invalid \
+  --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=public-example-key \
+  --tag workout-journal-frontend:verify \
+  .
+```
+
+The frontend image accepts only the two publishable Supabase build arguments. Backend secrets and `BACKEND_INTERNAL_URL` are runtime-only.
+
+For browser-artifact secrecy, build with a unique non-secret Backend URL canary in the environment, then confirm the canary is absent from `.next/static` and generated `.html` files. The variable name may appear in the server-side API bundle; its runtime value must not.
+
+Runtime probes use `PORT=8080`. Expected current contracts are Frontend `/` = `200`, Backend `/` = `404`, invalid `POST /auth/login` = `400`, and unauthenticated `GET /notes/test` = `401`.
+
+## Deployment Verification Boundary
+
+Container builds and local runtime probes verify repository artifacts only. Cloud Run service creation, no-traffic candidate deployment, production smoke, traffic promotion, and Safari/iOS Safari/Chrome/Firefox/Edge browser smoke are Human Gate work described in [the deployment runbook](./cloud-run-deployment-runbook.md).
 
 ## Test Candidates
 

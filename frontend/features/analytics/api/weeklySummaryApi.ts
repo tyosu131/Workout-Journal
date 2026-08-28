@@ -20,7 +20,7 @@ export const generateWeeklySummaryAPI = async (
   request: GenerateWeeklySummaryRequest
 ): Promise<GenerateWeeklySummaryResponse> => (
   apiRequestWithAuth<GenerateWeeklySummaryResponse, GenerateWeeklySummaryRequest>(
-    "/analytics/weekly-summary",
+    "/api/analytics/weekly-summary",
     "post",
     request
   )

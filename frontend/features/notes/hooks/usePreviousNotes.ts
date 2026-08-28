@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { NoteData } from "../../../types/types";
 import { fetchNotesByTagsAPI } from "../api";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 export function usePreviousNotes(noteData: NoteData | null) {
   const [showPrevious, setShowPrevious] = useState(false);
@@ -16,7 +17,7 @@ export function usePreviousNotes(noteData: NoteData | null) {
       const notes = await fetchNotesByTagsAPI(noteData.tags);
       setPreviousNotes(notes);
     } catch (error) {
-      console.error("Failed to fetch previous notes:", error);
+      console.error("Failed to fetch previous notes:", getErrorSummary(error));
       setPreviousNotes([]);
     }
     setShowPrevious(true);

@@ -52,9 +52,9 @@ Every claim below is labelled as one of the following:
 | Concern | Status | Current boundary or requirement |
 | --- | --- | --- |
 | Authentication and user isolation | **Current / Implemented** | Protected note and weekly-summary paths extract a Bearer token, verify the backend JWT, and scope note/tag database queries by the verified user ID. |
-| Secret management | **Current / Implemented** | Backend Supabase credentials and `JWT_SECRET` are read from backend environment files; browser-visible configuration is limited to `NEXT_PUBLIC_*` values. The README instructs deployments to configure real values outside repository files. |
-| Sensitive logging | **Current / Implemented** | The weekly-summary service does not log prompt messages, mock/provider response text, tokens, or workout payloads. Its request validator rejects named raw-note-content fields. |
-| Logging policy completeness | **Open Question** | A repository-wide sensitive-logging policy is not enforced centrally. Current auth handlers still log decoded user IDs and Supabase query results, so a broader production logging audit remains necessary. |
+| Secret management | **Current / Implemented** | Backend Supabase credentials and `JWT_SECRET` are server-only runtime values. The deployment contract injects secret values from Secret Manager; browser-visible configuration is limited to the two publishable Supabase values used for password recovery. |
+| Sensitive logging | **Current / Implemented** | Backend and frontend failure logs use allow-listed summaries rather than tokens, user IDs, profiles, raw URLs/queries, raw Axios objects, or raw Supabase objects. The weekly-summary boundary also excludes prompts, provider response text, and workout payloads. |
+| Logging policy completeness | **Future Direction** | Structured logging, collection, retention, access control, and monitoring remain post-v1 operational work. |
 | Backward compatibility | **Current / Implemented** | Missing `rpe`, `rir`, and `failure` normalize to `null`; old nested sets remain readable. The backend only adds valid effort fields and otherwise keeps the surrounding exercise/set payload shape. |
 | Defensive parsing and validation | **Current / Implemented** | Nested exercises are parsed defensively, numeric metrics require finite values, effort values are range-normalized, and weekly-summary requests and responses are validated before use. |
 | CI verification | **Current / Implemented** | GitHub Actions installs root, frontend, and backend dependencies, then runs frontend lint/build, backend syntax checks, and the root Jest suite on pushes and pull requests. |
@@ -77,7 +77,8 @@ Every claim below is labelled as one of the following:
 ```mermaid
 flowchart TD
     Browser["Browser"]
-    Frontend["Next.js Frontend<br/>React, TypeScript, Chakra UI, Axios"]
+    Frontend["Frontend Cloud Run<br/>Next.js Pages Router"]
+    Proxy["Same-origin /api proxy<br/>auth, notes, analytics allow-list"]
     Shared["Shared deterministic analytics utilities<br/>Normalization, metrics, trends, summaries, signals"]
     Backend["Express Backend<br/>Node.js"]
     Summary["Weekly summary boundary<br/>Request validation, mock provider adapter, response validation, fallback"]
@@ -85,8 +86,9 @@ flowchart TD
     SupabaseAuth["Supabase Auth"]
     SupabaseDb[("Supabase PostgreSQL")]
 
-    Browser --> Frontend
-    Frontend -->|Authenticated HTTP| Backend
+    Browser -->|HTTPS| Frontend
+    Frontend -->|/api/*| Proxy
+    Proxy -->|Server-to-server HTTP| Backend
     Frontend -->|Uses| Shared
     Backend -->|Request-local Auth: sign-up, login, reset email| SupabaseAuth
     Frontend -->|Browser recovery only: publishable key| SupabaseAuth
@@ -95,7 +97,7 @@ flowchart TD
     Summary -->|Mock response only| MockProvider
 ```
 
-**Current / Implemented:** The frontend is a Next.js Pages Router application using React, TypeScript, Chakra UI, Axios, and Recharts. It owns interactive note editing, calendar/history screens, authenticated API calls, and responsive Analytics rendering.
+**Current / Implemented:** The frontend is a Next.js Pages Router application using React, TypeScript, Chakra UI, Axios, and Recharts. Frontend Cloud Run is the browser-facing origin and owns a catch-all Pages API proxy. Browser API requests use same-origin `/api/*`; only `auth`, `notes`, and `analytics` are forwarded to the Backend URL read from the server-only runtime environment.
 
 **Current / Implemented:** The backend is a Node.js and Express service. It owns authentication handlers, bearer-token verification, note and tag persistence, request validation, and the current weekly-summary endpoint boundary.
 
@@ -111,7 +113,7 @@ flowchart TD
 
 | Boundary | Status | Responsibility |
 | --- | --- | --- |
-| Frontend | **Current / Implemented** | Collect and display note data; attach the access token; fetch user-scoped notes; derive and render analytics; construct the structured weekly-summary request; show rule-based, mocked-endpoint, and fallback states; and use a temporary publishable-key client only for browser password recovery. |
+| Frontend | **Current / Implemented** | Serve the browser UI and same-origin `/api/*` boundary; attach the access token; preserve request/response and refresh-cookie semantics through the server-side proxy; derive and render analytics; and use a temporary publishable-key client only for browser password recovery. |
 | Backend | **Current / Implemented** | Authenticate requests; use request-local Auth clients for sign-up, login, and password-reset email requests; enforce user-scoped note/tag database operations through the Admin/DB secret client; normalize nested exercise intensity fields before saving; validate weekly-summary requests; call the local mock provider boundary; validate provider-shaped responses; and return fallback output when needed. |
 | Shared analytics | **Current / Implemented** | Parse nested exercise payloads into normalized sets and derive metrics, weekly volume, BIG3 trends, muscle groups, effort summaries, Growth Signals, weekly summary input, and provider-neutral prompt payloads without network or database calls. |
 | Supabase | **Current / Implemented** | Authenticate backend sign-up/login/password-reset-email requests and browser recovery-session password updates. Store application data accessed only through the backend Admin/DB secret client, including `notes`, users, and the user tag catalog. |
@@ -122,10 +124,10 @@ flowchart TD
 | Path layer | Status | Observed behavior |
 | --- | --- | --- |
 | Express internal mounts | **Current / Implemented** | `backend/server.js` mounts `authRoutes` at `/auth`, `noteRoutes` at `/notes`, and `analyticsRoutes` at `/analytics`. The weekly-summary route is therefore `POST /analytics/weekly-summary` inside Express. |
-| Frontend API base | **Current / Implemented** | Axios uses `NEXT_PUBLIC_API_URL`, defaulting to `http://localhost:3001`, and frontend runtime clients call the Express paths directly: `/auth/*`, `/notes/*`, and `/analytics/*`. |
-| Next.js API routing | **Current / Implemented** | No Next.js API routes, rewrites, or proxy configuration are used for backend requests. Frontend runtime calls rely on `NEXT_PUBLIC_API_URL` resolving to the Express service. |
-| Production/public API origin | **Open Question** | The repository does not define the deployed value of `NEXT_PUBLIC_API_URL` or its hosting/network configuration. Production must make the Express service reachable at that configured origin; no `/api/*` alias is required by the frontend runtime. |
-| Weekly-summary public route | **Current / Implemented** | The frontend calls `POST /analytics/weekly-summary` through the same API base, matching the Express mount. |
+| Browser API paths | **Current / Implemented** | Axios calls same-origin `/api/auth/*`, `/api/notes/*`, and `/api/analytics/*`. Browser code has no Backend base URL. |
+| Next.js API routing | **Current / Implemented** | `frontend/pages/api/[...proxyPath].ts` strips `/api`, preserves the current JSON request/response contract and individual `Set-Cookie` fields, rejects unknown namespaces with `404`, and returns sanitized `502`/`504` gateway failures. |
+| Server-only Backend target | **Current / Implemented** | The proxy reads `BACKEND_INTERNAL_URL` directly from the Frontend server runtime. It is not a public variable, Next config value, build argument, client prop, or HTML value. |
+| Weekly-summary public route | **Current / Implemented** | The browser calls `POST /api/analytics/weekly-summary`; the proxy maps it to Express `POST /analytics/weekly-summary`. |
 
 ## 3. Data Model
 
@@ -291,7 +293,7 @@ Persisted notes
 
 ### Endpoint Inventory
 
-**Current / Implemented:** The following inventory combines the Express mount in `backend/server.js` with each route module. Frontend runtime clients append these direct Express paths to `NEXT_PUBLIC_API_URL`.
+**Current / Implemented:** The inventory lists Express paths. Browser clients prepend `/api`, and the Frontend proxy removes that prefix before forwarding.
 
 #### Authentication / User
 
@@ -304,6 +306,7 @@ Persisted notes
 | `GET` | `/auth/get-user` | Bearer token | Return the authenticated user's application profile. |
 | `PUT` | `/auth/update-user` | Bearer token | Update the authenticated user's username when the submitted email is unchanged; email and password changes require dedicated flows. |
 | `POST` | `/auth/forgot-password` | None | Request a Supabase password-reset email. |
+| `POST` | `/auth/logout` | Refresh cookie optional | Clear the refresh cookie with the same path, security, and same-site attributes used when issuing it. |
 
 #### Notes / Tags
 
@@ -323,9 +326,9 @@ Persisted notes
 | --- | --- | --- | --- |
 | `POST` | `/analytics/weekly-summary` | Bearer token | Validate range and structured input, invoke the local mock provider boundary, validate its response, and return an `ai` or `rule_based_fallback` source. |
 
-**Current / Implemented:** Frontend runtime clients use the `NEXT_PUBLIC_API_URL` base with the Express paths `/auth/*`, `/notes/*`, and `/analytics/*`; no Next.js API route, rewrite, or proxy is required for those calls.
+**Current / Implemented:** Frontend runtime clients use same-origin `/api/auth/*`, `/api/notes/*`, and `/api/analytics/*`. The allow-listed Next.js proxy is required for every application API call from the browser.
 
-**Current / Implemented:** `frontend/features/auth/hooks/useResendVerification.ts` calls `/auth/signup` through `apiRequestWithAuth`. That wrapper requires a stored access token and throws before making an HTTP request when no access token exists. The mounted Express signup route is `POST /auth/signup`.
+**Current / Implemented:** `frontend/features/auth/hooks/useResendVerification.ts` calls `/api/auth/signup` through `apiRequestWithAuth`. That wrapper requires a stored access token and throws before making an HTTP request when no access token exists. The proxy maps the path to `POST /auth/signup`.
 
 **Open Question:** Verification resend is expected to be usable around an unauthenticated signup flow, but the current authenticated wrapper may prevent the request from being sent when no access token exists. The intended dedicated endpoint and authentication requirement need confirmation.
 
@@ -335,11 +338,11 @@ Persisted notes
 
 **Current / Implemented:** The Axios client enables credentials, attaches the stored access token for authenticated calls, and intercepts 401 responses. A request marked for retry is refreshed once; a module-level limit stops repeated refresh attempts and removes the local access token after exhaustion or refresh failure.
 
-**Current / Implemented:** Frontend logout clears the locally stored access token and redirects to login. The associated server logout request is commented out in the current AuthContext.
+**Current / Implemented:** Frontend logout calls `/api/auth/logout`, then clears the locally stored access token and redirects to login even if the network request fails. The Backend clears the HTTP-only refresh cookie; the proxy preserves the deletion `Set-Cookie` field.
 
 **Current / Implemented:** The reset-password page creates a non-persistent browser Supabase client with public configuration, requires an implicit-flow fragment containing `access_token`, `refresh_token`, and `type=recovery`, updates the password through Supabase Auth, clears that local session, and redirects to login. It does not send recovery tokens or a new password to the backend.
 
-**Open Question:** No mounted logout endpoint, server-side access-token revocation list, refresh-token rotation, or refresh-token invalidation mechanism was found in the inspected code. Production session invalidation behavior therefore remains unverified.
+**Current Design Decision:** Refresh tokens remain stateless backend JWTs. Logout clears the browser cookie, but server-side token revocation and rotation are post-v1 work.
 
 ### Request Validation
 
@@ -384,7 +387,7 @@ Persisted notes
 
 ### API Open Questions
 
-- **Open Question:** The production value of `NEXT_PUBLIC_API_URL`, the deployed Express public origin and reachability, and the required CORS, HTTPS, and frontend-to-backend connectivity are not established by this repository.
+- **Open Question:** Exact Cloud Run URLs and the deployed end-to-end result remain Human Gate inputs. The code/config architecture fixes the browser-facing boundary at the Frontend origin and uses server-side `BACKEND_INTERNAL_URL` for the Backend target.
 - **Open Question:** API versioning is not present in the inspected route mounts.
 - **Open Question:** A common error-response schema is not present across the current services.
 - **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
@@ -434,7 +437,7 @@ Persisted notes
 
 | Failure domain | Status | Current behavior | Risk or gap |
 | --- | --- | --- | --- |
-| Frontend and network | **Current / Implemented** | The Axios interceptor rejects network errors and removes the locally stored token. Feature API wrappers log an Axios response payload or message and rethrow. | Network failures are not retried. Some wrappers log server-provided error data, whose production sensitivity depends on each endpoint response. |
+| Frontend and network | **Current / Implemented** | Browser Axios calls same-origin `/api/*`. The proxy times out Backend calls after 30 seconds, returning sanitized `504`; other Backend network failures return sanitized `502`. Frontend error logs use allow-listed summaries. | Network failures are not retried. |
 | Authentication and token refresh | **Current / Implemented** | A `401` can trigger one retry for the original request after refresh; refresh failures or an exhausted module-level refresh-attempt limit remove the local token. AuthContext redirects to login when no token exists and logs out after failed refresh during session lookup. | No server-side revocation, rotation, or invalidation mechanism is confirmed; see [Authentication and Token Lifecycle](#authentication-and-token-lifecycle). |
 | Request validation | **Current / Implemented** | Auth handlers, tag handlers, and the weekly-summary validator return `400` for selected invalid inputs. Invalid weekly-summary range or raw-note-content fields do not reach the provider boundary. | Notes date/range values do not have a dedicated service-side format validator; see [Request Validation](#request-validation). |
 | Note and tag persistence | **Current / Implemented** | Note and tag service handlers catch Supabase errors, log an error message, and generally return `500`. Note saving is one normalized-payload upsert. | The note service includes `error.message` in some client responses. Tag deletion performs two writes without a visible transaction; see [Partial Failure and Consistency Risks](#partial-failure-and-consistency-risks). |
@@ -443,7 +446,7 @@ Persisted notes
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
 | Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project. Production release configuration and final verification remain incomplete; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
-| Production frontend-to-backend connectivity | **Open Question** | Frontend runtime clients use `NEXT_PUBLIC_API_URL` and call the Express `/auth/*`, `/notes/*`, and `/analytics/*` paths directly. | The production API-base value, deployed Express public origin and reachability, CORS policy, HTTPS behavior, and end-to-end connectivity remain unverified; see [API Path Clarification](#api-path-clarification). |
+| Production frontend-to-backend connectivity | **Current Design Decision** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the Backend URL from its runtime environment. CORS remains optional defense-in-depth, not the browser connectivity mechanism. | Exact Cloud Run URLs and live browser behavior remain deployment-time Human Gate verification. |
 
 ### Current Recovery Behavior
 
@@ -489,7 +492,7 @@ Persisted notes
 - **Verified Hosted Isolated Fact:** The composite daily-note key, [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end behavior passed in the isolated Hosted project; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
 - **Current Design Decision:** Legacy test data will not be imported. Production deployment will use a clean-start data policy.
 - **Future Direction:** Production configuration, final release verification, deployment, and cutover remain separate uncompleted steps.
-- **Open Question:** Verify the production `NEXT_PUBLIC_API_URL`, deployed Express public-origin reachability, CORS policy, HTTPS behavior, and frontend-to-backend connectivity described in [API Path Clarification](#api-path-clarification).
+- **Open Question:** Verify the exact Frontend and Backend Cloud Run URLs, HTTPS behavior, same-origin refresh/logout flow, and server-to-server connectivity at the deployment Human Gate.
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
 - **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
@@ -500,25 +503,23 @@ Persisted notes
 
 | Signal | Status | Current implementation | Limitation |
 | --- | --- | --- | --- |
-| Express route activity | **Current / Implemented** | A server middleware logs the HTTP method and request URL for each request. | It is unstructured console output without request or correlation IDs; URLs can include query parameters. |
-| Configuration presence | **Current / Implemented** | Server startup and Supabase initialization log boolean configuration presence and whether the Supabase client initialized. | These are startup diagnostics, not secret rotation, configuration validation, or production health signals. |
+| Express route activity | **Current Design Decision** | Raw request URLs and queries are not logged. | Structured route metrics and correlation IDs remain post-v1. |
+| Configuration presence | **Current / Implemented** | Runtime configuration is consumed without logging values. | This is not secret rotation or production health monitoring. |
 | Backend service failures | **Current / Implemented** | Auth, note, token, and weekly-summary handlers use `console.error` in caught failure paths. | Logs are endpoint-specific console output with no common schema, level policy, or centralized destination in the repository. |
-| Frontend diagnostics | **Current / Implemented** | API, authentication, note, tag, and page code emits browser console logs for selected successes and failures. | Client logs are not a production monitoring system; some paths log server response data or error objects. |
-| Weekly-summary boundary | **Current / Implemented** | The service avoids logging prompt messages and provider-response text; it logs only the caught endpoint error message in its outer failure path. | The boundary is local and mocked, so it does not demonstrate production provider monitoring. |
+| Frontend diagnostics | **Current / Implemented** | Selected failures log allow-listed name/code/status summaries. | Client logs are not a production monitoring system. |
+| Weekly-summary boundary | **Current / Implemented** | The service avoids logging prompt messages, provider-response text, tokens, workout payloads, and raw errors. | The boundary is local and mocked, so it does not demonstrate production provider monitoring. |
 | CI verification output | **Current / Implemented** | GitHub Actions emits build, lint, backend syntax, and Jest output on push and pull request. | CI output is pre-merge verification, not runtime application observability. |
 | Automated tests | **Current / Implemented** | The repository's CI baseline runs the root Jest suite alongside frontend lint/build and backend build checks. | Tests do not provide runtime metrics, alerts, or live dependency health. |
 
 ### Logging and Privacy
 
-**Current / Implemented:** Server startup logs whether required environment values are configured without printing their values. Supabase initialization logs configuration presence, and authentication middleware logs token presence as a boolean.
+**Current / Implemented:** Backend logging excludes raw request URLs/queries, Authorization values, JWTs, emails, user IDs, profiles, raw Supabase errors, and secret/config values. Caught failures use allow-listed `name`, `code`, and `status` fields.
 
-**Current / Implemented:** The backend logs request method and path, and the auth-route debug middleware logs request-body keys rather than request-body values. Auth-related code also logs decoded user IDs and full Supabase query-result objects in selected paths. The latter may contain personal data and is not a production-safe logging guarantee.
-
-**Current / Implemented:** Frontend API wrappers can log response data or messages on error. Because selected backend error responses include details derived from Supabase errors, browser-console output can expose more internal or user-related context than a minimal public error message.
+**Current / Implemented:** Frontend API and feature failure logs use the same allow-listed summary shape instead of raw Axios response data or raw error objects. Token utilities do not log token values or presence.
 
 **Current Design Decision:** The weekly-summary request validator rejects named raw-note-content fields, and its service boundary does not log prompt messages, provider response text, tokens, or workout payloads. This narrow boundary does not establish a repository-wide logging policy.
 
-**Open Question:** Production log collection, access control, retention, redaction, and audit practices are not represented in this repository. The current console logging should be reviewed before treating it as suitable for production personal-data handling.
+**Open Question:** Production log collection, access control, retention, redaction validation, and audit practices are not represented in this repository.
 
 ### Missing Production Signals
 
@@ -536,7 +537,7 @@ Persisted notes
 
 ### Operational Open Questions
 
-- **Open Question:** Which production hosting environment runs the frontend and backend?
+- **Current Design Decision:** Frontend and Backend run as separate Cloud Run services built from repository Dockerfiles.
 - **Open Question:** Where are runtime logs collected, who can access them, and how long are they retained?
 - **Open Question:** Who owns alerts, on-call response, escalation, and deployment rollback?
 - **Open Question:** How will health checks, readiness checks, secret rotation, and backup/restore verification be integrated?
@@ -564,9 +565,9 @@ Persisted notes
 1. Configure the production/release Supabase and application environment without committing credentials.
 2. Complete final release-readiness verification against that configuration under the clean-start data policy.
 3. Perform production deployment and cutover only after explicit release approval.
-4. Verify the production `NEXT_PUBLIC_API_URL`, deployed Express public-origin reachability, CORS and HTTPS behavior, and frontend-to-backend connectivity.
+4. Deploy no-traffic Cloud Run candidate revisions by digest and verify same-origin proxy, HTTPS, cookie, and Backend connectivity behavior.
 5. Resolve resend-verification route mapping and authentication-wrapper behavior.
-6. Define production-safe logging and remove or reduce sensitive debug output.
+6. Define production log collection, retention, access control, metrics, and alerts.
 7. Define common API error envelopes.
 8. Define production health checks and operational monitoring.
 9. Add external-provider timeout, rate-limit, and observability design only before real provider integration.

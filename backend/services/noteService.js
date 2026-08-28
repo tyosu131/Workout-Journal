@@ -5,6 +5,7 @@ const { verifyToken } = require("../utils/authUtils");
 const {
   normalizeExercisesPayloadForSave,
 } = require("../utils/noteExercisesValidation");
+const { getErrorSummary } = require("../utils/errorSummary");
 
 /**
  * GET /api/notes/:date
@@ -30,7 +31,7 @@ async function getNotes(req, res) {
 
     res.status(200).json({ notes: data });
   } catch (error) {
-    console.error("Failed to fetch notes:", error.message);
+    console.error("Failed to fetch notes:", getErrorSummary(error));
     res.status(500).json({ error: "Failed to fetch notes", details: error.message });
   }
 }
@@ -70,7 +71,7 @@ async function saveNote(req, res) {
 
     res.status(200).json({ message: "Note saved successfully!" });
   } catch (error) {
-    console.error("Failed to save note:", error.message);
+    console.error("Failed to save note:", getErrorSummary(error));
     res.status(500).json({ error: "Failed to save note", details: error.message });
   }
 }
@@ -102,7 +103,7 @@ async function getNotesInRange(req, res) {
 
     res.status(200).json({ notes: data });
   } catch (error) {
-    console.error("Failed to fetch notes in range:", error.message);
+    console.error("Failed to fetch notes in range:", getErrorSummary(error));
     res.status(500).json({ error: "Failed to fetch notes in range", details: error.message });
   }
 }
@@ -131,7 +132,7 @@ async function getAllTags(req, res) {
     const allTags = data.map((row) => row.tag);
     res.status(200).json({ tags: allTags });
   } catch (error) {
-    console.error("Failed to fetch all tags:", error.message);
+    console.error("Failed to fetch all tags:", getErrorSummary(error));
     res.status(500).json({ error: "Failed to fetch all tags", details: error.message });
   }
 }
@@ -164,7 +165,7 @@ async function getNotesByTags(req, res) {
     if (error) throw error;
     res.status(200).json({ notes: data });
   } catch (error) {
-    console.error("Failed to fetch notes by tags:", error.message);
+    console.error("Failed to fetch notes by tags:", getErrorSummary(error));
     res.status(500).json({ error: "Failed to fetch notes by tags", details: error.message });
   }
 }
@@ -219,7 +220,7 @@ async function createTag(req, res) {
 
     res.status(201).json({ message: "Tag created" });
   } catch (err) {
-    console.error("Failed to create tag:", err.message);
+    console.error("Failed to create tag:", getErrorSummary(err));
     res.status(500).json({ error: "Failed to create tag", details: err.message });
   }
 }
@@ -262,7 +263,7 @@ async function deleteTag(req, res) {
 
     res.status(200).json({ message: "Tag deleted" });
   } catch (err) {
-    console.error("Failed to delete tag:", err.message);
+    console.error("Failed to delete tag:", getErrorSummary(err));
     res.status(500).json({ error: "Failed to delete tag", details: err.message });
   }
 }

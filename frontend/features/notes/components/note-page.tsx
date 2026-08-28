@@ -47,6 +47,7 @@ import {
   createNoteQuery,
   resolveNoteReturnMonth,
 } from "../../../../shared/utils/calendarNavigation";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 const RPE_OPTIONS = Array.from({ length: 19 }, (_, index) => (
   Number((1 + index * 0.5).toFixed(1))
@@ -95,7 +96,7 @@ const NotePage: React.FC = () => {
   useEffect(() => {
     fetchAllTagsAPI()
       .then((tags) => setAllTags(tags))
-      .catch((err) => console.error("Failed to fetch all tags:", err));
+      .catch((err) => console.error("Failed to fetch all tags:", getErrorSummary(err)));
   }, []);
 
   useEffect(() => {
@@ -176,7 +177,7 @@ const NotePage: React.FC = () => {
     setIsTagPopoverOpen(true);
     fetchAllTagsAPI()
       .then((tags) => setAllTags(tags))
-      .catch(console.error);
+      .catch((error) => console.error("Failed to refresh tags:", getErrorSummary(error)));
   };
 
   const handleTagOptionClick = (tag: string) => {
@@ -201,7 +202,7 @@ const NotePage: React.FC = () => {
         setPreviousNote(older[0]);
       }
     } catch (error) {
-      console.error("Failed to fetch previous note:", error);
+      console.error("Failed to fetch previous note:", getErrorSummary(error));
       setPreviousNote(null);
     }
     setShowPrevious(true);

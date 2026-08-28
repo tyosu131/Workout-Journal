@@ -1,56 +1,56 @@
-@startuml mydiagram
+@startuml workout_journal_production
 actor User
-participant Frontend
-participant Backend
-participant Middleware
+participant Browser
+participant "Frontend Cloud Run\nNext.js Pages Router" as Frontend
+participant "Pages API proxy\n/api/*" as Proxy
+participant "Backend Cloud Run\nExpress" as Backend
 participant Supabase
 
-== ログイン (POST /api/login) ==
-User -> Frontend : ログイン情報入力
-Frontend -> Backend : POST /api/login (email, password)
-Backend -> Supabase : supabase.auth.signInWithPassword()
-Supabase --> Backend : 認証成功 (session, user data)
-Backend -> Frontend : トークンを返す (accessToken, refreshToken)
-Frontend -> Frontend : トークンを保存 (localStorage or setToken)
+== Login ==
+User -> Browser : Enter email and password
+Browser -> Frontend : POST /api/auth/login (same origin)
+Frontend -> Proxy : Invoke allow-listed auth route
+Proxy -> Backend : POST /auth/login
+Backend -> Supabase : Auth signInWithPassword
+Supabase --> Backend : Auth user
+Backend --> Proxy : access token + Set-Cookie refreshToken
+Proxy --> Frontend : Preserve status/body and Set-Cookie
+Frontend --> Browser : Same-origin response
+Browser -> Browser : Store access token
 
-== ユーザー登録 (POST /api/signup) ==
-User -> Frontend : サインアップ情報入力
-Frontend -> Backend : POST /api/signup (name, email, password)
-Backend -> Supabase : supabase.auth.signUp()
-Supabase --> Backend : 登録成功 (user data)
-Backend -> Supabase : 新しいユーザー情報をDBに保存
-Backend -> Frontend : メール確認案内 or トークンを返す (accessToken, refreshToken)
+== Authenticated request and refresh ==
+Browser -> Frontend : GET /api/notes/:date + Bearer token
+Frontend -> Proxy : Invoke allow-listed notes route
+Proxy -> Backend : GET /notes/:date + Bearer/Cookie
+Backend --> Proxy : 401 expired access token
+Proxy --> Browser : Preserve 401
+Browser -> Frontend : POST /api/auth/refresh + refresh cookie
+Frontend -> Proxy : Invoke allow-listed auth route
+Proxy -> Backend : POST /auth/refresh + Cookie
+Backend --> Proxy : New access token
+Proxy --> Browser : Preserve response
+Browser -> Frontend : Retry GET /api/notes/:date
+Proxy -> Backend : Retry GET /notes/:date + new Bearer token
+Backend -> Supabase : Read user-scoped note
+Supabase --> Backend : Note data
+Backend --> Browser : Response through Proxy and Frontend
 
-== 認証付きリクエストの流れ ==
-Frontend -> Frontend : 保存したトークンを取得
-Frontend -> Backend : 認証APIリクエスト (Authorization: Bearer <access_token>)
-Backend -> Middleware : リクエストを受信
-Middleware -> Middleware : Authorizationヘッダーからトークンを取得
-Middleware -> Middleware : verifyTokenでトークン検証
-Middleware -> Backend : トークンが有効なら次の処理へ進む
+== Logout ==
+Browser -> Frontend : POST /api/auth/logout + refresh cookie
+Proxy -> Backend : POST /auth/logout + Cookie
+Backend --> Proxy : Set-Cookie deletion (Path=/api/auth)
+Proxy --> Browser : Preserve deletion cookie
+Browser -> Browser : Remove local access token
 
-== セッション取得 (GET /api/auth/session) ==
-User -> Frontend : サイトにアクセス
-Frontend -> Backend : GET /api/auth/session (Authorizationヘッダー)
-Backend -> Middleware : Middlewareでトークンを検証
-Middleware -> Supabase : supabase.auth.getSession()
-Supabase --> Middleware : セッション情報 (session data)
-Middleware -> Backend : セッション情報を返す
-Backend -> Frontend : セッションデータを返す
+== Password recovery exception ==
+Browser -> Frontend : POST /api/auth/forgot-password
+Proxy -> Backend : POST /auth/forgot-password
+Backend -> Supabase : Send reset email for Frontend /reset-password
+Supabase --> Browser : Recovery redirect
+Browser -> Supabase : Set recovery session and update password\n(public URL + publishable key only)
 
-== ユーザー情報更新 (PUT /api/update-user) ==
-User -> Frontend : ユーザー情報変更
-Frontend -> Backend : PUT /api/update-user (Authorizationヘッダー, 更新データ)
-Backend -> Middleware : Middlewareでトークンを検証
-Middleware -> Supabase : 更新データをDBに保存
-Middleware -> Backend : トークン検証後更新処理
-Backend -> Frontend : 更新完了メッセージを返す
-
-== ノート保存 (POST /api/notes/:date) ==
-User -> Frontend : ノート情報入力
-Frontend -> Backend : POST /api/notes/:date (Authorizationヘッダー, note, exercises)
-Backend -> Middleware : Middlewareでトークンを検証
-Middleware -> Supabase : ノートデータをDBに保存
-Middleware -> Backend : トークン検証後保存処理
-Backend -> Frontend : 保存完了メッセージを返す
+note over Browser,Backend
+Normal application API and database traffic never calls the Backend directly from the browser.
+Only the password-recovery password update uses the browser-visible Supabase Auth boundary.
+end note
 @enduml

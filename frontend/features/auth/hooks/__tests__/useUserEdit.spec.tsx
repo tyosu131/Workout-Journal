@@ -75,7 +75,7 @@ describe("useUserEdit", () => {
     });
 
     expect(apiRequestWithAuth).toHaveBeenCalledWith(
-      "/auth/update-user",
+      "/api/auth/update-user",
       "put",
       { username: "Renamed", email: "user@example.com" }
     );

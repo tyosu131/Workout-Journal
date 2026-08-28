@@ -141,7 +141,7 @@ describe("apiClient", () => {
     it("refreshes a 401 request, stores the new token, and retries the original request", async () => {
       const { __mocks } = loadApiClient();
       jest.spyOn(console, "log").mockImplementation(() => {});
-      const error = createUnauthorizedError("/notes/2026-07-26");
+      const error = createUnauthorizedError("/api/notes/2026-07-26");
       const originalRequest = error.config;
 
       __mocks.post.mockResolvedValue({ data: { access_token: "new-dummy-token" } });
@@ -151,7 +151,7 @@ describe("apiClient", () => {
         data: { retried: true },
       });
 
-      expect(__mocks.post).toHaveBeenCalledWith("/auth/refresh", {});
+      expect(__mocks.post).toHaveBeenCalledWith("/api/auth/refresh", {});
       expect(__mocks.setToken).toHaveBeenCalledWith("new-dummy-token");
       expect(originalRequest.headers.Authorization).toBe("Bearer new-dummy-token");
       expect(originalRequest.headers._retry).toBe(true);
@@ -161,7 +161,7 @@ describe("apiClient", () => {
     it("removes the token and rejects when refresh fails", async () => {
       const { __mocks } = loadApiClient();
       jest.spyOn(console, "error").mockImplementation(() => {});
-      const error = createUnauthorizedError("/notes/2026-07-26");
+      const error = createUnauthorizedError("/api/notes/2026-07-26");
       const refreshError = {
         isAxiosError: true,
         response: { data: { error: "refresh failed" } },
@@ -178,10 +178,10 @@ describe("apiClient", () => {
     });
 
     it.each([
-      "/auth/login?returnTo=%2F",
-      "http://localhost:3001/auth/signup?source=form",
-      "/auth/forgot-password",
-      "http://localhost:3001/auth/refresh?attempt=1",
+      "/api/auth/login?returnTo=%2F",
+      "http://same-origin.invalid/api/auth/signup?source=form",
+      "/api/auth/forgot-password",
+      "http://same-origin.invalid/api/auth/refresh?attempt=1",
     ])("does not refresh a public Auth endpoint 401 for %s", async (url) => {
       const { __mocks } = loadApiClient();
       const error = createUnauthorizedError(url);
@@ -204,7 +204,7 @@ describe("apiClient", () => {
       __mocks.post.mockRejectedValue(refreshError);
       for (let attempt = 0; attempt < 3; attempt++) {
         await expect(
-          __mocks.getRejectedInterceptor()(createUnauthorizedError(`/notes/${attempt}`))
+          __mocks.getRejectedInterceptor()(createUnauthorizedError(`/api/notes/${attempt}`))
         ).rejects.toBe(refreshError);
       }
 
@@ -212,7 +212,7 @@ describe("apiClient", () => {
       __mocks.client.mockResolvedValue({ data: { retried: true } });
 
       await expect(
-        __mocks.getRejectedInterceptor()(createUnauthorizedError("/notes/after-refresh-failures"))
+        __mocks.getRejectedInterceptor()(createUnauthorizedError("/api/notes/after-refresh-failures"))
       ).resolves.toEqual({ data: { retried: true } });
 
       expect(__mocks.post).toHaveBeenCalledTimes(4);

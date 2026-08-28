@@ -13,6 +13,7 @@ const router = {
   replace,
 };
 const fetchNotesInRangeAPI = jest.fn();
+const logout = jest.fn();
 
 jest.mock("next/router", () => ({
   useRouter: () => router,
@@ -54,6 +55,10 @@ jest.mock("@chakra-ui/icons", () => ({
 
 jest.mock("../../../notes/api", () => ({
   fetchNotesInRangeAPI,
+}));
+
+jest.mock("../../../auth/AuthContext", () => ({
+  useAuth: () => ({ logout }),
 }));
 
 jest.mock("../../../notes/contexts/TagColorContext", () => ({
@@ -110,6 +115,7 @@ describe("TopPage calendar navigation", () => {
     push.mockReset();
     replace.mockReset();
     fetchNotesInRangeAPI.mockReset();
+    logout.mockReset();
     fetchNotesInRangeAPI.mockResolvedValue([]);
     localStorage.setItem("token", "test-token");
     container = document.createElement("div");
@@ -178,7 +184,7 @@ describe("TopPage calendar navigation", () => {
     }
   });
 
-  it("removes the token and navigates to login when logging out", async () => {
+  it("uses the shared logout flow so the Backend cookie is cleared", async () => {
     await renderTopPage();
 
     const logOut = Array.from(container.querySelectorAll("button")).find(
@@ -187,8 +193,7 @@ describe("TopPage calendar navigation", () => {
 
     await act(async () => logOut.click());
 
-    expect(localStorage.getItem("token")).toBeNull();
-    expect(push).toHaveBeenLastCalledWith("/login");
+    expect(logout).toHaveBeenCalledTimes(1);
   });
 
   it("uses replace for adjacent-month navigation and 今月", async () => {

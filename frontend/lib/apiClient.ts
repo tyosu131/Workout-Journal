@@ -2,11 +2,9 @@
 import axios from 'axios';
 import { getToken, setToken, removeToken } from '../../shared/utils/tokenUtils';
 import { API_ENDPOINTS } from '../../shared/constants/endpoints';
-
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getErrorSummary } from './errorSummary';
 
 const apiClient = axios.create({
-  baseURL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -19,6 +17,7 @@ const MAX_REFRESH_ATTEMPTS = 3;
 const PUBLIC_AUTH_ENDPOINTS = new Set([
   API_ENDPOINTS.LOGIN,
   API_ENDPOINTS.SIGNUP,
+  API_ENDPOINTS.LOGOUT,
   API_ENDPOINTS.FORGOT_PASSWORD,
   API_ENDPOINTS.REFRESH,
 ]);
@@ -43,7 +42,7 @@ function getRequestPath(url: unknown): string | null {
     return new URL(url).pathname;
   } catch {
     try {
-      return new URL(url, baseURL).pathname;
+      return new URL(url, 'http://same-origin.invalid').pathname;
     } catch {
       const path = url.split(/[?#]/, 1)[0];
       return path.startsWith('/') ? path : `/${path}`;
@@ -66,7 +65,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     if (!isAxiosError(error)) {
-      console.error('未知のエラー:', error);
+      console.error('未知のエラー:', getErrorSummary(error));
       return Promise.reject(error);
     }
 
@@ -99,7 +98,6 @@ apiClient.interceptors.response.use(
         // Call the refresh API with an empty request body
         const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, {});
         const newAccessToken = data.access_token;
-        console.log('[apiClient] トークンリフレッシュ成功:', Boolean(newAccessToken));
         setToken(newAccessToken);
         refreshAttempts = 0;
 
@@ -107,10 +105,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         if (isAxiosError(refreshError)) {
-          console.error(
-            '[apiClient] トークンリフレッシュ失敗:',
-            refreshError.response?.data || refreshError.message
-          );
+          console.error('[apiClient] トークンリフレッシュ失敗:', getErrorSummary(refreshError));
         }
         clearTokenAndRefreshAttempts();
         return Promise.reject(refreshError);
@@ -143,9 +138,9 @@ export const apiRequestWithAuth = async <TResponse, TData = any>(
     return response.data;
   } catch (error) {
     if (isAxiosError(error)) {
-      console.error('APIリクエストに失敗しました:', error.response?.data || error.message);
+      console.error('APIリクエストに失敗しました:', getErrorSummary(error));
     } else {
-      console.error('未知のエラー:', error);
+      console.error('未知のエラー:', getErrorSummary(error));
     }
     throw error;
   }
@@ -166,9 +161,9 @@ export const apiRequest = async <TResponse, TData = any>(
     return response.data;
   } catch (error) {
     if (isAxiosError(error)) {
-      console.error('APIリクエストに失敗しました:', error.response?.data || error.message);
+      console.error('APIリクエストに失敗しました:', getErrorSummary(error));
     } else {
-      console.error('未知のエラー:', error);
+      console.error('未知のエラー:', getErrorSummary(error));
     }
     throw error;
   }

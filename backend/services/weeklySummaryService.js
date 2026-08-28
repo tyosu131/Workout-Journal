@@ -2,6 +2,7 @@ const { verifyToken } = require("../utils/authUtils");
 const {
   validateWeeklySummaryRequest,
 } = require("../utils/weeklySummaryRequestValidation");
+const { getErrorSummary } = require("../utils/errorSummary");
 const {
   parseAndValidateWeeklySummaryResponse,
 } = require("../utils/weeklySummaryResponseValidation");
@@ -204,7 +205,7 @@ const handleGenerateWeeklySummary = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error("Weekly summary endpoint failed:", error.message);
+    console.error("Weekly summary endpoint failed:", getErrorSummary(error));
     return res.status(500).json({ error: "Failed to generate weekly summary" });
   }
 };

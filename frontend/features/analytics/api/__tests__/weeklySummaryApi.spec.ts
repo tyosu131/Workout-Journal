@@ -71,7 +71,7 @@ describe("weeklySummaryApi", () => {
     await expect(generateWeeklySummaryAPI(request)).resolves.toEqual(response);
 
     expect(apiRequestWithAuth).toHaveBeenCalledWith(
-      "/analytics/weekly-summary",
+      "/api/analytics/weekly-summary",
       "post",
       request
     );

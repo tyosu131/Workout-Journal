@@ -2,12 +2,13 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "@supabase/supabase-js";
 import { getToken, setToken, removeToken } from "../../../shared/utils/tokenUtils";
 import { useRouter } from "next/router";
-import { loginUser, fetchSession, refreshAccessToken } from "./api";
+import { loginUser, logoutUser, fetchSession, refreshAccessToken } from "./api";
+import { getErrorSummary } from "../../lib/errorSummary";
 
 type AuthContextProps = {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 type AuthProviderProps = {
@@ -17,11 +18,6 @@ type AuthProviderProps = {
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 const PUBLIC_AUTH_PATHNAMES = new Set(["/forgot-password", "/reset-password"]);
-
-const getErrorSummary = (error: any) => ({
-  status: error?.response?.status,
-  message: error?.message,
-});
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -34,9 +30,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ================================
   const logout = async () => {
     try {
-      // await apiClient.post('/auth/logout');
-    } catch (error: any) {
-      console.error("Logout request failed (non-critical):", error?.message);
+      await logoutUser();
+    } catch (error: unknown) {
+      console.error("Logout request failed (non-critical):", getErrorSummary(error));
     } finally {
       setUser(null);
       removeToken();
@@ -48,13 +44,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Fetch session
   // ================================
   const getSession = async () => {
-    console.log("getSession called");
     setLoading(true);
 
     try {
       const token = getToken();
       if (!token) {
-        console.log("No token found, not calling session API.");
         router.push("/login");
         return;
       }
@@ -74,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await handleTokenRefresh();
           } catch (refreshError) {
             console.error("Failed to refresh access token:", getErrorSummary(refreshError));
-            logout();
+            await logout();
           }
         } else {
           console.error(`Failed to get session (status: ${status})`, getErrorSummary(error));
@@ -95,7 +89,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const resp = await refreshAccessToken();
       if (resp.access_token) {
         setToken(resp.access_token);
-        console.log("Token refreshed:", Boolean(resp.access_token));
         await getSession();
       }
     } catch (error) {
@@ -115,7 +108,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const token = getToken();
     if (!token) {
-      console.log("No token found, skipping session check");
       router.push("/login");
       setLoading(false);
       return;

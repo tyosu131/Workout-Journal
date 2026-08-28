@@ -20,6 +20,7 @@ import {
   createNoteQuery,
   resolveNoteReturnMonth,
 } from "../../../../shared/utils/calendarNavigation";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 /**
  * Hook that groups note, exercise, and set operations
@@ -43,7 +44,7 @@ const useNoteHandlers = (
     try {
       await saveNoteAPI(data);
     } catch (error) {
-      console.error("Failed to save note", error);
+      console.error("Failed to save note", getErrorSummary(error));
     }
   }, []);
 
