@@ -3,6 +3,7 @@
 import { apiRequestWithAuth } from "../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../shared/constants/endpoints";
 import { NoteData } from "../../types/types";
+import { getErrorSummary } from "../../lib/errorSummary";
 
 /**
  * API for fetching a note list or one note
@@ -96,7 +97,7 @@ function parseNoteFields(note: NoteData) {
     try {
       note.exercises = JSON.parse(note.exercises);
     } catch (e) {
-      console.error("Failed to parse exercises:", e);
+      console.error("Failed to parse exercises:", getErrorSummary(e));
       note.exercises = [];
     }
   }

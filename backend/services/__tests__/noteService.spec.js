@@ -345,7 +345,11 @@ describe("noteService", () => {
       });
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to create tag:",
-        "database unavailable"
+        {
+          name: "UnknownError",
+          code: "XX000",
+          status: undefined,
+        }
       );
       consoleErrorSpy.mockRestore();
     });

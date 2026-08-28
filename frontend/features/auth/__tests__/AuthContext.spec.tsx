@@ -4,7 +4,9 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 const fetchSession = jest.fn();
+const logoutUser = jest.fn();
 const getToken = jest.fn();
+const removeToken = jest.fn();
 const push = jest.fn();
 const router = {
   pathname: "/top",
@@ -17,17 +19,18 @@ jest.mock("next/router", () => ({
 
 jest.mock("../api", () => ({
   fetchSession,
+  logoutUser,
   loginUser: jest.fn(),
   refreshAccessToken: jest.fn(),
 }));
 
 jest.mock("../../../../shared/utils/tokenUtils", () => ({
   getToken,
-  removeToken: jest.fn(),
+  removeToken,
   setToken: jest.fn(),
 }));
 
-const { AuthProvider } = require("../AuthContext") as typeof import("../AuthContext");
+const { AuthProvider, useAuth } = require("../AuthContext") as typeof import("../AuthContext");
 
 describe("AuthProvider route protection", () => {
   let container: HTMLDivElement;
@@ -48,7 +51,10 @@ describe("AuthProvider route protection", () => {
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     fetchSession.mockReset();
+    logoutUser.mockReset();
+    logoutUser.mockResolvedValue(undefined);
     getToken.mockReset();
+    removeToken.mockReset();
     push.mockReset();
     router.pathname = "/top";
     container = document.createElement("div");
@@ -120,5 +126,25 @@ describe("AuthProvider route protection", () => {
 
     expect(push).toHaveBeenCalledWith("/login");
     expect(fetchSession).not.toHaveBeenCalled();
+  });
+
+  it("calls Backend logout before clearing local authentication state", async () => {
+    getToken.mockReturnValue("backend-jwt");
+    fetchSession.mockResolvedValue({ user: { id: "test-user" } });
+    const LogoutButton = () => {
+      const { logout } = useAuth();
+      return React.createElement("button", { onClick: logout }, "Logout");
+    };
+
+    await act(async () => {
+      root.render(React.createElement(AuthProvider, null, React.createElement(LogoutButton)));
+    });
+    await act(async () => {
+      container.querySelector("button")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(logoutUser).toHaveBeenCalledTimes(1);
+    expect(removeToken).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith("/login");
   });
 });

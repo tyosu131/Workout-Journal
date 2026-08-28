@@ -16,8 +16,8 @@ I wanted to build a workout logging app that's easy to manage day by day. By com
 For a detailed list of features, please see [this GitHub repository](https://github.com/tyosu131/Workout-Journal.git).
 
 ## Tech Stack
-- **Frontend**: Next.js, React, TypeScript
-- **Backend**: Node.js / Express
+- **Frontend**: Next.js 15 Pages Router, React, TypeScript
+- **Backend**: Node.js 24 / Express
 - **Database**: Supabase (PostgreSQL)
 - **Auth**: Supabase Auth (JWT, Refresh Tokens)
 - **Others**: Chakra UI, Axios, etc.
@@ -31,9 +31,9 @@ For a detailed list of features, please see [this GitHub repository](https://git
 
 2. **Install dependencies:**
    ```bash
-   npm install
-   npm install --prefix frontend
-   npm install --prefix backend
+   npm ci
+   npm ci --prefix frontend
+   npm ci --prefix backend
    ```
 
 Configure environment variables (e.g., .env):
@@ -47,8 +47,7 @@ Use [backend/.env.example](./backend/.env.example) and [frontend/.env.example](.
 | Variable | Required | Secret | Notes |
 | --- | --- | --- | --- |
 | `PORT` | No | No | Express port. Defaults to `3001`. |
-| `CORS_ORIGIN` | No | No | Allowed frontend origin for credentialed CORS. Defaults to `http://localhost:3000`. Set this to the Azure Static Web Apps origin in production. |
-| `FRONTEND_ORIGIN` | No | No | Alternative to `CORS_ORIGIN`; used only when `CORS_ORIGIN` is unset. |
+| `CORS_ORIGIN` | No | No | Optional defense-in-depth origin. Browser application traffic uses the Frontend same-origin proxy. |
 | `SUPABASE_URL` | Yes | No | Supabase project URL for backend access. |
 | `SUPABASE_PUBLISHABLE_KEY` | Yes | No | Used only by backend Auth client factories for sign-up, login, and password-reset requests. |
 | `SUPABASE_SECRET_KEY` | Yes | Yes | Used only by the backend Admin/DB client for application tables and RPCs. Never expose it to the browser. |
@@ -60,11 +59,11 @@ Use [backend/.env.example](./backend/.env.example) and [frontend/.env.example](.
 ### Frontend
 | Variable | Required | Secret | Notes |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Yes | No | Backend API base URL. Use `http://localhost:3001` locally and the Azure backend URL in production. |
+| `BACKEND_INTERNAL_URL` | Yes | No | Server-only Frontend runtime value for the Backend Cloud Run URL. Never expose it through public config or build arguments. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | No | Required by browser password recovery; this Supabase project URL is exposed to the browser. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | No | Public key used only for browser password recovery. Never set a secret or service-role key here. |
 
-For Azure or other production deployments, configure these values in the hosting platform rather than storing real values in repository files.
+Production runs as `Browser -> Frontend Cloud Run -> /api/* proxy -> Backend Cloud Run -> Supabase`. Browser code never receives the Backend hostname. Configure runtime values and secrets in Cloud Run rather than storing real values in repository files. See [the Cloud Run deployment runbook](./docs/cloud-run-deployment-runbook.md).
 
 ### Supabase Client Boundaries
 The backend uses a request-local Auth client with the publishable key for sign-up, login, and password-reset email requests. A separate singleton Admin/DB client uses the secret key for `public` tables and RPCs. Browser password recovery requires both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, creates a temporary Supabase session only to update the password, then clears that session. Never expose a secret or service-role key to the frontend. Email changes and logged-in password changes are not implemented; they require separate confirmation and security flows.
@@ -79,9 +78,9 @@ See [docs/quality-improvements.md](./docs/quality-improvements.md) for a summary
 npm run dev
 ```
 
-Access the application in your browser:
+Access the application in your browser. Application API calls go through the frontend origin under `/api/*`:
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+- Backend (server-to-server proxy target and direct local probe only): http://localhost:3001
 
 ## Usage
 Sign up for a new account.

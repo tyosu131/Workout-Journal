@@ -11,12 +11,15 @@ This project has been improved with cloud migration, production operation, and c
 - Removed the backend startup dependency on a fixed EC2 `.env.local` path.
 - Added environment variable examples for backend and frontend setup.
 - Made the backend CORS origin configurable through environment variables, while keeping the local default.
+- Standardized root, frontend, backend, CI, and container contracts on Node 24.
+- Added a server-only Backend target and a same-origin `/api/*` allow-listed proxy for production browser traffic.
 
 ### Security / Logging
 
 - Removed or reduced logs that exposed secret, token, or environment variable values.
 - Avoided logging Authorization header values, access token values, refresh token values, and localStorage token values.
-- Kept necessary logs focused on configured/not-configured state rather than raw values.
+- Replaced raw Axios/Supabase/profile/request logging with allow-listed failure summaries.
+- Centralized refresh-cookie issue/clear attributes and added Backend logout.
 
 ### CI / Verification
 
@@ -36,6 +39,13 @@ This project has been improved with cloud migration, production operation, and c
 
 - Replaced the backend build placeholder with a JavaScript syntax check.
 - `npm run build --prefix backend` now runs `node --check` against backend JavaScript files.
+
+### Cloud Run Build and Recovery
+
+- Added separate Node 24 multi-stage Dockerfiles for Frontend and Backend using the repository root as build context.
+- Added build-context exclusions for environment files, credentials, Git data, dependencies, coverage, and temporary artifacts.
+- Added Cloud Build configuration for two git-SHA-tagged Artifact Registry images.
+- Added a digest-based deployment, known-good revision-pair, redeploy, and rollback runbook.
 
 ### Bug Fix
 
@@ -57,8 +67,8 @@ npm test
 - Resolve or document the Google Fonts download warning during build.
 - Add more backend service and route tests.
 - Add Supabase success and error path tests.
-- Add Docker and Azure deployment configuration.
-- Review dependency audit results and apply safe upgrades separately.
+- Complete the Cloud Run/Supabase Human Gate, no-traffic deployment, production smoke, and browser smoke.
+- Triage remaining production-only moderate advisories separately; critical/high advisories block release.
 
 ## How to Explain This Project
 

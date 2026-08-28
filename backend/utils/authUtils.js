@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { getErrorSummary } = require("./errorSummary");
 
 // Validate an email address format
 const validateEmail = (email) => {
@@ -39,7 +40,7 @@ const verifyToken = async (token) => {
     }
     return decoded;
   } catch (error) {
-    console.error("トークンの検証に失敗しました:", error.message);
+    console.error("トークンの検証に失敗しました:", getErrorSummary(error));
     return null;
   }
 };
@@ -56,7 +57,7 @@ const refreshAccessToken = async (refreshToken) => {
     // Issue a new access token
     return generateAccessToken({ id: decoded.id, email: decoded.email });
   } catch (error) {
-    console.error("アクセストークンのリフレッシュに失敗しました:", error.message);
+    console.error("アクセストークンのリフレッシュに失敗しました:", getErrorSummary(error));
     throw new Error("Invalid or expired refresh token");
   }
 };

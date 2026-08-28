@@ -41,6 +41,8 @@ import {
 import { fetchNotesInRangeAPI } from "../../../features/notes/api";
 import { useTagColor } from "../../../features/notes/contexts/TagColorContext";
 import { CalendarMonthPicker } from "./CalendarMonthPicker";
+import { useAuth } from "../../auth/AuthContext";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 const useCurrentLocalDate = () => {
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -65,6 +67,7 @@ const useCurrentLocalDate = () => {
 
 const Top: React.FC = () => {
   const router = useRouter();
+  const { logout } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const currentDate = useCurrentLocalDate();
 
@@ -129,7 +132,7 @@ const Top: React.FC = () => {
 
         setNotesByDate(newNotesByDate);
       } catch (error) {
-        console.error("Error fetching notes for month:", error);
+        console.error("Error fetching notes for month:", getErrorSummary(error));
       }
     }
 
@@ -223,10 +226,7 @@ const Top: React.FC = () => {
               <MenuItem
                 py={3}
                 borderRadius="md"
-                onClick={() => {
-                  localStorage.removeItem("token");
-                  router.push("/login");
-                }}
+                onClick={logout}
               >
                 Log Out
               </MenuItem>

@@ -17,6 +17,10 @@ export async function loginUser(email: string, password: string): Promise<LoginR
   );
 }
 
+export async function logoutUser(): Promise<void> {
+  await apiRequest<void>(API_ENDPOINTS.LOGOUT, "post", {});
+}
+
 /**
  * Get session information (equivalent to get-user)
  */
@@ -31,7 +35,7 @@ export async function fetchSession(token: string) {
  * Refresh an access token with a refresh token
  */
 export async function refreshAccessToken() {
-  return await apiRequestWithAuth<{ access_token: string }>(
+  return await apiRequest<{ access_token: string }>(
     API_ENDPOINTS.REFRESH,
     "post",
     {}

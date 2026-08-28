@@ -4,6 +4,7 @@ import { useToast } from "@chakra-ui/react";
 import { apiRequestWithAuth } from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 import { getToken } from "../../../../shared/utils/tokenUtils";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 export const useUserEdit = () => {
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -51,7 +52,7 @@ export const useUserEdit = () => {
         } else if (error instanceof Error) {
           errorMsg = error.message;
         }
-        console.error("Error updating user:", errorMsg);
+        console.error("Error updating user:", getErrorSummary(error));
         toast({
           title: "Error!",
           description: `Failed to update user data: ${errorMsg}`,

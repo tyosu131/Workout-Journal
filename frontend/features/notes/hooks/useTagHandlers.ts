@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { NoteData } from "../../../types/types";
 import { saveNoteAPI, createTagAPI } from "../api";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 /**
  * Hook that groups tag operations
@@ -21,7 +22,9 @@ const useTagHandlers = (
       }
       const updated = { ...noteData, tags: currentTags };
       setNoteData(updated);
-      saveNoteAPI(updated).catch(console.error);
+      saveNoteAPI(updated).catch((error) => {
+        console.error("Failed to save tag change:", getErrorSummary(error));
+      });
     },
     [noteData, setNoteData]
   );
@@ -34,7 +37,9 @@ const useTagHandlers = (
       currentTags.splice(tagIndex, 1);
       const updated = { ...noteData, tags: currentTags };
       setNoteData(updated);
-      saveNoteAPI(updated).catch(console.error);
+      saveNoteAPI(updated).catch((error) => {
+        console.error("Failed to save tag change:", getErrorSummary(error));
+      });
     },
     [noteData, setNoteData]
   );
@@ -45,8 +50,8 @@ const useTagHandlers = (
       if (!noteData) return;
       try {
         await createTagAPI(tag);
-      } catch (err: any) {
-        console.error("Failed to create tag in user_tags:", err);
+      } catch (err: unknown) {
+        console.error("Failed to create tag in user_tags:", getErrorSummary(err));
       }
       handleAddTag(tag);
     },

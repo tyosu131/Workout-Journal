@@ -11,6 +11,12 @@ const {
   generateRefreshToken,
 } = require("../utils/authUtils");
 const validator = require("validator");
+const {
+  REFRESH_COOKIE_NAME,
+  setRefreshCookie,
+  clearRefreshCookie,
+} = require("../utils/refreshCookie");
+const { getErrorSummary } = require("../utils/errorSummary");
 
 /**
  * Get session
@@ -33,7 +39,7 @@ const handleSession = async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Failed to fetch user from DB:", error);
+      console.error("Failed to fetch user from DB:", getErrorSummary(error));
       return res.status(500).json({ error: "Database error" });
     }
     if (!dbUser) {
@@ -41,7 +47,7 @@ const handleSession = async (req, res) => {
     }
     return res.status(200).json({ user: dbUser });
   } catch (error) {
-    console.error("Session retrieval failed:", error.message);
+    console.error("Session retrieval failed:", getErrorSummary(error));
     return res.status(500).json({ error: "Session retrieval failed" });
   }
 };
@@ -50,7 +56,7 @@ const handleSession = async (req, res) => {
  * Reissue an access token with a refresh token
  */
 const handleRefresh = async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
     return res.status(401).json({ error: "Refresh token is missing" });
   }
@@ -64,7 +70,7 @@ const handleRefresh = async (req, res) => {
     const newAccessToken = generateAccessToken(decoded);
     return res.status(200).json({ access_token: newAccessToken });
   } catch (error) {
-    console.error("Failed to refresh token:", error.message);
+    console.error("Failed to refresh token:", getErrorSummary(error));
     return res.status(500).json({ error: "Failed to refresh token" });
   }
 };
@@ -114,23 +120,18 @@ const handleSignUp = async (req, res) => {
       .from("users")
       .upsert([{ uuid: createdUser.id, name: username, email }], { onConflict: "uuid" });
     if (dbError) {
-      console.error("Sign-up succeeded but profile creation failed:", dbError.message);
+      console.error("Sign-up succeeded but profile creation failed:", getErrorSummary(dbError));
       throw dbError;
     }
 
     const token = generateAccessToken(createdUser);
     const refreshToken = generateRefreshToken(createdUser);
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshCookie(res, refreshToken);
 
     return res.status(201).json({ token, user: createdUser, verificationRequired: false });
   } catch (error) {
-    console.error("Failed to sign up user:", error.message);
+    console.error("Failed to sign up user:", getErrorSummary(error));
     return res.status(500).json({ error: error.message });
   }
 };
@@ -169,7 +170,7 @@ const handleLogin = async (req, res) => {
       .eq("uuid", data.user.id)
       .maybeSingle();
     if (profileLookupError) {
-      console.error("Failed to look up login profile:", profileLookupError.message);
+      console.error("Failed to look up login profile:", getErrorSummary(profileLookupError));
       return res.status(500).json({ error: "Login failed" });
     }
 
@@ -183,7 +184,7 @@ const handleLogin = async (req, res) => {
           { onConflict: "uuid" }
         );
       if (profileCreateError) {
-        console.error("Login succeeded but profile creation failed:", profileCreateError.message);
+        console.error("Login succeeded but profile creation failed:", getErrorSummary(profileCreateError));
         return res.status(500).json({ error: "Login failed" });
       }
     }
@@ -191,16 +192,11 @@ const handleLogin = async (req, res) => {
     const token = generateAccessToken(data.user);
     const refreshToken = generateRefreshToken(data.user);
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshCookie(res, refreshToken);
 
     return res.status(200).json({ token, user: data.user });
   } catch (error) {
-    console.error("Login error:", error.message);
+    console.error("Login error:", getErrorSummary(error));
     return res.status(500).json({ error: "Login failed" });
   }
 };
@@ -216,7 +212,6 @@ const handleGetUser = async (req, res) => {
 
   try {
     const decoded = await verifyToken(token);
-    console.log("Decoded ID:", decoded.id);
     if (!decoded) {
       return res.status(401).json({ error: "Invalid token" });
     }
@@ -227,20 +222,17 @@ const handleGetUser = async (req, res) => {
       .eq("uuid", decoded.id)
       .single();
 
-    console.log("Supabase query result:", dbUser, error);
-
     if (error) {
-      console.error("Failed to fetch user from DB:", error);
+      console.error("Failed to fetch user from DB:", getErrorSummary(error));
       return res.status(500).json({ error: "Database error" });
     }
     if (!dbUser) {
-      console.log("User not found. ID:", decoded.id);
       return res.status(404).json({ error: "User not found" });
     }
 
     return res.status(200).json(dbUser);
   } catch (error) {
-    console.error("Failed to fetch user:", error.message);
+    console.error("Failed to fetch user:", getErrorSummary(error));
     return res.status(500).json({ error: "Failed to fetch user" });
   }
 };
@@ -279,7 +271,7 @@ const handleUpdateUser = async (req, res) => {
       .eq("uuid", userId)
       .maybeSingle();
     if (userError) {
-      console.error("Failed to fetch current user profile:", userError.message);
+      console.error("Failed to fetch current user profile:", getErrorSummary(userError));
       return res.status(500).json({ error: "Database error" });
     }
     if (!dbUser) {
@@ -302,13 +294,13 @@ const handleUpdateUser = async (req, res) => {
       .update({ name: username })
       .eq("uuid", userId);
     if (profileError) {
-      console.error("Failed to update user profile:", profileError.message);
+      console.error("Failed to update user profile:", getErrorSummary(profileError));
       return res.status(500).json({ error: "Failed to update user" });
     }
 
     return res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
-    console.error("Failed to update user:", error.message);
+    console.error("Failed to update user:", getErrorSummary(error));
     return res.status(500).json({ error: "Failed to update user" });
   }
 };
@@ -336,15 +328,20 @@ const handleForgotPassword = async (req, res) => {
     });
 
     if (error) {
-      console.error("Reset password error:", error);
+      console.error("Reset password error:", getErrorSummary(error));
       return res.status(500).json({ error: "Failed to send reset email" });
     }
 
     return res.status(200).json({ message: "Password reset email sent" });
   } catch (err) {
-    console.error("Exception in forgot password:", err);
+    console.error("Exception in forgot password:", getErrorSummary(err));
     return res.status(500).json({ error: "Server error" });
   }
+};
+
+const handleLogout = (req, res) => {
+  clearRefreshCookie(res);
+  return res.status(200).json({ message: "Logged out" });
 };
 
 module.exports = {
@@ -355,4 +352,5 @@ module.exports = {
   handleGetUser,
   handleUpdateUser,
   handleForgotPassword,
+  handleLogout,
 };

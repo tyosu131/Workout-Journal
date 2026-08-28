@@ -7,11 +7,7 @@ import { validateEmail } from "../../../../shared/utils/validationUtils";
 import { URLS } from "../../../../shared/constants/urls";
 import { apiRequest } from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
-
-const getErrorSummary = (error: any) => ({
-  status: error?.response?.status,
-  message: error?.message,
-});
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,8 +16,6 @@ const Login: React.FC = () => {
   const router = useRouter();
 
   const handleLogin = async () => {
-    console.log("Attempting login");
-
     if (!validateEmail(email)) {
       toast({
         title: 'Invalid email format',
@@ -36,9 +30,7 @@ const Login: React.FC = () => {
     try {
       const result: { token: string } = await apiRequest(API_ENDPOINTS.LOGIN, 'post', { email, password });
 
-      console.log("Login successful, token received:", Boolean(result.token));
       setToken(result.token);
-      console.log("Token saved to localStorage:", Boolean(localStorage.getItem("token")));
       router.push(URLS.TOP_PAGE);
 
       toast({
@@ -48,11 +40,11 @@ const Login: React.FC = () => {
         duration: 5000,
         isClosable: true,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", getErrorSummary(error));
       toast({
         title: 'Login failed',
-        description: `An error occurred: ${error.message}. Please try again later.`,
+        description: 'An error occurred. Please try again later.',
         status: 'error',
         duration: 5000,
         isClosable: true,

@@ -19,6 +19,7 @@ import { useUserEdit } from "../hooks/useUserEdit";
 import { apiRequestWithAuth } from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../../shared/constants/endpoints";
 import { getToken } from "../../../../shared/utils/tokenUtils";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 const UserSettings: React.FC = () => {
   const { isEditingUsername, handleEdit, handleSave, userData, setUserData } = useUserEdit();
@@ -49,9 +50,10 @@ const UserSettings: React.FC = () => {
             password: "******",
           });
         }
-      } catch (error: any) {
-        console.error("Error fetching user data:", error.message);
-        if (error.response?.status === 401) {
+      } catch (error: unknown) {
+        const errorSummary = getErrorSummary(error);
+        console.error("Error fetching user data:", errorSummary);
+        if (errorSummary.status === 401) {
           toast({
             title: "Session expired",
             description: "Please log in again.",

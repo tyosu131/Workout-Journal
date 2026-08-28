@@ -37,10 +37,11 @@ const {
   handleGetUser,
   handleUpdateUser,
   handleForgotPassword,
+  handleLogout,
 } = require("../authService");
 
 const createResponse = () => {
-  const res = { status: jest.fn(), json: jest.fn(), cookie: jest.fn() };
+  const res = { status: jest.fn(), json: jest.fn(), cookie: jest.fn(), clearCookie: jest.fn() };
   res.status.mockReturnValue(res);
   return res;
 };
@@ -449,5 +450,22 @@ describe("authService client boundaries", () => {
     expect(invalidTokenResponse.json).toHaveBeenCalledWith({ error: "Invalid or expired refresh token" });
     expect(createAuthClient).not.toHaveBeenCalled();
     expect(getAdminDbClient).not.toHaveBeenCalled();
+  });
+
+  it("clears the refresh cookie when logging out", () => {
+    const res = createResponse();
+
+    handleLogout({}, res);
+
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      expect.objectContaining({
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/api/auth",
+      })
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 });

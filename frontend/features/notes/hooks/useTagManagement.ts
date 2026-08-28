@@ -7,6 +7,7 @@ import {
   createTagAPI,
   deleteTagAPI,
 } from "../api";
+import { getErrorSummary } from "../../../lib/errorSummary";
 
 /**
  * Hook that groups tag management logic
@@ -22,7 +23,7 @@ export function useTagManagement() {
     fetchAllTagsAPI()
       .then((fetched) => setTags(fetched))
       .catch((err) => {
-        console.error("Failed to fetch tags:", err);
+        console.error("Failed to fetch tags:", getErrorSummary(err));
         toast({
           title: "Error",
           description: "Failed to load tags.",
@@ -70,7 +71,7 @@ export function useTagManagement() {
         isClosable: true,
       });
     } catch (err: any) {
-      console.error("Failed to create tag", err);
+      console.error("Failed to create tag", getErrorSummary(err));
       toast({
         title: "Error",
         description: err.message || "Failed to create tag.",
@@ -96,7 +97,7 @@ export function useTagManagement() {
         isClosable: true,
       });
     } catch (err: any) {
-      console.error("Failed to delete tag", err);
+      console.error("Failed to delete tag", getErrorSummary(err));
       toast({
         title: "Error",
         description: err.message || "Failed to delete tag.",
