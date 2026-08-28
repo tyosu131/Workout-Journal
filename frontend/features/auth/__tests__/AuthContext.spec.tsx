@@ -69,7 +69,7 @@ describe("AuthProvider route protection", () => {
     container.remove();
   });
 
-  it.each(["/reset-password", "/forgot-password"])(
+  it.each(["/login", "/signup", "/forgot-password", "/reset-password"])(
     "renders %s without a backend JWT or backend session check",
     async (pathname) => {
       router.pathname = pathname;
