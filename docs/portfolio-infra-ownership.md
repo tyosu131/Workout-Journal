@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1A baseline configuration only; no Terraform state or cloud mutation exists yet
+- **Implementation status:** P1B existing-production adoption complete; remote GCS state contains the eight approved resources and the post-import plan is zero-drift
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -13,28 +13,28 @@ Terraform and CD must not compete for the same mutable production state.
 
 ## Approved ownership matrix
 
-| Resource or state | Ownership | P1A status and boundary |
+| Resource or state | Ownership | Current status and boundary |
 | --- | --- | --- |
-| Dedicated GCS Terraform state bucket | Terraform Owns after manual bootstrap and import | Desired resource is defined; bucket does not yet exist |
-| Artifact Registry repository `workout-journal` | Terraform Owns after import | Existing-resource import baseline defined |
-| Backend and Frontend runtime Service Accounts | Terraform Owns after import | Only the two existing runtime identities are defined |
-| Secret Manager secret metadata | Terraform Owns after import | Automatic replication metadata only |
-| Backend runtime access to the two secrets | Terraform Owns after import | Exact additive `secretAccessor` members only |
-| Deploy Service Account `workout-journal-deploy` | Terraform Owns | Approved Next Work; not defined or created in P1A |
-| Build Service Account `workout-journal-build` | Terraform Owns | Approved Next Work; not defined or created in P1A |
-| WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Approved Next Work; not defined or created in P1A |
+| Dedicated GCS Terraform state bucket | Terraform Owns | Manually bootstrapped, verified, imported, and used by the initialized GCS backend |
+| Artifact Registry repository `workout-journal` | Terraform Owns | Imported into remote state; zero-drift verified |
+| Backend and Frontend runtime Service Accounts | Terraform Owns | Both existing runtime identities are in remote state; zero-drift verified |
+| Secret Manager secret metadata | Terraform Owns | Two metadata-only resources are in remote state; secret versions and values remain excluded |
+| Backend runtime access to the two secrets | Terraform Owns | Two exact additive `secretAccessor` members are in remote state; zero-drift verified |
+| Deploy Service Account `workout-journal-deploy` | Future Terraform ownership | P1C future work; not defined or created |
+| Build Service Account `workout-journal-build` | Future Terraform ownership | P1C future work; not defined or created |
+| WIF pool `github-actions` and provider `workout-journal` | Future Terraform ownership | P1C future work; not defined or created |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
 | Candidate creation, promotion, post-deploy verification, and rollback pair | CD / runbook Owns | Must preserve the current paired-release contract |
 | Human Owner bindings and Google-managed service agents | External / Manually Managed | Terraform must not adopt them |
 | Supabase infrastructure | External / Manually Managed | Outside Terraform scope |
-| GitHub Environment and branch protection | External / Manually Managed | Future GitHub governance work; not changed in P1A |
+| GitHub Environment and branch protection | External / Manually Managed | Future GitHub governance work; not changed in P1B |
 | Secret versions, values, and payloads | Do Not Manage | Never enter Terraform configuration, plan, or state |
-| Compute default Service Account | Do Not Manage | Migration target only until dedicated build verification succeeds |
+| Compute default Service Account | Do Not Manage | P1C migration/hardening target only; no role cleanup has occurred |
 | Legacy Cloud Build Service Account | Do Not Manage | Not an adoption target |
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
-| Monitoring and alert resources | Deferred / Pending | Deferred to Must 5 design |
+| Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
 
-“Terraform Owns” above is the approved target ownership. Existing objects do not become Terraform-managed until the P1B import plan is reviewed and applied. New deploy/build/WIF resources belong to a later, separately reviewed P1 plan and must not be mixed into the initial adoption plan.
+The current remote state contains exactly eight resources: the state bucket, Artifact Registry repository, two runtime Service Accounts, two Secret Manager metadata resources, and two additive Backend `secretAccessor` IAM members. P1B imported these existing objects without creating, updating, destroying, or replacing application infrastructure. New deploy/build/WIF resources and their IAM belong to P1C and are not Current.
 
 ## CD-owned delivery contract
 
@@ -60,7 +60,9 @@ main merge
 
 Each release attempt gets a never-reused `CANDIDATE_ID`. A Backend tag referenced by a known-good or rollback-eligible Frontend revision is not moved or removed. Rollback restores the compatible revision pair recorded by the runbook; Terraform does not reconstruct or reconcile it.
 
-## Approved next identity work
+## Approved P1C identity work (Future)
+
+None of the identities, federation resources, or IAM grants in this section has been implemented by P1B.
 
 Future GitHub Actions authentication is keyless Service Account impersonation:
 
@@ -122,7 +124,7 @@ Terraform/WIF foundation
 -> CD activation
 ```
 
-The Environment and branch protection are not created in P1A. Their future implementation must be verified from actual GitHub settings, not inferred from workflow files. See GitHub's official documentation for [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+The Environment and branch protection were not created in P1B. Their future implementation must be verified from actual GitHub settings, not inferred from workflow files. See GitHub's official documentation for [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
 
 ## Dedicated build identity decision
 
@@ -136,11 +138,11 @@ dedicated build succeeds
 + separate Human Gate
 ```
 
-P1A changes no IAM binding.
+P1B created no new IAM binding and changed no existing cloud IAM policy. It adopted only the two previously verified additive Backend `secretAccessor` members. Dedicated deploy/build identity IAM and any Compute default Service Account cleanup remain P1C future work.
 
-## State ownership and adoption gate
+## Completed P1B state ownership and adoption record
 
-The candidate bucket is `workout-journal-506909-tfstate`; global availability is Pending Evidence. Because a GCS backend requires a pre-existing bucket, P1B must use this exact Human-gated order:
+In P1A, `workout-journal-506909-tfstate` was a candidate whose global availability was Pending Evidence. P1B confirmed availability by creating the dedicated bucket through its Human Gate, verified the complete bootstrap contract, and completed the following adoption sequence:
 
 1. Verify the candidate bucket name is globally available.
 2. With Human approval, manually bootstrap the bucket once using the approved settings.
@@ -163,9 +165,9 @@ gcloud storage buckets describe \
 
 The read-back contract uses the actual raw API fields: `name` must be `workout-journal-506909-tfstate`; `projectNumber` must be `437413312066`, which is the approved project `workout-journal-506909`; `location` must be `ASIA-NORTHEAST1`, the API representation of `asia-northeast1`; `iamConfiguration.uniformBucketLevelAccess.enabled` must be `true`; `iamConfiguration.publicAccessPrevention` must be `enforced`; and `versioning.enabled` must be `true`. A successful create command alone does not pass this gate.
 
-If any read-back property differs, stop before adding or executing the state bucket import, backend initialization, any Terraform plan, or any Terraform import/apply operation. `force_destroy = false` and `prevent_destroy = true` are Terraform configuration protections rather than remote bucket properties and are not part of the read-back.
+The read-back matched every required property before import and backend initialization. `force_destroy = false` and `prevent_destroy = true` are Terraform configuration protections rather than remote bucket properties and were not part of the read-back.
 
-The adoption gate is an imports-only plan followed by a baseline plan of:
+The reviewed imports-only plan and the import apply both reported no resource create, update, destroy, or replacement. The required post-import baseline plan reported:
 
 ```text
 0 to add
@@ -173,16 +175,16 @@ The adoption gate is an imports-only plan followed by a baseline plan of:
 0 to destroy
 ```
 
-No hardening, new identity, WIF, or IAM redesign may be mixed into that first baseline. State and plan design contains no secret values.
+Remote state now contains exactly the eight approved resources. No secret values entered configuration, plan output, or state. No hardening, new identity, WIF, or IAM redesign was mixed into the adoption.
 
-Provider refresh/import zero-drift remains PE-1. State bucket global availability, manual bootstrap, actual property read-back, its import block, and backend initialization remain PE-2. This P1A documentation does not close either Pending Evidence item.
+PE-1 is Closed by the successful eight-resource import and post-import zero-drift plan. PE-2 is Closed by the successful bucket bootstrap, exact property read-back, state-bucket import block, and initialized GCS backend.
 
 ## Human gates and deferred risk
 
-| Future action | Risk | Required gate |
+| Action | Risk | Required gate / status |
 | --- | --- | --- |
-| State bucket bootstrap and first remote state | High | Post-bootstrap read-only property verification before import/backend initialization, then reviewed imports-only plan |
-| Existing resource and IAM-member import | High | Exact identifiers and zero-change post-import plan |
+| State bucket bootstrap and first remote state | High | P1B complete: read-back verified, backend initialized, and zero-drift confirmed |
+| Existing resource and IAM-member import | High | P1B complete: eight imports, no resource mutation, and zero-drift confirmed |
 | WIF attribute mapping and trust condition | High | Numeric/name/ref/workflow claim review |
 | Dedicated deploy/build SA and IAM creation | High | Least-privilege permission review |
 | Compute default SA role removal | High | Successful dedicated build, dependency audit, separate Human Gate |

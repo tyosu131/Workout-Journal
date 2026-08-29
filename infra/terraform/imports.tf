@@ -1,6 +1,10 @@
 # These import blocks target only resources verified to exist during P1.
-# P1A does not execute them. The not-yet-existing state bucket is intentionally
-# absent; README.md defines the gated P1B bootstrap and import sequence.
+# The state bucket block was added only after the P1B bootstrap read-back passed.
+
+import {
+  to = google_storage_bucket.terraform_state
+  id = "workout-journal-506909/workout-journal-506909-tfstate"
+}
 
 import {
   to = google_artifact_registry_repository.workout_journal
