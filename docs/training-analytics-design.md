@@ -1,5 +1,8 @@
 # Training Analytics Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 Workout Journal will evolve from a simple workout log into a training analytics foundation for hypertrophy, strength progress, exercise-specific trends, and mobile-friendly gym usage.

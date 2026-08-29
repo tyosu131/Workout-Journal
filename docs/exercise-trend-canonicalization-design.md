@@ -1,5 +1,8 @@
 # Exercise Trend Canonicalization Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 The Analytics page now includes an Exercises tab with an exercise-specific trend selector. The current implementation intentionally uses exact raw `exerciseName` matching. That is simple, predictable, and safe, but it also means related names such as `Bench Press`, `bench press`, `ベンチプレス`, `Paused Bench Press`, and `Competition Bench` can appear as separate exercises.

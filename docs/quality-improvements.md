@@ -46,6 +46,7 @@ This project has been improved with cloud migration, production operation, and c
 - Added build-context exclusions for environment files, credentials, Git data, dependencies, coverage, and temporary artifacts.
 - Added Cloud Build configuration for two git-SHA-tagged Artifact Registry images.
 - Added a digest-based deployment, known-good revision-pair, redeploy, and rollback runbook.
+- Completed the approved Cloud Run/Supabase production deployment, major-workflow browser smoke, and synthetic-data cleanup. The known-good artifact and revision pair are recorded in the [v1 production release record](./releases/workout-journal-v1.md).
 
 ### Bug Fix
 
@@ -63,12 +64,11 @@ npm test
 
 ## Remaining Work
 
-- Resolve the Next.js custom font warning.
 - Resolve or document the Google Fonts download warning during build.
 - Add more backend service and route tests.
 - Add Supabase success and error path tests.
-- Complete the Cloud Run/Supabase Human Gate, no-traffic deployment, production smoke, and browser smoke.
-- Triage remaining production-only moderate advisories separately; critical/high advisories block release.
+- Complete the separately scoped Must conditions in the [Portfolio Finish Completion Contract](./portfolio-completion-contract.md). This does not reopen the completed v1 deployment or smoke.
+- Triage advisories for each future release candidate; critical/high advisories block that candidate unless explicitly resolved or accepted through the applicable release process.
 
 ## How to Explain This Project
 

@@ -1,5 +1,8 @@
 # Backend AI Weekly Summary Endpoint Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 This document defines the design direction for a future backend endpoint that can generate weekly training summaries with an AI provider.

@@ -1,5 +1,8 @@
 # Graph UI Placement Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 Workout Journal now has deterministic analytics utilities that can prepare chart-ready training data, but it does not yet have an analytics user interface. Deciding where graphs belong before implementing them helps protect the existing calendar and workout-entry flows from added complexity.

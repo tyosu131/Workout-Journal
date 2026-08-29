@@ -9,6 +9,7 @@ Every claim below is labelled as one of the following:
 - **Current / Implemented**: confirmed in the current repository code.
 - **Verified Infrastructure Fact**: confirmed by the reviewed Supabase backup, rather than inferred from application code.
 - **Verified Hosted Isolated Fact**: confirmed against the isolated Hosted Supabase verification project; this does not claim production configuration, deployment, or cutover.
+- **Current Production Evidence**: confirmed by the [v1 production release record](./releases/workout-journal-v1.md), including the recorded release artifact, deployed revision pair, production smoke, and cleanup result.
 - **Current Design Decision**: an explicit current boundary or policy reflected in code and supporting design material.
 - **Future Direction**: a proposed next step, not an implemented capability.
 - **Open Question**: not verified from this repository, the reviewed backup, or the isolated Hosted evidence, as applicable.
@@ -161,7 +162,7 @@ flowchart TD
 
 **Current Design Decision:** The historical legacy schema is migration evidence and is not treated as the target schema for the new project.
 
-### Hosted Isolated Verification and Deployment Boundary
+### Hosted Isolated Verification and Current Production Boundary
 
 **Verified Hosted Isolated Fact:** Both repository migrations and the read-only [validation SQL](../supabase/validation/validate_initial_schema.sql) passed in the isolated Hosted project. The schema, constraints, indexes, RLS state, table and sequence privileges, and `remove_tag_from_notes` RPC contract matched the repository definitions.
 
@@ -169,9 +170,9 @@ flowchart TD
 
 **Verified Hosted Isolated Fact:** The synthetic Auth users, profiles, notes, and tags used for verification were removed. The retained isolated project contains zero rows in each of those application/Auth aggregates while its two-entry migration history remains intact.
 
-**Current Design Decision:** The legacy environment contains only disposable test data. Legacy Auth users and application data will not be imported, and the target deployment uses a clean-start data policy. Historical backup evidence remains relevant to the target schema decisions.
+**Current Production Evidence:** The legacy environment contained only disposable test data. Legacy Auth users and application data were not imported, and the v1 production release used the approved clean-start data policy. Historical backup evidence remains relevant to the target schema decisions.
 
-**Future Direction:** Hosted isolated verification is complete, but production configuration, final release-readiness verification, production deployment, and production cutover have not been completed.
+**Current Production Evidence:** The Hosted isolated verification above remains point-in-time evidence. The same target Supabase project was subsequently used by the known-good production release. Production configuration, deployment, major-workflow smoke, and synthetic-data cleanup are complete for v1; see the [v1 production release record](./releases/workout-journal-v1.md).
 
 ### Persisted Application Shape
 
@@ -385,16 +386,16 @@ Persisted notes
 
 **Future Direction:** Before an external provider is introduced, define rate limiting, request-size limits, trusted backend reconstruction of summary input, timeout behavior, and a production logging policy.
 
-### API Open Questions
+### API Status and Open Questions
 
-- **Open Question:** Exact Cloud Run URLs and the deployed end-to-end result remain Human Gate inputs. The code/config architecture fixes the browser-facing boundary at the Frontend origin and uses server-side `BACKEND_INTERNAL_URL` for the Backend target.
+- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. The exact public Frontend URL is not recorded in repository documentation and remains a separate verified input for the final portfolio README.
 - **Open Question:** API versioning is not present in the inspected route mounts.
 - **Open Question:** A common error-response schema is not present across the current services.
 - **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
 - **Open Question:** Rate limiting is not present in the inspected Express middleware or weekly-summary service.
 - **Open Question:** The weekly-summary input may need backend reconstruction from user-scoped notes before external provider use.
 - **Open Question:** The JavaScript backend currently does not reuse the shared TypeScript weekly-summary utilities at runtime.
-- **Future Direction:** Carry the verified Supabase contract into production/release configuration, then repeat the required release-readiness checks before deployment or cutover.
+- **Current Production Evidence:** The verified Supabase contract was carried into the v1 production configuration, and the required production release and smoke checks passed. Future releases must repeat the applicable candidate and post-deploy checks from the deployment runbook.
 - **Open Question:** Resend-verification route mapping and its authentication requirement are unresolved.
 
 ## 6. Async Jobs
@@ -445,8 +446,8 @@ Persisted notes
 | Deterministic analytics | **Current / Implemented** | Numeric derivation requires finite values; missing effort is unknown, and sparse or empty range data renders data-quality or unknown states rather than an effort conclusion. | The Analytics page reports a range-load error, but no separate diagnostics distinguish fetch, parsing, and individual metric-derivation failures. |
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
-| Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project. Production release configuration and final verification remain incomplete; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
-| Production frontend-to-backend connectivity | **Current Design Decision** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the Backend URL from its runtime environment. CORS remains optional defense-in-depth, not the browser connectivity mechanism. | Exact Cloud Run URLs and live browser behavior remain deployment-time Human Gate verification. |
+| Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project and were carried into the v1 production release. Ongoing schema monitoring remains outside the repository evidence; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
+| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | The exact public Frontend URL is not recorded in repository documentation; future candidates still require deployment-time verification. |
 
 ### Current Recovery Behavior
 
@@ -490,9 +491,9 @@ Persisted notes
 ### Known Critical Risks and Release Boundaries
 
 - **Verified Hosted Isolated Fact:** The composite daily-note key, [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end behavior passed in the isolated Hosted project; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
-- **Current Design Decision:** Legacy test data will not be imported. Production deployment will use a clean-start data policy.
-- **Future Direction:** Production configuration, final release verification, deployment, and cutover remain separate uncompleted steps.
-- **Open Question:** Verify the exact Frontend and Backend Cloud Run URLs, HTTPS behavior, same-origin refresh/logout flow, and server-to-server connectivity at the deployment Human Gate.
+- **Current Production Evidence:** Legacy test data was not imported. The v1 production release used the approved clean-start data policy.
+- **Current Production Evidence:** Production configuration, final release verification, deployment, major-workflow smoke, and cleanup are complete for v1; see the [v1 production release record](./releases/workout-journal-v1.md).
+- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. The exact public Frontend URL still requires verified evidence before it is added to the portfolio README.
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
 - **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
@@ -529,7 +530,7 @@ Persisted notes
 
 ### Future Metrics
 
-**Future Direction:** Before production operations depend on the service, define useful metrics without assigning unsupported SLO values. Candidate signals include API request count and latency by route, `4xx` and `5xx` rates, authentication and refresh failures, Supabase query failures, note-save failures, weekly-summary fallback and invalid-provider-response rates, weekly-summary validation failures, and analytics data-quality warning counts.
+**Future Direction:** Before Portfolio Done, define useful operational metrics without assigning unsupported SLO values. Candidate signals include API request count and latency by route, `4xx` and `5xx` rates, authentication and refresh failures, Supabase query failures, note-save failures, weekly-summary fallback and invalid-provider-response rates, weekly-summary validation failures, and analytics data-quality warning counts.
 
 ### Alerting Boundary
 
@@ -557,17 +558,18 @@ Persisted notes
 - [Growth Signals design](./growth-signals-design.md)
 - [Verification baseline](./verification.md)
 - [Quality improvements](./quality-improvements.md)
+- [v1 production release record](./releases/workout-journal-v1.md)
+- [Portfolio Finish Completion Contract](./portfolio-completion-contract.md)
 
 ## Next Engineering Follow-ups
 
-**Future Direction:** Prioritize the following confirmed design and operational gaps before expanding the product surface:
+**Future Direction:** The completed v1 production release is not reopened. Prioritize only work required by the [Portfolio Finish Completion Contract](./portfolio-completion-contract.md) or a separately approved product task:
 
-1. Configure the production/release Supabase and application environment without committing credentials.
-2. Complete final release-readiness verification against that configuration under the clean-start data policy.
-3. Perform production deployment and cutover only after explicit release approval.
-4. Deploy no-traffic Cloud Run candidate revisions by digest and verify same-origin proxy, HTTPS, cookie, and Backend connectivity behavior.
-5. Resolve resend-verification route mapping and authentication-wrapper behavior.
-6. Define production log collection, retention, access control, metrics, and alerts.
-7. Define common API error envelopes.
-8. Define production health checks and operational monitoring.
-9. Add external-provider timeout, rate-limit, and observability design only before real provider integration.
+1. Automate the required production-like candidate E2E workflows.
+2. Define the Terraform/CD ownership boundary, then implement the approved GCP foundation and keyless GitHub OIDC/WIF identity.
+3. Implement the continuous-delivery path while preserving immutable digests, exact Backend tagged URLs, revision pairing, approval, promotion, and rollback behavior.
+4. Define production log collection, retention, access control, health inspection, metrics, actionable alerts, and recovery procedures required for Portfolio Done.
+5. Add static security scanning, dependency/security automation, protected `main`, and required status checks.
+6. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
+7. Define common API error envelopes only if a separate accepted scope requires them.
+8. Add external-provider timeout, rate-limit, and observability design only before real provider integration; external AI integration is not a Portfolio Must.

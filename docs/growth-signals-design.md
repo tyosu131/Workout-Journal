@@ -1,5 +1,8 @@
 # Growth Signals Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 Growth Signals are a proposed Analytics feature for showing whether logged training appears to be improving, flat, sparse, or worth watching.
