@@ -6,9 +6,9 @@ This directory contains the target schema migrations for a new Supabase project.
 
 The isolated verification covered the read-only schema validation, Auth flows, browser password recovery, the backend-only database boundary, direct browser Data API denial, and two-user application isolation. The synthetic Auth users and application rows created for verification have been removed, and the isolated project has been retained with zero Auth users, profiles, notes, and tags.
 
-**Current Project Decision:** the legacy environment contains only disposable test data. Legacy Auth users and application data will not be imported; a new deployment will start clean.
+**Current Project Decision:** the legacy environment contained only disposable test data. Legacy Auth users and application data were not imported; the v1 production release used the approved clean-start policy.
 
-This verified isolated state does not mean that production configuration, production deployment, or production cutover is complete. Those remain release work.
+The Hosted isolated verification remains point-in-time evidence and did not, by itself, establish production readiness. The same target Supabase project was subsequently used by the known-good v1 production release. Production deployment, major-workflow smoke, and synthetic-data cleanup are recorded separately in the [v1 production release record](../docs/releases/workout-journal-v1.md).
 
 No migration in this directory contains production data, Supabase credentials, Auth credentials, email addresses, or user IDs.
 
@@ -54,9 +54,9 @@ The current backend deletes the `user_tags` row and then invokes `remove_tag_fro
 4. **Complete:** Configure Auth and application settings for isolated verification without committing credentials.
 5. **Complete:** Verify signup, login, browser password recovery, note/tag behavior, multi-user isolation, direct Data API denial, backend privileged access, RLS, privileges, and the RPC contract.
 6. **Complete:** Remove synthetic verification users and confirm their profiles, notes, and tags were removed by cascade, leaving the retained isolated project empty.
-7. **Future:** Configure the production/release environment, including its Supabase values and registered password-reset redirect URL.
-8. **Future:** Repeat the required validation and application checks against the final release configuration.
-9. **Future:** Perform production deployment and cutover only after release approval.
+7. **Complete:** Configure the production/release environment, including its Supabase values and registered password-reset redirect URL.
+8. **Complete:** Repeat the required application and release checks against the final configuration.
+9. **Complete:** Perform the approved v1 production deployment, major-workflow smoke, and synthetic-data cleanup; see the [v1 production release record](../docs/releases/workout-journal-v1.md).
 
 Legacy application-data import is not part of the current migration order. [Legacy Data Migration](./legacy-data-migration.md) is retained only as a contingency reference if the Clean Start decision changes in the future.
 
@@ -64,7 +64,7 @@ Legacy application-data import is not part of the current migration order. [Lega
 
 Treat these migrations as forward-only. Do not create a destructive down migration for a project that may contain required data.
 
-Before application cutover, keep the legacy deployment and a protected legacy backup available as the rollback path. The current Clean Start decision does not erase the historical backup evidence. Production configuration, release validation, deployment, and rollback planning must be completed before cutover; a failed release check must stop cutover and be investigated rather than bypassed with a reset or migration-history repair.
+The completed Clean Start decision does not erase the historical backup evidence. Application rollback uses a recorded compatible Frontend/Backend revision pair as defined by the [Cloud Run deployment runbook](../docs/cloud-run-deployment-runbook.md); it does not use a destructive database down migration. For future candidates, a failed release check must stop promotion and be investigated rather than bypassed with a reset or migration-history repair.
 
 ## Open Questions
 

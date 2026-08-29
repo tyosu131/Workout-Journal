@@ -1,5 +1,8 @@
 # RPE / RIR Input Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 This document defines the design direction for adding set-level `rpe`, `rir`, and `failure` fields to Workout Journal.

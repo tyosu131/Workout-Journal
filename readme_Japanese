@@ -9,7 +9,7 @@
 ## 機能一覧
 - ユーザー登録・ログイン
 - ワークアウト記録の作成、更新、削除
-- ユーザー情報の更新（ユーザーネームやメールアドレスなど）
+- ユーザー情報の更新（ユーザーネームのみ）
 - カレンダースタイルの画面で日付ごとのワークアウトを可視化
 
 詳しい機能のコード例や解説は [こちらの GitHub リポジトリ](https://github.com/tyosu131/Workout-Journal.git) をご参照ください。
@@ -26,20 +26,27 @@
    ```bash
    git clone https://github.com/<your_repo>/Workout-Journal.git
    cd Workout-Journal
+   ```
 
 ## 依存関係をインストール
+
+```bash
 npm install
 # または
 yarn install
+```
 
 ## 環境変数の設定 
 Supabase のプロジェクトURLや anon/public キーを登録
 JWT シークレットなど、必要な環境変数を設定
 
 ## アプリを起動
+
+```bash
 npm run dev
 # または
 yarn dev
+```
 
 
 ブラウザで http://にアクセスし、アプリケーションを利用開始

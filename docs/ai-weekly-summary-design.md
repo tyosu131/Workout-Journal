@@ -1,5 +1,8 @@
 # AI Weekly Summary Design
 
+> **Document status:** Historical point-in-time design evidence.<br>
+> This document preserves the design context at the time it was written and is not the current runtime Source of Truth. For current system behavior, see [System Design](./system-design.md) and the [v1 production release record](./releases/workout-journal-v1.md).
+
 ## Overview
 
 AI weekly summary is intended to turn Workout Journal's logged workout data and existing analytics outputs into a concise weekly reflection.
