@@ -7,10 +7,11 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1A (Historical):** Created the configuration-only existing-infrastructure adoption baseline. At that point no backend initialization, state, import, plan, apply, IAM change, or cloud resource creation had been performed.
 - **P1B (Current):** Manually bootstrapped and verified the dedicated state bucket, initialized the GCS backend, and imported all eight approved existing resources into remote state. The reviewed import apply reported `8 imported, 0 added, 0 changed, 0 destroyed`, and the post-import second plan reported no changes.
 - **P1C-A (Current):** Applied and verified the additive, initially inert identity foundation: four prerequisite APIs, dedicated deploy/build Service Accounts, one federation-only pool, one disabled GitHub OIDC provider, and one repository-ID-scoped impersonation member. The reviewed apply reported `9 added, 0 changed, 0 destroyed`, and the post-apply plan reported no changes.
+- **P1C-B (Current):** Applied and verified exactly 13 additive operational IAM members for the approved deploy/build command path. The reviewed apply reported `13 added, 0 changed, 0 destroyed`, bringing remote state to 30 resources; the post-apply plan reported no changes.
 
-PE-1 (provider refresh/import zero-drift) and PE-2 (state bucket bootstrap, read-back, import block, and backend initialization) are Closed. Portfolio Must 3 remains In progress because P1C-B operational IAM, P1C-C build-identity migration and verification, provider activation, and subsequent hardening remain future work.
+PE-1 (provider refresh/import zero-drift) and PE-2 (state bucket bootstrap, read-back, import block, and backend initialization) are Closed. Portfolio Must 3 remains In progress because P1C-C build-identity migration and verification, provider activation, and subsequent hardening remain future work.
 
-This root intentionally contains no Cloud Run service resources, Secret Manager versions or payloads, Service Account keys, operational P1C-B IAM, or monitoring resources. The current P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; the OIDC provider remains explicitly disabled. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
+This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; the OIDC provider remains explicitly disabled. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
 ## Toolchain decision
 
@@ -42,8 +43,21 @@ Official references: [Terraform installation and current release](https://develo
 | `google_iam_workload_identity_pool.github_actions` | Federation-only pool `github-actions` |
 | `google_iam_workload_identity_pool_provider.workout_journal` | Disabled GitHub OIDC provider `workout-journal` |
 | `google_service_account_iam_member.deploy_workload_identity_user` | Exact repository principal's additive deploy-SA impersonation member |
+| `google_project_iam_member.deploy_cloud_build_editor` | Deploy SA Cloud Build invocation member on project `workout-journal-506909` |
+| `google_project_iam_member.deploy_service_usage_consumer` | Deploy SA Service Usage consumer member on project `workout-journal-506909` |
+| `google_artifact_registry_repository_iam_member.deploy_artifact_registry_reader` | Deploy SA reader member on Artifact Registry repository `workout-journal` |
+| `google_cloud_run_v2_service_iam_member.deploy_backend_run_developer` | Deploy SA developer member on Backend Cloud Run service |
+| `google_cloud_run_v2_service_iam_member.deploy_frontend_run_developer` | Deploy SA developer member on Frontend Cloud Run service |
+| `google_service_account_iam_member.deploy_build_act_as` | Deploy SA `actAs` member on the dedicated build SA |
+| `google_service_account_iam_member.deploy_backend_runtime_act_as` | Deploy SA `actAs` member on the Backend runtime SA |
+| `google_service_account_iam_member.deploy_frontend_runtime_act_as` | Deploy SA `actAs` member on the Frontend runtime SA |
+| `google_storage_bucket_iam_member.deploy_source_object_creator` | Deploy SA source-object creator member on `workout-journal-506909_cloudbuild` |
+| `google_storage_bucket_iam_member.deploy_source_bucket_viewer` | Deploy SA bucket-metadata viewer member on `workout-journal-506909_cloudbuild` |
+| `google_artifact_registry_repository_iam_member.build_artifact_registry_writer` | Build SA writer member on Artifact Registry repository `workout-journal` |
+| `google_project_iam_member.build_log_writer` | Build SA Logging writer member on project `workout-journal-506909` |
+| `google_storage_bucket_iam_member.build_source_reader` | Build SA source-object reader member on `workout-journal-506909_cloudbuild` |
 
-Remote state contains exactly these 17 resources: the eight-resource P1B foundation plus the nine-resource P1C-A identity foundation.
+Remote state contains exactly these 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer.
 
 The repository description, Service Account display names, automatic secret replication, and the two IAM members were rechecked against read-only GCP metadata before encoding them. The import IDs use the fully qualified formats documented for [Artifact Registry repositories](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/artifact_registry_repository), [Service Accounts](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/google_service_account), [Secret Manager secrets](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret), and [Secret Manager IAM](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret_iam).
 
@@ -120,18 +134,32 @@ P1C-A passed its saved-plan Human Gate and added exactly nine resources with `0 
 
 The provider condition requires owner ID `95160728`, repository ID `790375516`, the expected owner and repository names, `refs/heads/main`, and the exact future `cd.yml` workflow reference. Actual read-back confirmed that mapping and condition, pool state `ACTIVE` with mode `FEDERATION_ONLY`, and provider state `ACTIVE` with `disabled = true`. Here `ACTIVE` is the provider resource lifecycle state; disabled providers cannot perform new token exchanges.
 
-The dedicated deploy and build Service Accounts exist and each has zero user-managed keys. The deploy Service Account has only the exact P1C-A `roles/iam.workloadIdentityUser` binding; the build Service Account has no IAM binding. Remote state contains 17 resources, and the post-apply plan is zero-drift: `No changes. Your infrastructure matches the configuration.`
+At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation exists, but production CD is not active. The provider remains disabled, `cd.yml` does not yet exist, and P1C-A grants no deploy, build, Cloud Run, Artifact Registry, Logging, Storage, or `serviceAccountUser` permission. P1C-B must separately review and implement operational IAM; P1C-C must separately migrate and verify the dedicated build path. Provider activation, Compute default Service Account cleanup, and production CD activation each remain separate later gates.
+The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled and `cd.yml` does not yet exist. P1C-C must separately migrate and verify the dedicated build path. Provider activation, Compute default Service Account cleanup, and production CD activation each remain separate later gates.
 
-### P1C-B correction ledger
+## Completed P1C-B operational IAM
 
-Future `gcloud builds submit` execution as the deploy Service Account stages local source in `workout-journal-506909_cloudbuild`. P1C-B must therefore review the following resource-scoped candidates against the actual submission path before implementation:
+P1C-B passed its saved-plan Human Gate and applied exactly these 13 additive IAM members with `0 changed` and `0 destroyed`:
 
-- deploy Service Account -> `roles/storage.objectCreator` -> `workout-journal-506909_cloudbuild`;
-- deploy Service Account -> `roles/storage.bucketViewer` -> `workout-journal-506909_cloudbuild`.
+| Principal | Role | Scope | Count |
+| --- | --- | --- | ---: |
+| Deploy Service Account | `roles/cloudbuild.builds.editor` | Project `workout-journal-506909` | 1 |
+| Deploy Service Account | `roles/serviceusage.serviceUsageConsumer` | Project `workout-journal-506909` | 1 |
+| Deploy Service Account | `roles/artifactregistry.reader` | Artifact Registry repository `workout-journal` | 1 |
+| Deploy Service Account | `roles/run.developer` | Backend and Frontend Cloud Run services separately | 2 |
+| Deploy Service Account | `roles/iam.serviceAccountUser` | Build, Backend runtime, and Frontend runtime Service Accounts separately | 3 |
+| Deploy Service Account | `roles/storage.objectCreator` | Bucket `workout-journal-506909_cloudbuild` | 1 |
+| Deploy Service Account | `roles/storage.bucketViewer` | Bucket `workout-journal-506909_cloudbuild` | 1 |
+| Build Service Account | `roles/artifactregistry.writer` | Artifact Registry repository `workout-journal` | 1 |
+| Build Service Account | `roles/logging.logWriter` | Project `workout-journal-506909` | 1 |
+| Build Service Account | `roles/storage.objectViewer` | Bucket `workout-journal-506909_cloudbuild` | 1 |
 
-These grants are not P1C-A resources and are not present in this configuration. The previous P1C-B `10 add` assumption must be recalculated after that review.
+The Service Usage grant supplies `serviceusage.services.use`, which the current Cloud Build CLI submission contract requires in addition to Cloud Build Editor. The source-staging correction is also included: the deploy identity can create the local-source archive and read bucket metadata on the exact Cloud Build source bucket, while the build identity can only read staged source objects. The previous `10 add` and intermediate `12 add` assumptions are historical and obsolete. Actual read-back confirmed all 13 exact members, remote state contains 30 resources, and the post-apply plan is zero-drift: `No changes. Your infrastructure matches the configuration.`
+
+All resources use additive `*_iam_member` forms. The Cloud Run resources own only service-level IAM membership, not service configuration, revisions, images, environment, tags, traffic, promotion, or rollback state. P1C-B grants no project-wide `serviceAccountUser`, Secret Manager access, Service Account Token Creator, basic role, or Service Account key. The WIF provider remains disabled.
+
+IAM configured does not mean the dedicated build path is proven functional. `PE-P1C-01` remains open: runtime sufficiency of this exact role set must be proven by a separately approved P1C-C repository build. P1C-C remains responsible for selecting the dedicated build Service Account in `cloudbuild.yaml`, running a Human-gated real build, and verifying source staging/read, Backend and Frontend image pushes, the actual build execution identity, and `CLOUD_LOGGING_ONLY`. P1C-B does not broaden permissions to close that evidence gap speculatively.
 
 ## Historical P1A local validation
 
