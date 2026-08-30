@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption complete; remote GCS state contains the eight approved resources and the post-import plan is zero-drift
+- **Implementation status:** P1B existing-production adoption and P1C-A disabled-WIF foundation complete; remote GCS state contains 17 resources and the post-apply plan is zero-drift
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -20,9 +20,11 @@ Terraform and CD must not compete for the same mutable production state.
 | Backend and Frontend runtime Service Accounts | Terraform Owns | Both existing runtime identities are in remote state; zero-drift verified |
 | Secret Manager secret metadata | Terraform Owns | Two metadata-only resources are in remote state; secret versions and values remain excluded |
 | Backend runtime access to the two secrets | Terraform Owns | Two exact additive `secretAccessor` members are in remote state; zero-drift verified |
-| Deploy Service Account `workout-journal-deploy` | Future Terraform ownership | P1C future work; not defined or created |
-| Build Service Account `workout-journal-build` | Future Terraform ownership | P1C future work; not defined or created |
-| WIF pool `github-actions` and provider `workout-journal` | Future Terraform ownership | P1C future work; not defined or created |
+| IAM, Cloud Resource Manager, IAM Credentials, and STS APIs | Terraform Owns | Four prerequisite `google_project_service` resources are enabled and protected from disable-on-destroy |
+| Deploy Service Account `workout-journal-deploy` | Terraform Owns | Exists with zero user-managed keys and no operational P1C-B role |
+| Build Service Account `workout-journal-build` | Terraform Owns | Exists with zero user-managed keys and no IAM binding; it does not yet execute Cloud Build |
+| WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Pool is `ACTIVE` / `FEDERATION_ONLY`; provider resource is `ACTIVE` but remains `disabled = true` |
+| Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
 | Candidate creation, promotion, post-deploy verification, and rollback pair | CD / runbook Owns | Must preserve the current paired-release contract |
 | Human Owner bindings and Google-managed service agents | External / Manually Managed | Terraform must not adopt them |
@@ -34,7 +36,7 @@ Terraform and CD must not compete for the same mutable production state.
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
 | Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
 
-The current remote state contains exactly eight resources: the state bucket, Artifact Registry repository, two runtime Service Accounts, two Secret Manager metadata resources, and two additive Backend `secretAccessor` IAM members. P1B imported these existing objects without creating, updating, destroying, or replacing application infrastructure. New deploy/build/WIF resources and their IAM belong to P1C and are not Current.
+The current remote state contains exactly 17 resources: the eight-resource P1B foundation plus four prerequisite APIs, two dedicated Service Accounts, one WIF pool, one disabled WIF provider, and one additive deploy-SA impersonation member from P1C-A. The reviewed P1C-A apply added nine resources without changing or destroying existing infrastructure, and the post-apply plan is zero-drift. Operational IAM remains P1C-B future work.
 
 ## CD-owned delivery contract
 
@@ -60,9 +62,9 @@ main merge
 
 Each release attempt gets a never-reused `CANDIDATE_ID`. A Backend tag referenced by a known-good or rollback-eligible Frontend revision is not moved or removed. Rollback restores the compatible revision pair recorded by the runbook; Terraform does not reconstruct or reconcile it.
 
-## Approved P1C identity work (Future)
+## Completed P1C-A identity foundation and future P1C-B operations
 
-None of the identities, federation resources, or IAM grants in this section has been implemented by P1B.
+P1C-A created and verified the identity foundation in Terraform. Its GitHub provider is explicitly disabled, and its only new IAM grant is the additive repository-ID-scoped `roles/iam.workloadIdentityUser` member on the dedicated deploy Service Account. No operational deploy/build role is part of P1C-A.
 
 Future GitHub Actions authentication is keyless Service Account impersonation:
 
@@ -74,7 +76,7 @@ GitHub Actions OIDC
 -> workout-journal-deploy Service Account impersonation
 ```
 
-The provider must map at least:
+The provider maps:
 
 ```text
 google.subject                = assertion.sub
@@ -86,7 +88,7 @@ attribute.ref                 = assertion.ref
 attribute.workflow_ref        = assertion.workflow_ref
 ```
 
-The provider trust condition must require all of:
+The provider trust condition requires all of:
 
 ```text
 repository_owner_id == 95160728
@@ -97,7 +99,7 @@ ref                 == refs/heads/main
 workflow_ref        == tyosu131/Workout-Journal/.github/workflows/cd.yml@refs/heads/main
 ```
 
-Numeric owner/repository IDs are the stable trust anchors; name checks provide defense in depth and make intent reviewable. The future `roles/iam.workloadIdentityUser` grant belongs on the deploy Service Account and must be limited to the mapped repository principal. The deploy identity receives only the permissions needed to invoke Cloud Build and perform the approved Cloud Run delivery contract, including `actAs` only for the dedicated build and approved runtime Service Accounts. It does not need Secret Manager payload access merely to deploy a revision that references existing secret versions.
+Numeric owner/repository IDs are the stable trust anchors; name checks provide defense in depth and make intent reviewable. P1C-A owns `roles/iam.workloadIdentityUser` on the deploy Service Account, limited to repository ID `790375516` through the mapped repository principal. The provider resource state is `ACTIVE`, but `disabled = true` remains the authentication gate until a later activation review. In P1C-B, the deploy identity may receive only the separately proven permissions needed to invoke Cloud Build and perform the approved Cloud Run delivery contract, including `actAs` only for the dedicated build and approved runtime Service Accounts. It does not need Secret Manager payload access merely to deploy a revision that references existing secret versions.
 
 Google requires mappings for claims used in provider conditions and recommends restricting a shared GitHub issuer with an attribute condition. GitHub documents `repository_owner_id`, `repository_id`, `repository_owner`, `repository`, `ref`, and `workflow_ref` as OIDC token claims. See [Google Cloud deployment-pipeline federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines) and the [GitHub OIDC claim reference](https://docs.github.com/en/actions/reference/security/oidc).
 
@@ -124,11 +126,13 @@ Terraform/WIF foundation
 -> CD activation
 ```
 
-The Environment and branch protection were not created in P1B. Their future implementation must be verified from actual GitHub settings, not inferred from workflow files. See GitHub's official documentation for [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+The Environment and branch protection were not created by P1C-A. Their future implementation must be verified from actual GitHub settings, not inferred from workflow files. See GitHub's official documentation for [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
 
 ## Dedicated build identity decision
 
-A dedicated build Service Account is approved. The future custom build identity should own the least-privilege Artifact Registry write and Cloud Logging write path; the deploy identity should be able to invoke builds and act as that build identity only as required. The exact permissions must be reviewed against the final `cloudbuild.yaml` and Google's [user-specified Cloud Build Service Account guidance](https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts) before creation.
+The dedicated build Service Account now exists with zero user-managed keys and no IAM binding, but it does not yet execute Cloud Build. P1C-C should migrate the build path only after P1C-B proves the least-privilege Artifact Registry write, Cloud Logging write, build invocation, and exact `actAs` requirements. Those permissions must be reviewed against the final `cloudbuild.yaml` and Google's [user-specified Cloud Build Service Account guidance](https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts) before operational use.
+
+P1C-B correction ledger: future `gcloud builds submit` runs as the dedicated deploy Service Account and stages local source into `workout-journal-506909_cloudbuild`. Before P1C-B implementation, review the deploy Service Account candidates `roles/storage.objectCreator` and `roles/storage.bucketViewer` on that exact bucket. Neither grant belongs to P1C-A, and the previous P1C-B `10 add` expectation must be recalculated rather than reused.
 
 Compute default Service Account Editor removal is **not** part of initial creation. Any removal requires all three gates:
 
@@ -138,7 +142,7 @@ dedicated build succeeds
 + separate Human Gate
 ```
 
-P1B created no new IAM binding and changed no existing cloud IAM policy. It adopted only the two previously verified additive Backend `secretAccessor` members. Dedicated deploy/build identity IAM and any Compute default Service Account cleanup remain P1C future work.
+P1B created no new IAM binding and changed no existing cloud IAM policy. It adopted only the two previously verified additive Backend `secretAccessor` members. P1C-A added one additive, repository-scoped impersonation member but no operational IAM. Dedicated deploy/build operational IAM and any Compute default Service Account cleanup remain future, separately gated work.
 
 ## Completed P1B state ownership and adoption record
 
@@ -175,7 +179,7 @@ The reviewed imports-only plan and the import apply both reported no resource cr
 0 to destroy
 ```
 
-Remote state now contains exactly the eight approved resources. No secret values entered configuration, plan output, or state. No hardening, new identity, WIF, or IAM redesign was mixed into the adoption.
+At P1B closure, remote state contained exactly the eight approved resources. No secret values entered configuration, plan output, or state. No hardening, new identity, WIF, or IAM redesign was mixed into that adoption.
 
 PE-1 is Closed by the successful eight-resource import and post-import zero-drift plan. PE-2 is Closed by the successful bucket bootstrap, exact property read-back, state-bucket import block, and initialized GCS backend.
 
@@ -185,8 +189,9 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | --- | --- | --- |
 | State bucket bootstrap and first remote state | High | P1B complete: read-back verified, backend initialized, and zero-drift confirmed |
 | Existing resource and IAM-member import | High | P1B complete: eight imports, no resource mutation, and zero-drift confirmed |
-| WIF attribute mapping and trust condition | High | Numeric/name/ref/workflow claim review |
-| Dedicated deploy/build SA and IAM creation | High | Least-privilege permission review |
+| Disabled WIF foundation and exact trust condition | High | P1C-A complete: actual mapping/condition verified, provider disabled, and zero-drift confirmed |
+| Dedicated deploy/build SA creation | High | P1C-A complete: both identities exist with zero user-managed keys and no operational roles |
+| P1C-B operational IAM | High | Future: independently recomputed least-privilege matrix and Human Gate |
 | Compute default SA role removal | High | Successful dedicated build, dependency audit, separate Human Gate |
 | Production CD activation | High | Protected `main`, required CI, automated candidate E2E, Environment approval |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |
