@@ -8,9 +8,9 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1B (Current):** Manually bootstrapped and verified the dedicated state bucket, initialized the GCS backend, and imported all eight approved existing resources into remote state. The reviewed import apply reported `8 imported, 0 added, 0 changed, 0 destroyed`, and the post-import second plan reported no changes.
 - **P1C-A (Current):** Applied and verified the additive, initially inert identity foundation: four prerequisite APIs, dedicated deploy/build Service Accounts, one federation-only pool, one disabled GitHub OIDC provider, and one repository-ID-scoped impersonation member. The reviewed apply reported `9 added, 0 changed, 0 destroyed`, and the post-apply plan reported no changes.
 - **P1C-B (Current):** Applied and verified exactly 13 additive operational IAM members for the approved deploy/build command path. The reviewed apply reported `13 added, 0 changed, 0 destroyed`, bringing remote state to 30 resources; the post-apply plan reported no changes.
-- **P1C-C configuration (Proposed / Pending Real-Build Human Gate):** `cloudbuild.yaml` selects the dedicated Build Service Account and preserves `CLOUD_LOGGING_ONLY`; no real build has been submitted and no dedicated-build success is claimed.
+- **P1C-C dedicated Build execution (Current / Complete):** Human-gated build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact tested commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account. Both exact-SHA image tags resolve to immutable digests, `CLOUD_LOGGING_ONLY` logs are readable, and Cloud Run remained unchanged.
 
-PE-1 (provider refresh/import zero-drift) and PE-2 (state bucket bootstrap, read-back, import block, and backend initialization) are Closed. Portfolio Must 3 remains In progress because P1C-C real-build verification, provider activation, and subsequent hardening remain future work.
+PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), and PE-P1C-01A (dedicated Build execution) are Closed. Portfolio Must 3 remains In progress because PE-P1C-01B deploy submission under WIF/CD, provider activation, and subsequent hardening remain future work.
 
 This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; the OIDC provider remains explicitly disabled. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
@@ -137,7 +137,7 @@ The provider condition requires owner ID `95160728`, repository ID `790375516`, 
 
 At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled and `cd.yml` does not yet exist. The P1C-C build configuration is Proposed / Pending Real-Build Human Gate; the dedicated build path is not yet runtime-verified. Provider activation, Compute default Service Account cleanup, and production CD activation each remain separate later gates.
+The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled and `cd.yml` does not yet exist. P1C-C runtime-verified the dedicated Build Service Account only; Deploy-SA submission under WIF remains unproven. Provider activation, Compute default Service Account cleanup, and production CD activation each remain separate later gates.
 
 ## Completed P1C-B operational IAM
 
@@ -160,7 +160,18 @@ The Service Usage grant supplies `serviceusage.services.use`, which the current 
 
 All resources use additive `*_iam_member` forms. The Cloud Run resources own only service-level IAM membership, not service configuration, revisions, images, environment, tags, traffic, promotion, or rollback state. P1C-B grants no project-wide `serviceAccountUser`, Secret Manager access, Service Account Token Creator, basic role, or Service Account key. The WIF provider remains disabled.
 
-IAM configured and a proposed build configuration do not mean the dedicated build path is proven functional. `PE-P1C-01` remains open: runtime sufficiency of this exact role set must be proven by a separately approved P1C-C repository build from the exact clean committed SHA. That human-submitted build may prove the dedicated Build Service Account can read staged source, build and push both images, and write Cloud Logging. It does not independently prove that the dedicated Deploy Service Account can stage source, invoke Cloud Build, attach the Build Service Account, or operate through WIF; that evidence remains for the later WIF/CD phase. P1C-B does not broaden permissions, enable WIF, or grant Service Account Token Creator to close those gaps speculatively.
+## Completed P1C-C dedicated Build execution
+
+`PE-P1C-01A — Dedicated Build execution` is Closed. Human-gated Cloud Build `44a37101-eb7c-4f12-8901-5b3854afd7ae` completed with `SUCCESS` from exact tested commit `709c55a934783917184d09831facc085e7bc19c9`. Build metadata reported the actual execution identity as `projects/workout-journal-506909/serviceAccounts/workout-journal-build@workout-journal-506909.iam.gserviceaccount.com` and logging as `CLOUD_LOGGING_ONLY`; the logs were readable.
+
+The build completed the repository source build, Backend Docker build, Frontend Docker build, and both Artifact Registry pushes. The exact-SHA verification artifacts resolve to these immutable digests:
+
+- Backend: `asia-northeast1-docker.pkg.dev/workout-journal-506909/workout-journal/workout-journal-backend:709c55a934783917184d09831facc085e7bc19c9` -> `sha256:a36a6e9ee78ab59c8de5eccd1595bb740342e31b896acea0cb20aed1d8614c04`
+- Frontend: `asia-northeast1-docker.pkg.dev/workout-journal-506909/workout-journal/workout-journal-frontend:709c55a934783917184d09831facc085e7bc19c9` -> `sha256:d65af4c241e31658d684191f1d831b79d9bb6bd5b0043ea315affcd1ed0d7ea6`
+
+These images are P1C-C verification artifacts, not production-deployed images. Backend and Frontend Cloud Run state remained unchanged, and the build execution window contained no Cloud Run Admin Activity.
+
+`PE-P1C-01B — Deploy submission / WIF path` remains Open: can the dedicated Deploy Service Account under the intended GitHub WIF credentials stage repository source, invoke Cloud Build, attach the dedicated Build Service Account, and complete the same submission path? The successful human-submitted build does not prove that path. The provider remains disabled; P1C-C added no Service Account Token Creator grant, Service Account key, IAM change, or WIF activation.
 
 ## Historical P1A local validation
 

@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, and P1C-B operational least-privilege IAM complete; P1C-C configuration is Proposed / Pending Real-Build Human Gate; remote GCS state contains 30 resources and the current Terraform plan is zero-drift
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, and P1C-C dedicated Build execution complete; remote GCS state contains 30 resources and the current Terraform plan is zero-drift
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -22,7 +22,7 @@ Terraform and CD must not compete for the same mutable production state.
 | Backend runtime access to the two secrets | Terraform Owns | Two exact additive `secretAccessor` members are in remote state; zero-drift verified |
 | IAM, Cloud Resource Manager, IAM Credentials, and STS APIs | Terraform Owns | Four prerequisite `google_project_service` resources are enabled and protected from disable-on-destroy |
 | Deploy Service Account `workout-journal-deploy` | Terraform Owns | Keyless identity with exact P1C-A impersonation and P1C-B operational additive members; provider remains disabled |
-| Build Service Account `workout-journal-build` | Terraform Owns | Keyless identity with exact P1C-B build permissions; the proposed P1C-C build config selects it, but no real build has executed yet |
+| Build Service Account `workout-journal-build` | Terraform Owns | Keyless identity with exact P1C-B build permissions; P1C-C runtime-verified its repository build, two image pushes, and Cloud Logging path |
 | WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Pool is `ACTIVE` / `FEDERATION_ONLY`; provider resource is `ACTIVE` but remains `disabled = true` |
 | Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
 | P1C-B operational IAM members | Terraform Owns | Exactly 13 additive members are in remote state and actual IAM; zero-drift verified |
@@ -132,15 +132,20 @@ The Environment and branch protection were not created by P1C-A. Their future im
 
 ## Dedicated build identity decision
 
-The dedicated build Service Account now has the exact P1C-B Artifact Registry writer, Cloud Logging writer, and source-object viewer members, but it does not yet execute Cloud Build. The deploy Service Account has the exact build invocation, Service Usage, resource-scoped Artifact Registry/Cloud Run/Storage, and three `actAs` members required by the approved hypothesis. These permissions were reviewed against the current `cloudbuild.yaml` and Google's [user-specified Cloud Build Service Account guidance](https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts), but runtime sufficiency remains `PE-P1C-01` until P1C-C executes a separately approved real build.
+The dedicated build Service Account has the exact P1C-B Artifact Registry writer, Cloud Logging writer, and source-object viewer members. P1C-C runtime-verified that role set for the repository build path. The deploy Service Account has the exact build invocation, Service Usage, resource-scoped Artifact Registry/Cloud Run/Storage, and three `actAs` members required by the approved hypothesis, but its submission path under WIF remains unproven.
 
 P1C-B correction closure: future `gcloud builds submit` runs as the dedicated deploy Service Account and stages local source into `workout-journal-506909_cloudbuild`. The current 13-member layer therefore includes deploy `roles/storage.objectCreator` and `roles/storage.bucketViewer` on that exact bucket, plus project `roles/serviceusage.serviceUsageConsumer` for `serviceusage.services.use`. The previous `10 add` and intermediate `12 add` expectations are historical and obsolete.
 
-The proposed P1C-C configuration selects `projects/workout-journal-506909/serviceAccounts/workout-journal-build@workout-journal-506909.iam.gserviceaccount.com` in `cloudbuild.yaml` and preserves `CLOUD_LOGGING_ONLY`. It remains Pending Real-Build Human Gate. Before authorization, review this source diff, commit it locally, confirm a clean working tree, and derive `GIT_SHA` from that exact commit. No build may be submitted from this uncommitted preparation state.
+P1C-C selected `projects/workout-journal-506909/serviceAccounts/workout-journal-build@workout-journal-506909.iam.gserviceaccount.com` in `cloudbuild.yaml` and preserved `CLOUD_LOGGING_ONLY`. Human-gated build `44a37101-eb7c-4f12-8901-5b3854afd7ae` completed with `SUCCESS` from exact tested commit `709c55a934783917184d09831facc085e7bc19c9`; build metadata confirmed that dedicated Build Service Account as the actual execution identity and the logs were readable.
 
-A Human-approved build submitted by the current operator may prove that Cloud Build accepts the configured identity and that the dedicated Build Service Account can read staged source, build both Docker images, push both exact-SHA tags, and write Cloud Logging. It cannot independently prove that the dedicated Deploy Service Account can stage source, invoke Cloud Build, attach the Build Service Account, or complete WIF-authenticated GitHub execution. `PE-P1C-01` therefore remains split between open build-execution evidence and open deploy-submission evidence; the latter remains for the later WIF/CD phase. Do not grant Service Account Token Creator or enable WIF merely to simulate that evidence.
+`PE-P1C-01A — Dedicated Build execution` is Closed by that build. The verified scope is repository source build, Backend and Frontend Docker builds, Backend and Frontend Artifact Registry pushes, and Cloud Logging. The exact-SHA verification artifacts resolve to immutable digests:
 
-The real-build gate allows only one source archive staging operation, one Cloud Build execution, two exact-SHA image tags, immutable digest read-back, and Cloud Logging entries. It forbids Cloud Run deployment or traffic/revision mutation, IAM/Terraform/Secret Manager mutation, WIF enablement, Compute default Service Account role mutation, and Service Account key creation. If the build fails, stop and classify submitter `actAs`, pre-build source staging, Build-SA source read, Artifact Registry push, Cloud Logging write, application/Docker failure, or other before proposing any correction or rerun.
+- Backend: `asia-northeast1-docker.pkg.dev/workout-journal-506909/workout-journal/workout-journal-backend:709c55a934783917184d09831facc085e7bc19c9` -> `sha256:a36a6e9ee78ab59c8de5eccd1595bb740342e31b896acea0cb20aed1d8614c04`
+- Frontend: `asia-northeast1-docker.pkg.dev/workout-journal-506909/workout-journal/workout-journal-frontend:709c55a934783917184d09831facc085e7bc19c9` -> `sha256:d65af4c241e31658d684191f1d831b79d9bb6bd5b0043ea315affcd1ed0d7ea6`
+
+They are P1C-C verification artifacts, not production-deployed images. Backend and Frontend Cloud Run state remained unchanged, and there was no Cloud Run Admin Activity during the build execution window.
+
+`PE-P1C-01B — Deploy submission / WIF path` remains Open. The successful build was submitted by the current human operator and does not independently prove that the dedicated Deploy Service Account under intended GitHub WIF credentials can stage source, invoke Cloud Build, attach the Build Service Account, or complete the submission path. The provider remains disabled, production CD is not active, and no Service Account Token Creator grant may be added merely to simulate this evidence.
 
 Compute default Service Account Editor removal is **not** part of initial creation. Any removal requires all three gates:
 
@@ -149,6 +154,8 @@ dedicated build succeeds
 + dependency audit confirms no other required use
 + separate Human Gate
 ```
+
+P1C-C satisfies only `dedicated build succeeds`. The dependency audit and separate Human Gate remain required, so the Compute default Service Account remains Do Not Manage and its Editor role has not been removed.
 
 P1B created no new IAM binding and changed no existing cloud IAM policy. It adopted only the two previously verified additive Backend `secretAccessor` members. P1C-A added one additive, repository-scoped impersonation member. P1C-B added exactly 13 additive operational IAM members without taking authoritative ownership of any policy. Human members and legacy bucket IAM remain external; any Compute default Service Account cleanup remains future, separately gated work.
 
@@ -200,7 +207,7 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | Disabled WIF foundation and exact trust condition | High | P1C-A complete: actual mapping/condition verified, provider disabled, and zero-drift confirmed |
 | Dedicated deploy/build SA creation | High | P1C-A complete: both identities exist with zero user-managed keys and no operational roles |
 | P1C-B operational IAM | High | Complete: exact 13-member additive matrix applied, actual read-back matched, and zero-drift confirmed |
-| P1C-C dedicated build configuration and real build | High | Configuration Proposed / Pending Real-Build Human Gate; source review and exact clean committed SHA required; no build submitted yet |
+| P1C-C dedicated Build execution | High | Complete: build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account; Cloud Run remained unchanged |
 | Compute default SA role removal | High | Successful dedicated build, dependency audit, separate Human Gate |
 | Production CD activation | High | Protected `main`, required CI, automated candidate E2E, Environment approval |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |
