@@ -27,6 +27,8 @@ images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/workout-journal-backend:$COMMIT_SHA
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/workout-journal-frontend:$COMMIT_SHA
 
+serviceAccount: projects/workout-journal-506909/serviceAccounts/workout-journal-build@workout-journal-506909.iam.gserviceaccount.com
+
 options:
   logging: CLOUD_LOGGING_ONLY
 
