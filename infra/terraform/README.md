@@ -9,6 +9,7 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1C-A (Current):** Applied and verified the additive, initially inert identity foundation: four prerequisite APIs, dedicated deploy/build Service Accounts, one federation-only pool, one disabled GitHub OIDC provider, and one repository-ID-scoped impersonation member. The reviewed apply reported `9 added, 0 changed, 0 destroyed`, and the post-apply plan reported no changes.
 - **P1C-B (Current):** Applied and verified exactly 13 additive operational IAM members for the approved deploy/build command path. The reviewed apply reported `13 added, 0 changed, 0 destroyed`, bringing remote state to 30 resources; the post-apply plan reported no changes.
 - **P1C-C dedicated Build execution (Current / Complete):** Human-gated build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact tested commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account. Both exact-SHA image tags resolve to immutable digests, `CLOUD_LOGGING_ONLY` logs are readable, and Cloud Run remained unchanged.
+- **P1C-D2 Compute default SA Editor cleanup (Current / Complete):** P1C-D found zero current active dependencies and returned `SAFE_CANDIDATE`; after a separate Human Gate, P1C-D2 removed only the legacy project-level `roles/editor` binding outside Terraform. The Compute default Service Account still exists, remains enabled, and is not Terraform-managed.
 
 PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), and PE-P1C-01A (dedicated Build execution) are Closed. Portfolio Must 3 remains In progress because PE-P1C-01B deploy submission under WIF/CD, provider activation, and subsequent hardening remain future work.
 
@@ -137,7 +138,7 @@ The provider condition requires owner ID `95160728`, repository ID `790375516`, 
 
 At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled and `cd.yml` does not yet exist. P1C-C runtime-verified the dedicated Build Service Account only; Deploy-SA submission under WIF remains unproven. Provider activation, Compute default Service Account cleanup, and production CD activation each remain separate later gates.
+The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled and `cd.yml` does not yet exist. P1C-C runtime-verified the dedicated Build Service Account only; Deploy-SA submission under WIF remains unproven. Compute default Service Account Editor cleanup completed separately in P1C-D2; provider activation and production CD activation remain later gates.
 
 ## Completed P1C-B operational IAM
 
@@ -172,6 +173,18 @@ The build completed the repository source build, Backend Docker build, Frontend 
 These images are P1C-C verification artifacts, not production-deployed images. Backend and Frontend Cloud Run state remained unchanged, and the build execution window contained no Cloud Run Admin Activity.
 
 `PE-P1C-01B — Deploy submission / WIF path` remains Open: can the dedicated Deploy Service Account under the intended GitHub WIF credentials stage repository source, invoke Cloud Build, attach the dedicated Build Service Account, and complete the same submission path? The successful human-submitted build does not prove that path. The provider remains disabled; P1C-C added no Service Account Token Creator grant, Service Account key, IAM change, or WIF activation.
+
+## Completed P1C-D2 Compute default SA Editor cleanup
+
+P1C-D completed the prerequisite dependency audit across Cloud Run, Cloud Build, Compute API state, enabled GCP services, repository references, IAM, Audit Logs, and Terraform. It found zero current active dependencies and returned `SAFE_CANDIDATE`. The only historical usage found was Cloud Build activity on 2026-08-28; the current build path uses `workout-journal-build@workout-journal-506909.iam.gserviceaccount.com`, so that history is not a current dependency.
+
+After a separate approved Human Gate, P1C-D2 removed the single project-level `roles/editor` binding for `437413312066-compute@developer.gserviceaccount.com` outside Terraform. Post-removal read-back confirms that the binding is absent while the Service Account still exists, remains enabled, has zero user-managed keys, and has zero resource-level Service Account IAM bindings. The Service Account was not disabled, deleted, or adopted into Terraform, and its former Editor binding also remains outside Terraform ownership.
+
+Cloud Run state remained unchanged. Backend revision `workout-journal-backend-00003-luc` continues to run as `workout-journal-backend-run@workout-journal-506909.iam.gserviceaccount.com`, and Frontend revision `workout-journal-frontend-00003-xar` continues to run as `workout-journal-frontend-run@workout-journal-506909.iam.gserviceaccount.com`; each retains 100% traffic and candidate tag `candidate-0829-923536`. Post-removal lightweight production verification returned Frontend `/` `200` and Backend `/` `404`. It created no synthetic production data and triggered no password-reset or email workflow, so it is not the full v1 production smoke.
+
+P1C-D2 did not run Cloud Build or modify `cloudbuild.yaml`; the configuration still selects the dedicated Build Service Account and preserves `CLOUD_LOGGING_ONLY`. Terraform still contains exactly 30 resources, and the post-removal plan remains zero-drift. Neither the Compute default Service Account nor its former Editor binding may be added to this Terraform root.
+
+During the preceding dependency audit, a read-only BigQuery Data Transfer API inspection caused Google-managed service-agent provisioning. The resulting `roles/bigquerydatatransfer.serviceAgent` binding for `service-437413312066@gcp-sa-bigquerydatatransfer.iam.gserviceaccount.com` was preserved, is unrelated to P1C-D2, and remains External / Google-managed rather than Terraform-owned. Organization Policy constraint `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; potential automatic-grant prevention is Backlog / separate hardening and was not a P1C-D2 completion blocker.
 
 ## Historical P1A local validation
 

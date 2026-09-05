@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, and P1C-C dedicated Build execution complete; remote GCS state contains 30 resources and the current Terraform plan is zero-drift
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete; remote GCS state contains 30 resources and the current Terraform plan is zero-drift
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -30,10 +30,11 @@ Terraform and CD must not compete for the same mutable production state.
 | Cloud Build source bucket body `workout-journal-506909_cloudbuild` | External / Manually Managed | Terraform owns only the three exact P1C-B additive bucket IAM members, not the bucket body or legacy members |
 | Candidate creation, promotion, post-deploy verification, and rollback pair | CD / runbook Owns | Must preserve the current paired-release contract |
 | Human Owner bindings and Google-managed service agents | External / Manually Managed | Terraform must not adopt them |
+| BigQuery Data Transfer service-agent binding | External / Google-managed | Google-managed `roles/bigquerydatatransfer.serviceAgent` binding for `service-437413312066@gcp-sa-bigquerydatatransfer.iam.gserviceaccount.com`; preserved outside Terraform ownership |
 | Supabase infrastructure | External / Manually Managed | Outside Terraform scope |
 | GitHub Environment and branch protection | External / Manually Managed | Future GitHub governance work; not changed in P1B |
 | Secret versions, values, and payloads | Do Not Manage | Never enter Terraform configuration, plan, or state |
-| Compute default Service Account | Do Not Manage | P1C migration/hardening target only; no role cleanup has occurred |
+| Compute default Service Account | Do Not Manage | The Service Account body still exists and remains enabled. Its former project-level `roles/editor` grant was removed outside Terraform after the P1C-D dependency audit and a separate P1C-D2 Human Gate; neither the Service Account nor that former binding is Terraform-owned |
 | Legacy Cloud Build Service Account | Do Not Manage | Not an adoption target |
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
 | Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
@@ -147,7 +148,7 @@ They are P1C-C verification artifacts, not production-deployed images. Backend a
 
 `PE-P1C-01B — Deploy submission / WIF path` remains Open. The successful build was submitted by the current human operator and does not independently prove that the dedicated Deploy Service Account under intended GitHub WIF credentials can stage source, invoke Cloud Build, attach the Build Service Account, or complete the submission path. The provider remains disabled, production CD is not active, and no Service Account Token Creator grant may be added merely to simulate this evidence.
 
-Compute default Service Account Editor removal is **not** part of initial creation. Any removal requires all three gates:
+Compute default Service Account Editor removal was **not** part of initial creation. The approved boundary required all three gates:
 
 ```text
 dedicated build succeeds
@@ -155,9 +156,15 @@ dedicated build succeeds
 + separate Human Gate
 ```
 
-P1C-C satisfies only `dedicated build succeeds`. The dependency audit and separate Human Gate remain required, so the Compute default Service Account remains Do Not Manage and its Editor role has not been removed.
+All three gates are now satisfied. P1C-C proved the dedicated Build execution path. P1C-D audited Cloud Run, Cloud Build, Compute API state, enabled GCP services, repository references, IAM, Audit Logs, and Terraform, found zero current active dependencies, and returned `SAFE_CANDIDATE`. The only historical usage found was Cloud Build activity on 2026-08-28; the current build path uses `workout-journal-build@workout-journal-506909.iam.gserviceaccount.com`, so that historical activity is not a current dependency. P1C-D2 then passed its separate Human Gate and removed only the Compute default Service Account's project-level `roles/editor` binding outside Terraform.
 
-P1B created no new IAM binding and changed no existing cloud IAM policy. It adopted only the two previously verified additive Backend `secretAccessor` members. P1C-A added one additive, repository-scoped impersonation member. P1C-B added exactly 13 additive operational IAM members without taking authoritative ownership of any policy. Human members and legacy bucket IAM remain external; any Compute default Service Account cleanup remains future, separately gated work.
+Post-removal read-back confirms that `roles/editor` is absent while `437413312066-compute@developer.gserviceaccount.com` still exists, remains enabled, has zero user-managed keys, and has zero resource-level Service Account IAM bindings. P1C-D2 did not disable, delete, or adopt the Service Account into Terraform.
+
+Cloud Run also remained unchanged: Backend revision `workout-journal-backend-00003-luc` runs as `workout-journal-backend-run@workout-journal-506909.iam.gserviceaccount.com`, Frontend revision `workout-journal-frontend-00003-xar` runs as `workout-journal-frontend-run@workout-journal-506909.iam.gserviceaccount.com`, and each retained 100% traffic plus candidate tag `candidate-0829-923536`. Post-removal lightweight production verification returned Frontend `/` `200` and Backend `/` `404`; it created no synthetic data and did not trigger password-reset or email workflows. This is not the full v1 production smoke. Terraform remained at 30 state resources and the post-removal plan remained zero-drift.
+
+A read-only BigQuery Data Transfer API inspection during P1C-D caused Google to provision the service-agent binding `roles/bigquerydatatransfer.serviceAgent` for `service-437413312066@gcp-sa-bigquerydatatransfer.iam.gserviceaccount.com`; Audit Logs identified `service-agent-manager@system.gserviceaccount.com` as the actor. This Google-managed binding is unrelated to the Compute default SA cleanup, was preserved during P1C-D2, and remains outside Terraform ownership.
+
+P1B created no new IAM binding and changed no existing cloud IAM policy. It adopted only the two previously verified additive Backend `secretAccessor` members. P1C-A added one additive, repository-scoped impersonation member. P1C-B added exactly 13 additive operational IAM members without taking authoritative ownership of any policy. Human members and legacy bucket IAM remain external. P1C-D2 later removed the single separately approved legacy Editor binding without changing Terraform ownership.
 
 ## Completed P1B state ownership and adoption record
 
@@ -208,6 +215,7 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | Dedicated deploy/build SA creation | High | P1C-A complete: both identities exist with zero user-managed keys and no operational roles |
 | P1C-B operational IAM | High | Complete: exact 13-member additive matrix applied, actual read-back matched, and zero-drift confirmed |
 | P1C-C dedicated Build execution | High | Complete: build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account; Cloud Run remained unchanged |
-| Compute default SA role removal | High | Successful dedicated build, dependency audit, separate Human Gate |
+| Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
+| Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
 | Production CD activation | High | Protected `main`, required CI, automated candidate E2E, Environment approval |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |
