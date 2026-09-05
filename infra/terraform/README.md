@@ -134,11 +134,11 @@ P1C-A passed its saved-plan Human Gate and added exactly nine resources with `0 
 - the `workout-journal` GitHub OIDC provider with the default Google audience behavior and `disabled = true`; and
 - one additive `roles/iam.workloadIdentityUser` member on the deploy Service Account, scoped to repository ID `790375516` through the pool's mapped `attribute.repository_id`.
 
-The provider condition requires owner ID `95160728`, repository ID `790375516`, the expected owner and repository names, `refs/heads/main`, and the exact future `cd.yml` workflow reference. Actual read-back confirmed that mapping and condition, pool state `ACTIVE` with mode `FEDERATION_ONLY`, and provider state `ACTIVE` with `disabled = true`. Here `ACTIVE` is the provider resource lifecycle state; disabled providers cannot perform new token exchanges.
+The provider condition requires owner ID `95160728`, repository ID `790375516`, the expected owner and repository names, `refs/heads/main`, and the exact `cd.yml` workflow reference. Actual read-back confirmed that mapping and condition, pool state `ACTIVE` with mode `FEDERATION_ONLY`, and provider state `ACTIVE` with `disabled = true`. Here `ACTIVE` is the provider resource lifecycle state; disabled providers cannot perform new token exchanges.
 
 At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled and `cd.yml` does not yet exist. P1C-C runtime-verified the dedicated Build Service Account only; Deploy-SA submission under WIF remains unproven. Compute default Service Account Editor cleanup completed separately in P1C-D2; provider activation and production CD activation remain later gates.
+The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled. [CD-A](../../docs/wif-submission-proof.md) now supplies `cd.yml` as a manual submission-proof workflow only; it has not been dispatched and does not implement full CD. P1C-C runtime-verified the dedicated Build Service Account only; PE-P1C-01B Deploy-SA submission under WIF remains Open and unproven. Compute default Service Account Editor cleanup completed separately in P1C-D2; provider activation and production CD activation remain later gates. CD-A changes no Terraform resources or IAM.
 
 ## Completed P1C-B operational IAM
 

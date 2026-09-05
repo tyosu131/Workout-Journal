@@ -1,0 +1,66 @@
+name: CD-A WIF submission proof
+
+# Repository implementation only: provider activation and the first dispatch need
+# a separate Human Gate. This is NOT the production CD/approval workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cd-a-submission-proof
+  cancel-in-progress: false
+
+jobs:
+  submission-proof:
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GCP_PROJECT: workout-journal-506909
+      WIF_PROVIDER: projects/437413312066/locations/global/workloadIdentityPools/github-actions/providers/workout-journal
+      DEPLOY_SERVICE_ACCOUNT: workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com
+    steps:
+      - name: Checkout exact dispatch SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Fail-closed preflight and credential-free source preparation
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: python3 .github/scripts/wif_submission.py prepare
+
+      - name: Authenticate as the dedicated Deploy Service Account
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+          cleanup_credentials: true
+
+      - name: Set up gcloud for WIF credentials
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: '>= 416.0.0'
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Prove submission, dedicated build execution and unchanged Cloud Run
+        id: proof
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: python3 .github/scripts/wif_submission.py prove
+
+      - name: Fail-closed result when any proof prerequisite or execution fails
+        if: always() && steps.proof.outcome != 'success'
+        run: |
+          printf '%s\n' '## CD-A: PE-P1C-01B FAIL / incomplete' \
+            'No submission-path closure. Review the fixed failure code, if available; do not widen IAM automatically.' \
+            >> "$GITHUB_STEP_SUMMARY"
