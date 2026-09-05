@@ -417,6 +417,7 @@ const NotePage: React.FC = () => {
                 Exercise:
               </Text>
               <input
+                aria-label={`Exercise ${eIndex + 1} name`}
                 style={{ width: "100%", border: "none", outline: "none" }}
                 value={exercise.exercise}
                 onChange={(ev) => handleExerciseChange(ev, eIndex)}
@@ -459,6 +460,7 @@ const NotePage: React.FC = () => {
                           <td style={tdStyle}>{sIndex + 1}</td>
                           <td style={tdStyle}>
                             <input
+                              aria-label={`Exercise ${eIndex + 1} set ${sIndex + 1} weight`}
                               style={inputStyle}
                               value={set.weight}
                               onChange={(ev) =>
@@ -468,6 +470,7 @@ const NotePage: React.FC = () => {
                           </td>
                           <td style={tdStyle}>
                             <input
+                              aria-label={`Exercise ${eIndex + 1} set ${sIndex + 1} reps`}
                               style={inputStyle}
                               value={set.reps}
                               onChange={(ev) =>
@@ -477,6 +480,7 @@ const NotePage: React.FC = () => {
                           </td>
                           <td style={tdStyle}>
                             <input
+                              aria-label={`Exercise ${eIndex + 1} set ${sIndex + 1} rest`}
                               style={inputStyle}
                               value={set.rest}
                               onChange={(ev) =>

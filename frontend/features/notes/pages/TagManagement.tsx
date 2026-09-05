@@ -114,7 +114,7 @@ const TagManagement: React.FC = () => {
                 px={3}
               >
                 <TagLabel fontSize="md">{tag}</TagLabel>
-                <TagCloseButton onClick={() => handleDeleteTag(tag)} ml={1} opacity={0.8} />
+                <TagCloseButton aria-label={`Delete tag ${tag}`} onClick={() => handleDeleteTag(tag)} ml={1} opacity={0.8} />
               </Tag>
             );
           })}

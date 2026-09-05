@@ -12,9 +12,14 @@
     "lint": "npm run lint --prefix frontend",
     "start": "concurrently \"npm run start --prefix backend\" \"npm run start --prefix frontend\"",
     "clean": "rimraf backend/node_modules frontend/node_modules && rimraf backend/package-lock.json frontend/package-lock.json",
-    "test": "jest --config ./jest.config.js"
+    "test": "jest --config ./jest.config.js",
+    "e2e": "node e2e/run.mjs",
+    "e2e:cleanup": "node e2e/cleanup.mjs",
+    "e2e:test": "tsc --project e2e/tsconfig.json && node --test e2e/*.test.mjs",
+    "e2e:verify-cleanup": "node e2e/verify-cleanup.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/axios": "^0.14.4",
     "@types/jest": "^29.5.12",
     "@types/lodash": "^4.17.10",

@@ -4,3 +4,11 @@ node_modules
 .env*.local
 
 /.next/
+
+# P2A local-only runtime metadata and sanitized evidence (never commit credentials).
+/e2e/.runs/
+/e2e/.work/
+/e2e/evidence/
+/test-results/
+/playwright-report/
+/.supabase/

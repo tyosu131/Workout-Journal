@@ -23,3 +23,7 @@ credentials*.json
 service-account*.json
 tmp
 temp
+e2e
+test-results
+playwright-report
+.supabase

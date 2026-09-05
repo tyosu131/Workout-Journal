@@ -55,6 +55,8 @@ const Big3SummarySection: React.FC<Big3SummarySectionProps> = ({
           return (
             <Box
               key={summary.liftType}
+              role="group"
+              aria-label={(chartSeries?.label ?? summary.liftType) + " summary"}
               border="1px solid"
               borderColor="gray.200"
               borderRadius="6px"
