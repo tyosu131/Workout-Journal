@@ -33,7 +33,7 @@ Terraform and CD must not compete for the same mutable production state.
 | BigQuery Data Transfer service-agent binding | External / Google-managed | Google-managed `roles/bigquerydatatransfer.serviceAgent` binding for `service-437413312066@gcp-sa-bigquerydatatransfer.iam.gserviceaccount.com`; preserved outside Terraform ownership |
 | Supabase infrastructure | External / Manually Managed | Outside Terraform scope |
 | `main` branch protection | External / Manually Managed | Current / Implemented and functionally verified with the strict required GitHub Actions check `Lint, build, and test baseline` pinned to app ID `15368`; not Terraform-owned |
-| GitHub production Environment | External / Manually Managed | Future / not implemented; remains a separate CD activation prerequisite and is not Terraform-owned |
+| GitHub production Environment | External / Manually Managed | Current / Implemented and verified by configuration read-back; exact owner reviewer, no administrator bypass, branch `main` only; not Terraform-owned |
 | Secret versions, values, and payloads | Do Not Manage | Never enter Terraform configuration, plan, or state |
 | Compute default Service Account | Do Not Manage | The Service Account body still exists and remains enabled. Its former project-level `roles/editor` grant was removed outside Terraform after the P1C-D dependency audit and a separate P1C-D2 Human Gate; neither the Service Account nor that former binding is Terraform-owned |
 | Legacy Cloud Build Service Account | Do Not Manage | Not an adoption target |
@@ -109,17 +109,32 @@ Google requires mappings for claims used in provider conditions and recommends r
 
 ## Production Environment and activation dependency
 
-The future GitHub Environment decision is:
+The GitHub `production` Environment is Current / Implemented and verified by
+actual configuration read-back on 2026-09-05:
 
-| Setting | Approved value |
+| Setting | Verified current value |
 | --- | --- |
-| Environment | `production` |
-| Required reviewer | Repository owner / `tyosu131` |
+| Environment | `production` (ID `21297410440`) |
+| Required reviewer | Exactly one User: repository owner `tyosu131`, numeric ID `95160728` |
 | Prevent self-review | `false` |
-| Administrator bypass | Disabled |
-| Deployment branch | `main` after `main` is protected |
+| Wait timer | `0`; no active wait-timer rule |
+| Administrator bypass | Disabled; actual `can_admins_bypass = false` |
+| Deployment policy mode | `protected_branches = false`, `custom_branch_policies = true` |
+| Deployment branch | Exactly one policy: `name = main`, `type = branch` (ID `59168511`) |
+| Tag policies / other patterns | None |
+| Environment secrets / variables | `0` / `0`; none added |
+
+The Environment and branch policy were created through documented REST endpoints.
+The owner disabled administrator bypass in the GitHub UI; a subsequent GET returned
+`can_admins_bypass = false` (Environment `updated_at = 2026-09-05T08:36:40Z`).
+The reviewer ID matches the authenticated owner and repository owner. Read-back of
+the complete branch-policy collection confirmed only the exact `main` branch rule;
+no wildcard, tag policy or unexpected protection rule is configured.
 
 This is an explicit owner release checkpoint for a solo project, not independent four-eyes approval.
+This verifies configuration, not an executed deployment-approval or bypass test.
+No workflow was created or activated; `cd.yml` is absent, WIF remains `ACTIVE` with
+`disabled = true`, and production CD is inactive. Main protection is unchanged.
 
 The required delivery sequence remains:
 
@@ -127,6 +142,8 @@ The required delivery sequence remains:
 Terraform/WIF foundation
 -> main branch protection + required CI checks
 -> automated candidate E2E
+-> production Environment configuration
+-> keyless WIF/CD integration
 -> CD activation
 ```
 
@@ -137,14 +154,18 @@ Current status of that sequence:
 | Terraform/WIF foundation | Implemented; the WIF provider remains disabled |
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
-| GitHub production Environment | Future; not implemented |
+| GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
+| Keyless WIF/CD integration | Next unmet work: reviewed workflow integration, separately gated provider activation and PE-P1C-01B submission evidence |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
-The next unmet release-approval prerequisite is the GitHub production Environment.
-Reviewed keyless CD integration and `PE-P1C-01B` Deploy-SA/WIF submission evidence
-also remain required under a separate Human Gate. P2B did not activate the provider,
-create an Environment, implement CD, promote traffic or close Must 4.
+The production Environment configuration prerequisite is also satisfied. The next
+unmet work is reviewed keyless WIF/CD integration, including use of this Environment
+for release approval and `PE-P1C-01B` Deploy-SA/WIF submission evidence, under a
+separate Human Gate. Must 4 and PE-P1C-01B remain Open. Historically, P2B did not
+activate the provider, create an Environment, implement CD, promote traffic or
+close Must 4; this subsequent Environment setup does not activate WIF/CD or
+authorize production promotion.
 
 P2B tested application source `9b6c3c69543784b3e02e4fd9b45d8e7a4b34300d`
 with runner changes on `test/portfolio-p2b-candidate-proof`. The Backend and Frontend
@@ -160,7 +181,7 @@ Actual GitHub read-back confirms `main` is protected. The rule requires a pull r
 
 Temporary PR #91 provided functional evidence without entering `main`. Its first head, `b92c52c710f9408ea007f0e1832dda6a201959e5`, used `[skip ci]`; it had zero check runs and was `BLOCKED` even though Git reported it mergeable. Its second head, `ec28344de2d9a49a3bf926416c987e0e2125ea6c`, received two successful `Lint, build, and test baseline` checks because CI runs on both `push` and `pull_request`, after which the PR became `CLEAN`. The PR was closed unmerged and the temporary branch was deleted locally and remotely. The duplicate CI executions are a separate optimization opportunity, not a safeguard defect.
 
-Branch protection was not created by P1C-A and remains externally/manually managed rather than Terraform-owned. The future GitHub Environment must likewise be verified from actual GitHub settings after implementation, not inferred from workflow files. See GitHub's official documentation for [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+Branch protection was not created by P1C-A and remains externally/manually managed rather than Terraform-owned. The production Environment is likewise externally/manually managed; its verified configuration above comes from actual GitHub read-back, not workflow files. See GitHub's official documentation for [deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
 
 ## Dedicated build identity decision
 
@@ -248,5 +269,5 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | P1C-C dedicated Build execution | High | Complete: build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account; Cloud Run remained unchanged |
 | Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
 | Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
-| Production CD activation | High | Protected `main`, required CI and automated candidate E2E proof are complete; production Environment approval, reviewed keyless CD integration and PE-P1C-01B evidence remain required |
+| Production CD activation | High | Protected `main`, required CI, automated candidate E2E proof and production Environment configuration are verified; keyless CD integration, runtime approval/promotion verification and PE-P1C-01B evidence remain required |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |
