@@ -10,10 +10,33 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1C-B (Current):** Applied and verified exactly 13 additive operational IAM members for the approved deploy/build command path. The reviewed apply reported `13 added, 0 changed, 0 destroyed`, bringing remote state to 30 resources; the post-apply plan reported no changes.
 - **P1C-C dedicated Build execution (Current / Complete):** Human-gated build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact tested commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account. Both exact-SHA image tags resolve to immutable digests, `CLOUD_LOGGING_ONLY` logs are readable, and Cloud Run remained unchanged.
 - **P1C-D2 Compute default SA Editor cleanup (Current / Complete):** P1C-D found zero current active dependencies and returned `SAFE_CANDIDATE`; after a separate Human Gate, P1C-D2 removed only the legacy project-level `roles/editor` binding outside Terraform. The Compute default Service Account still exists, remains enabled, and is not Terraform-managed.
+- **CD-B1 WIF activation (Desired state / Pending apply):** Prepares `disabled = false` and a neutral description on the existing provider only. Actual GCP and remote state still report `disabled = true`; activation awaits the separate CD-B2 apply gate.
 
 PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), and PE-P1C-01A (dedicated Build execution) are Closed. Portfolio Must 3 remains In progress because PE-P1C-01B deploy submission under WIF/CD, provider activation, and subsequent hardening remain future work.
 
-This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; the OIDC provider remains explicitly disabled. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
+This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; the actual OIDC provider remains disabled pending CD-B2, while repository desired state is `disabled = false`. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
+
+## CD-B1 desired state / pending CD-B2 apply
+
+Read-only verification on 2026-09-05 confirmed the pool is `ACTIVE` /
+`FEDERATION_ONLY`, the provider is `ACTIVE` / `disabled = true`, and the provider
+exists among the 30 remote-state resources. CD-B1 prepares `disabled = false`
+and replaces the contradictory `Disabled activation gate` description with neutral
+wording. Trust condition, attribute mapping, issuer, pool and IAM are unchanged.
+
+The speculative plan reports **`0 to add, 1 to change, 0 to destroy`**, solely an
+in-place update to `google_iam_workload_identity_pool_provider.workout_journal`.
+This is an **intentional pending apply**, not unexpected drift or a current
+zero-change plan. Earlier zero-drift results below remain historical evidence.
+No apply or remote-state write was performed. This read-only plan used
+`-input=false -no-color -lock=false -detailed-exitcode` (exit `2`); no executable
+plan was saved. CD-B2 must obtain a fresh, normally locked plan before its separate
+apply gate; merging CD-B1 alone does not activate the provider.
+
+The CD-A `.github/workflows/cd.yml` is already on `main` (`workflow_dispatch` only).
+Repository variables remain unconfigured (actual count `0`); CD-B1 performed no
+workflow dispatch or Cloud Build submission.
+**PE-P1C-01B and Must 4 remain Open; CD is inactive.**
 
 ## Toolchain decision
 
@@ -43,7 +66,7 @@ Official references: [Terraform installation and current release](https://develo
 | `google_service_account.deploy` | `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com` |
 | `google_service_account.build` | `workout-journal-build@workout-journal-506909.iam.gserviceaccount.com` |
 | `google_iam_workload_identity_pool.github_actions` | Federation-only pool `github-actions` |
-| `google_iam_workload_identity_pool_provider.workout_journal` | Disabled GitHub OIDC provider `workout-journal` |
+| `google_iam_workload_identity_pool_provider.workout_journal` | GitHub OIDC provider `workout-journal`: actual `disabled = true`; desired `disabled = false`, pending CD-B2 apply |
 | `google_service_account_iam_member.deploy_workload_identity_user` | Exact repository principal's additive deploy-SA impersonation member |
 | `google_project_iam_member.deploy_cloud_build_editor` | Deploy SA Cloud Build invocation member on project `workout-journal-506909` |
 | `google_project_iam_member.deploy_service_usage_consumer` | Deploy SA Service Usage consumer member on project `workout-journal-506909` |
@@ -122,7 +145,7 @@ The following Human-gated sequence was completed in P1B and is retained as adopt
 
 The bucket resource has `prevent_destroy = true`, `force_destroy = false`, versioning, uniform bucket-level access, and enforced public access prevention. `prevent_destroy` and `force_destroy` are Terraform configuration protections, not remote bucket properties, so they were not part of the bucket metadata read-back. The bucket was manually bootstrapped only to solve the backend dependency; after its successful import, Terraform owns its configuration.
 
-All eight configuration-driven import blocks remain in `imports.tf` as explicit adoption evidence. With the resources already present at the same addresses in remote state, the current zero-drift plan does not attempt duplicate imports or cloud mutation.
+All eight configuration-driven import blocks remain in `imports.tf` as explicit adoption evidence. With the resources already present at the same addresses in remote state, no duplicate imports are planned. The current CD-B1 plan contains only the intentional provider update described above; the applied baseline's zero-drift result is historical.
 
 ## Completed P1C-A disabled WIF foundation
 
@@ -157,7 +180,7 @@ P1C-B passed its saved-plan Human Gate and applied exactly these 13 additive IAM
 | Build Service Account | `roles/logging.logWriter` | Project `workout-journal-506909` | 1 |
 | Build Service Account | `roles/storage.objectViewer` | Bucket `workout-journal-506909_cloudbuild` | 1 |
 
-The Service Usage grant supplies `serviceusage.services.use`, which the current Cloud Build CLI submission contract requires in addition to Cloud Build Editor. The source-staging correction is also included: the deploy identity can create the local-source archive and read bucket metadata on the exact Cloud Build source bucket, while the build identity can only read staged source objects. The previous `10 add` and intermediate `12 add` assumptions are historical and obsolete. Actual read-back confirmed all 13 exact members, remote state contains 30 resources, and the post-apply plan is zero-drift: `No changes. Your infrastructure matches the configuration.`
+The Service Usage grant supplies `serviceusage.services.use`, which the current Cloud Build CLI submission contract requires in addition to Cloud Build Editor. The source-staging correction is also included: the deploy identity can create the local-source archive and read bucket metadata on the exact Cloud Build source bucket, while the build identity can only read staged source objects. The previous `10 add` and intermediate `12 add` assumptions are historical and obsolete. Actual read-back confirmed all 13 exact members, remote state contains 30 resources, and the post-apply plan at P1C-B closure was zero-drift: `No changes. Your infrastructure matches the configuration.`
 
 All resources use additive `*_iam_member` forms. The Cloud Run resources own only service-level IAM membership, not service configuration, revisions, images, environment, tags, traffic, promotion, or rollback state. P1C-B grants no project-wide `serviceAccountUser`, Secret Manager access, Service Account Token Creator, basic role, or Service Account key. The WIF provider remains disabled.
 
@@ -182,7 +205,7 @@ After a separate approved Human Gate, P1C-D2 removed the single project-level `r
 
 Cloud Run state remained unchanged. Backend revision `workout-journal-backend-00003-luc` continues to run as `workout-journal-backend-run@workout-journal-506909.iam.gserviceaccount.com`, and Frontend revision `workout-journal-frontend-00003-xar` continues to run as `workout-journal-frontend-run@workout-journal-506909.iam.gserviceaccount.com`; each retains 100% traffic and candidate tag `candidate-0829-923536`. Post-removal lightweight production verification returned Frontend `/` `200` and Backend `/` `404`. It created no synthetic production data and triggered no password-reset or email workflow, so it is not the full v1 production smoke.
 
-P1C-D2 did not run Cloud Build or modify `cloudbuild.yaml`; the configuration still selects the dedicated Build Service Account and preserves `CLOUD_LOGGING_ONLY`. Terraform still contains exactly 30 resources, and the post-removal plan remains zero-drift. Neither the Compute default Service Account nor its former Editor binding may be added to this Terraform root.
+P1C-D2 did not run Cloud Build or modify `cloudbuild.yaml`; the configuration still selects the dedicated Build Service Account and preserves `CLOUD_LOGGING_ONLY`. Terraform still contains exactly 30 resources, and the post-removal plan at P1C-D2 closure was zero-drift. Neither the Compute default Service Account nor its former Editor binding may be added to this Terraform root.
 
 During the preceding dependency audit, a read-only BigQuery Data Transfer API inspection caused Google-managed service-agent provisioning. The resulting `roles/bigquerydatatransfer.serviceAgent` binding for `service-437413312066@gcp-sa-bigquerydatatransfer.iam.gserviceaccount.com` was preserved, is unrelated to P1C-D2, and remains External / Google-managed rather than Terraform-owned. Organization Policy constraint `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; potential automatic-grant prevention is Backlog / separate hardening and was not a P1C-D2 completion blocker.
 

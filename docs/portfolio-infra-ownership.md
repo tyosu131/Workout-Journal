@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete; remote GCS state contains 30 resources and the current Terraform plan is zero-drift
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete; remote GCS state contains 30 resources. CD-B1 prepares one in-place provider update (`disabled = false` desired); actual provider remains disabled pending CD-B2 apply, so the current plan is intentionally not zero-change
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -23,7 +23,7 @@ Terraform and CD must not compete for the same mutable production state.
 | IAM, Cloud Resource Manager, IAM Credentials, and STS APIs | Terraform Owns | Four prerequisite `google_project_service` resources are enabled and protected from disable-on-destroy |
 | Deploy Service Account `workout-journal-deploy` | Terraform Owns | Keyless identity with exact P1C-A impersonation and P1C-B operational additive members; provider remains disabled |
 | Build Service Account `workout-journal-build` | Terraform Owns | Keyless identity with exact P1C-B build permissions; P1C-C runtime-verified its repository build, two image pushes, and Cloud Logging path |
-| WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Pool is `ACTIVE` / `FEDERATION_ONLY`; provider resource is `ACTIVE` but remains `disabled = true` |
+| WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Actual pool is `ACTIVE` / `FEDERATION_ONLY`; actual provider is `ACTIVE` / `disabled = true`. CD-B1 desired provider state is `disabled = false`, pending CD-B2 apply; no pool or trust change |
 | Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
 | P1C-B operational IAM members | Terraform Owns | Exactly 13 additive members are in remote state and actual IAM; zero-drift verified |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
@@ -40,7 +40,7 @@ Terraform and CD must not compete for the same mutable production state.
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
 | Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
 
-The current remote state contains exactly 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer. The reviewed P1C-B apply added 13 resources without changing or destroying existing infrastructure, actual IAM read-back matched every member, and the post-apply plan is zero-drift.
+The current remote state contains exactly 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer. The reviewed P1C-B apply added 13 resources without changing or destroying existing infrastructure, actual IAM read-back matched every member, and the post-apply plan at P1C-B closure was zero-drift. CD-B1 now has exactly one intentional pending provider update, not unexpected drift.
 
 ## CD-owned delivery contract
 
@@ -103,7 +103,7 @@ ref                 == refs/heads/main
 workflow_ref        == tyosu131/Workout-Journal/.github/workflows/cd.yml@refs/heads/main
 ```
 
-Numeric owner/repository IDs are the stable trust anchors; name checks provide defense in depth and make intent reviewable. P1C-A owns `roles/iam.workloadIdentityUser` on the deploy Service Account, limited to repository ID `790375516` through the mapped repository principal. The provider resource state is `ACTIVE`, but `disabled = true` remains the authentication gate until a later activation review. P1C-B owns only the exact additive permissions needed to invoke Cloud Build and perform the approved Cloud Run delivery contract, including `actAs` only for the dedicated build and approved runtime Service Accounts. It grants no Secret Manager payload access.
+Numeric owner/repository IDs are the stable trust anchors; name checks provide defense in depth and make intent reviewable. P1C-A owns `roles/iam.workloadIdentityUser` on the deploy Service Account, limited to repository ID `790375516` through the mapped repository principal. The actual provider resource state is `ACTIVE`, but `disabled = true` remains the authentication gate until CD-B2 apply. CD-B1 prepares only desired `disabled = false` and a neutral provider description; all trust conditions above, mappings, issuer, pool and IAM remain unchanged. P1C-B owns only the exact additive permissions needed to invoke Cloud Build and perform the approved Cloud Run delivery contract, including `actAs` only for the dedicated build and approved runtime Service Accounts. It grants no Secret Manager payload access.
 
 Google requires mappings for claims used in provider conditions and recommends restricting a shared GitHub issuer with an attribute condition. GitHub documents `repository_owner_id`, `repository_id`, `repository_owner`, `repository`, `ref`, and `workflow_ref` as OIDC token claims. See [Google Cloud deployment-pipeline federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines) and the [GitHub OIDC claim reference](https://docs.github.com/en/actions/reference/security/oidc).
 
@@ -154,11 +154,11 @@ Current status of that sequence:
 
 | Dependency | Current status |
 | --- | --- |
-| Terraform/WIF foundation | Implemented; the WIF provider remains disabled |
+| Terraform/WIF foundation | Implemented; actual provider remains disabled. CD-B1 desired activation is prepared, pending one in-place CD-B2 apply update |
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | Next unmet work: CD-A manual submission-proof workflow is repository-only implementation, not runtime evidence; separately gated provider activation / variables setup and PE-P1C-01B proof, then full CD and approval integration, remain |
+| Keyless WIF/CD integration | CD-A manual `workflow_dispatch` proof workflow exists on `main`; CD-B1 desired activation is prepared, not applied. Next: separate CD-B2 apply, repository variables (currently unconfigured), PE-P1C-01B runtime proof, then full CD and approval integration |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).

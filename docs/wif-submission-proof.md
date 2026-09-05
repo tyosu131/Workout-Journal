@@ -5,6 +5,13 @@ Open; WIF is `ACTIVE` / `disabled = true`; production CD is inactive.** This pha
 has **not** dispatched the workflow, activated the provider, created repository
 variables or executed Cloud Build; those actions remain separately Human-gated.
 
+The CD-A workflow is now on `main` (`workflow_dispatch` only). Subsequent
+[CD-B1 desired-state preparation](../infra/terraform/README.md#cd-b1-desired-state--pending-cd-b2-apply)
+sets repository provider `disabled = false`, with one intentional in-place update
+pending CD-B2 apply. Actual GCP / remote state still report `disabled = true`;
+merging that desired-state change alone is not activation or runtime proof.
+Repository variables are still unconfigured; PE-P1C-01B and Must 4 remain Open.
+
 The [workflow](../.github/workflows/cd.yml) and its
 [standard-library Python controller](../.github/scripts/wif_submission.py) prepare
 one separately Human-gated proof:
