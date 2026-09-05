@@ -113,6 +113,30 @@ Runtime probes use `PORT=8080`. Expected current contracts are Frontend `/` = `2
 
 Container builds and local runtime probes verify repository artifacts only. Cloud Run service creation, no-traffic candidate deployment, production smoke, traffic promotion, and Safari/iOS Safari/Chrome/Firefox/Edge browser smoke are Human Gate work described in [the deployment runbook](./cloud-run-deployment-runbook.md).
 
+## Automated Candidate E2E Evidence
+
+[P2A/P2B E2E runbook](./e2e-smoke-runbook.md) owns the execution and cleanup contract.
+P2A verifies the local isolated foundation. On 2026-09-05, P2B run
+`p2b-1788593776629-9943a84c9ea7c644` passed the same serial Chromium scenario
+against the actual HTTPS Frontend 0% candidate paired with its exact Backend
+candidate URL, using application source `9b6c3c69543784b3e02e4fd9b45d8e7a4b34300d`.
+
+The proof includes matched autosave responses and persisted values after reload;
+Calendar tag/date-to-note navigation; Bench Press `60 x 5` / estimated 1RM `70`;
+catalog and persisted-note tag removal; and logout token/cookie removal, refresh
+401 and protected-route redirect. HTTPS refresh-cookie flags were verified.
+Exact disposable-user cleanup left Auth/profile/notes/user_tags residuals at zero.
+Production revisions stayed at 100%, the candidate pair stayed at 0%, and sanitized
+evidence passed secret inspection without raw browser artifacts.
+
+`npm run e2e:test` checks TypeScript and controller safety. `npm run e2e` and
+`npm run e2e:cleanup` select explicit local or Human-approved manifest-bound
+candidate mode; candidate credentials use a private stdin pipe, never CLI values.
+No E2E step was added to the required PR CI workflow. P2B is Must 2 evidence,
+not promotion, full v1 cross-browser smoke, password-recovery evidence or CD
+activation. Must 4, PE-P1C-01B and the production Environment remain open/future;
+the WIF provider stays disabled.
+
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.
