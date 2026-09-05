@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { hostname } from 'node:os';
 import { validateGateway } from './gateway.mjs';
+import { SafeError, check } from './errors.cjs';
+export { SafeError, check } from './errors.cjs';
 
 export const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 export const RUNS = path.join(ROOT, 'e2e/.runs');
@@ -19,12 +21,6 @@ const RUN_PATTERN = /^p2a-(\d{13})-[a-f0-9]{16}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const exec = promisify(execFile);
 
-export class SafeError extends Error {
-  constructor(code) { super(code); this.code = code; }
-}
-export function check(condition, code) {
-  if (!condition) throw new SafeError(code);
-}
 export function validateTarget(env) {
   check(env.E2E_TARGET === TARGET && env.E2E_SUPABASE_URL === API, 'TARGET_NOT_APPROVED');
   check(!env.DOCKER_HOST || env.DOCKER_HOST.startsWith('unix:///'), 'REMOTE_DOCKER_REFUSED');

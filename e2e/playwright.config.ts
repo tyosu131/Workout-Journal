@@ -1,18 +1,21 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
+const { browserBase } = require('./candidate-target.mjs');
 
 // Defense in depth; safe-test.ts also disables the pinned automatic recorder.
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = '1';
 if (require('@playwright/test/package.json').version !== '1.63.0') {
   throw new Error('ARTIFACT_BOUNDARY_REVIEW_REQUIRED');
 }
-if (process.env.E2E_BROWSER_BASE_URL !== 'http://127.0.0.1:3100' ||
-    !process.env.E2E_BROWSER_REPORT || !process.env.E2E_USER_ID) {
+browserBase(process.env);
+if (!process.env.E2E_BROWSER_REPORT || !process.env.E2E_USER_ID) {
   throw new Error('CONTROLLER_REQUIRED');
 }
 export default defineConfig({
   testDir: '.',
-  testMatch: 'smoke.spec.ts',
+  // Do not discover archived application sources under .work during a build.
+  // One controller-created user must execute exactly one scenario.
+  testMatch: path.join(__dirname, 'smoke.spec.ts'),
   workers: 1,
   fullyParallel: false,
   retries: 0,

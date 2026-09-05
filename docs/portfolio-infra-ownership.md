@@ -136,9 +136,25 @@ Current status of that sequence:
 | --- | --- |
 | Terraform/WIF foundation | Implemented; the WIF provider remains disabled |
 | `main` branch protection + required CI | Implemented and functionally verified |
-| Automated candidate E2E | Future; next unmet activation prerequisite |
+| Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Future; not implemented |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
+
+The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
+The next unmet release-approval prerequisite is the GitHub production Environment.
+Reviewed keyless CD integration and `PE-P1C-01B` Deploy-SA/WIF submission evidence
+also remain required under a separate Human Gate. P2B did not activate the provider,
+create an Environment, implement CD, promote traffic or close Must 4.
+
+P2B tested application source `9b6c3c69543784b3e02e4fd9b45d8e7a4b34300d`
+with runner changes on `test/portfolio-p2b-candidate-proof`. The Backend and Frontend
+revisions `workout-journal-backend-p2b-081adb25` and
+`workout-journal-frontend-p2b-081adb25` remain at 0%, sharing tag
+`candidate-p2b-081adb25`. The Frontend points to the exact Backend tagged URL,
+not the production service URL. Production remains `00003-luc` / `00003-xar`
+at 100%, with the known-good `candidate-0829-923536` pair intact. These revisions,
+tags, images and configuration remain outside Terraform ownership; keeping this
+proof pair does not authorize tag reassignment or deletion.
 
 Actual GitHub read-back confirms `main` is protected. The rule requires a pull request with zero approving reviews, enforces administrators, requires conversation resolution, and requires the strict `Lint, build, and test baseline` check from GitHub Actions app ID `15368`. Force pushes and deletions are disabled; linear history and branch locking are not required; restrictions are unset. No repository ruleset overlapped when the protection was applied.
 
@@ -232,5 +248,5 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | P1C-C dedicated Build execution | High | Complete: build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account; Cloud Run remained unchanged |
 | Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
 | Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
-| Production CD activation | High | Protected `main` and required CI are complete; automated candidate E2E and Environment approval remain required |
+| Production CD activation | High | Protected `main`, required CI and automated candidate E2E proof are complete; production Environment approval, reviewed keyless CD integration and PE-P1C-01B evidence remain required |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |

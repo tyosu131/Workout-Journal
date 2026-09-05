@@ -565,7 +565,7 @@ Persisted notes
 
 **Future Direction:** The completed v1 production release is not reopened. Prioritize only work required by the [Portfolio Finish Completion Contract](./portfolio-completion-contract.md) or a separately approved product task:
 
-1. Automate the required production-like candidate E2E workflows.
+1. Integrate the [verified P2A/P2B automated candidate E2E](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) into the separately gated future CD path; Must 2 runtime coverage is complete, not CD activation.
 2. Define the Terraform/CD ownership boundary, then implement the approved GCP foundation and keyless GitHub OIDC/WIF identity.
 3. Implement the continuous-delivery path while preserving immutable digests, exact Backend tagged URLs, revision pairing, approval, promotion, and rollback behavior.
 4. Define production log collection, retention, access control, health inspection, metrics, actionable alerts, and recovery procedures required for Portfolio Done.

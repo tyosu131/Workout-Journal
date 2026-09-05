@@ -1,9 +1,11 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './safe-test';
 import { writeFileSync } from 'node:fs';
+const { browserBase } = require('./candidate-target.mjs');
 
-test('P2A local-only serial smoke', async ({ page, context, browser }) => {
-  const base = 'http://127.0.0.1:3100';
+test('isolated or approved candidate serial smoke', async ({ page, context, browser }) => {
+  const base: string = browserBase(process.env);
+  const candidate = process.env.E2E_TARGET?.startsWith('candidate:') === true;
   const runId = process.env.E2E_RUN_ID!;
   const tag = runId + '-tag';
   const memo = runId + '-note';
@@ -12,7 +14,7 @@ test('P2A local-only serial smoke', async ({ page, context, browser }) => {
   let date = '';
   let unexpectedRemote = false;
   // The product requests a Google font; block it deliberately (system fallback).
-  // All authenticated/API navigation must remain on the controller's local origin.
+  // All authenticated/API navigation must remain on the validated Frontend origin.
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin === base) return route.continue();
@@ -38,6 +40,7 @@ test('P2A local-only serial smoke', async ({ page, context, browser }) => {
     await expect(page.getByPlaceholder('Write something about this exercise...')).toHaveValue(memo);
     await expect(page.getByLabel('Exercise 1 set 1 weight', { exact: true })).toHaveValue('60');
     await expect(page.getByLabel('Exercise 1 set 1 reps', { exact: true })).toHaveValue('5');
+    await expect(page.getByLabel('Exercise 1 set 1 rest', { exact: true })).toHaveValue('60');
   };
   const authenticatedRead = async (suffix: string) => page.evaluate(async route => {
     const response = await fetch(route, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
@@ -72,6 +75,9 @@ test('P2A local-only serial smoke', async ({ page, context, browser }) => {
     await page.evaluate(marker => console.info(marker), process.env.E2E_ARTIFACT_CANARY!);
     const cookie = (await context.cookies()).find(item => item.name === 'refreshToken');
     expect(Boolean(cookie?.httpOnly && cookie.path === '/api/auth' && cookie.sameSite === 'Lax')).toBe(true);
+    if (candidate) {
+      expect(cookie?.secure === true && cookie.domain === new URL(base).hostname).toBe(true);
+    }
   });
   await step('tag-create', async () => {
     await page.goto('/tag-management');
@@ -89,6 +95,8 @@ test('P2A local-only serial smoke', async ({ page, context, browser }) => {
     await expect(page).toHaveURL(/\/note\/new\?/);
     date = new URL(page.url()).searchParams.get('date')!;
     expect(/^\d{4}-\d{2}-\d{2}$/.test(date)).toBe(true);
+    expect((await authenticatedRead('/api/notes/' + date)).notes.length).toBe(0);
+    await expect(page.getByLabel('Exercise 1 name', { exact: true })).toHaveValue('');
     await fillSaved(page.getByLabel('Exercise 1 name', { exact: true }), 'Bench Press',
       body => exercises(body)[0].exercise === 'Bench Press');
     await fillSaved(page.getByPlaceholder('Write something about this exercise...'), memo,
