@@ -133,8 +133,11 @@ no wildcard, tag policy or unexpected protection rule is configured.
 
 This is an explicit owner release checkpoint for a solo project, not independent four-eyes approval.
 This verifies configuration, not an executed deployment-approval or bypass test.
-No workflow was created or activated; `cd.yml` is absent, WIF remains `ACTIVE` with
-`disabled = true`, and production CD is inactive. Main protection is unchanged.
+No workflow was created or activated during that Environment configuration phase.
+Subsequent CD-A repository implementation adds a [manual submission-proof workflow](./wif-submission-proof.md)
+at `cd.yml`, not an Environment approval job or full CD. It has not been dispatched;
+WIF remains `ACTIVE` with `disabled = true`, and production CD is inactive.
+Main protection is unchanged.
 
 The required delivery sequence remains:
 
@@ -155,7 +158,7 @@ Current status of that sequence:
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | Next unmet work: reviewed workflow integration, separately gated provider activation and PE-P1C-01B submission evidence |
+| Keyless WIF/CD integration | Next unmet work: CD-A manual submission-proof workflow is repository-only implementation, not runtime evidence; separately gated provider activation / variables setup and PE-P1C-01B proof, then full CD and approval integration, remain |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
@@ -199,6 +202,15 @@ P1C-C selected `projects/workout-journal-506909/serviceAccounts/workout-journal-
 They are P1C-C verification artifacts, not production-deployed images. Backend and Frontend Cloud Run state remained unchanged, and there was no Cloud Run Admin Activity during the build execution window.
 
 `PE-P1C-01B — Deploy submission / WIF path` remains Open. The successful build was submitted by the current human operator and does not independently prove that the dedicated Deploy Service Account under intended GitHub WIF credentials can stage source, invoke Cloud Build, attach the Build Service Account, or complete the submission path. The provider remains disabled, production CD is not active, and no Service Account Token Creator grant may be added merely to simulate this evidence.
+
+CD-A adds the [manual `workflow_dispatch` submission-proof implementation](./wif-submission-proof.md)
+for that separate gate. Its required repository variables are
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; they have not
+been created in this implementation phase. No dispatch or external activation has
+occurred. The workflow performs no Cloud Run mutation and leaves PE-P1C-01B and
+Must 4 Open. P2B's Admin credential currently enters its runner via private stdin;
+the Deploy SA has no Secret Manager payload access. Future CD credential delivery
+is a separate Human Decision, not a new grant or secret in CD-A.
 
 Compute default Service Account Editor removal was **not** part of initial creation. The approved boundary required all three gates:
 
