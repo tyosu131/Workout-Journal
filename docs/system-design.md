@@ -569,7 +569,7 @@ Persisted notes
 2. Define the Terraform/CD ownership boundary, then implement the approved GCP foundation and keyless GitHub OIDC/WIF identity.
 3. Implement the continuous-delivery path while preserving immutable digests, exact Backend tagged URLs, revision pairing, approval, promotion, and rollback behavior.
 4. Define production log collection, retention, access control, health inspection, metrics, actionable alerts, and recovery procedures required for Portfolio Done.
-5. Add static security scanning, dependency/security automation, protected `main`, and required status checks.
+5. Add static security scanning and dependency/security automation.
 6. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
 7. Define common API error envelopes only if a separate accepted scope requires them.
 8. Add external-provider timeout, rate-limit, and observability design only before real provider integration; external AI integration is not a Portfolio Must.
