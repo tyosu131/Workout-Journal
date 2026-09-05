@@ -23,8 +23,8 @@ resource "google_iam_workload_identity_pool_provider" "workout_journal" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_actions.workload_identity_pool_id
   workload_identity_pool_provider_id = "workout-journal"
   display_name                       = "Workout Journal GitHub"
-  description                        = "Disabled activation gate for the exact Workout Journal main-branch CD workflow."
-  disabled                           = true
+  description                        = "Keyless federation for the exact Workout Journal main-branch CD workflow."
+  disabled                           = false
 
   attribute_mapping = {
     "google.subject"                = "assertion.sub"
