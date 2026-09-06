@@ -3,8 +3,9 @@
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.
 Together they close Must 2, including fresh review of the implementation, runtime
-proof and cleanup evidence on 2026-09-05. Must 4 and PE-P1C-01B remain Open, WIF
-stays disabled, and CD is inactive. The production Environment is now
+proof and cleanup evidence on 2026-09-05. Subsequent [CD-B2 evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof)
+closed PE-P1C-01B and confirmed WIF `ACTIVE` / `disabled = false`; Must 4 remains
+Open and production CD inactive. The production Environment is
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency)
 under a subsequent gate; its runtime CD approval integration remains future work.
 The required CI workflow does not execute this suite.

@@ -134,8 +134,9 @@ evidence passed secret inspection without raw browser artifacts.
 candidate mode; candidate credentials use a private stdin pipe, never CLI values.
 No E2E step was added to the required PR CI workflow. P2B is Must 2 evidence,
 not promotion, full v1 cross-browser smoke, password-recovery evidence or CD
-activation. Must 4 and PE-P1C-01B remain Open; the WIF provider stays disabled and CD
-is inactive. The production Environment was subsequently
+activation. Subsequent [CD-B2 evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof)
+closed PE-P1C-01B and confirmed WIF `ACTIVE` / `disabled = false`; Must 4 remains
+Open and production CD inactive. The production Environment was separately
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency);
 runtime deployment-approval integration is still future work, not P2B evidence.
 
