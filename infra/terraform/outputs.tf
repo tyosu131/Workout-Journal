@@ -34,6 +34,6 @@ output "github_actions_workload_identity_pool_name" {
 }
 
 output "workout_journal_workload_identity_provider_name" {
-  description = "Canonical name of the disabled Workout Journal OIDC provider."
+  description = "Canonical name of the current Deploy OIDC provider."
   value       = google_iam_workload_identity_pool_provider.workout_journal.name
 }

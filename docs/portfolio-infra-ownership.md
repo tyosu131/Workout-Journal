@@ -7,6 +7,13 @@
 
 ## Core ownership rule
 
+CD-C1's [dedicated E2E identity and gated delivery source](./cd-c1-candidate-delivery.md)
+is **Proposed / Pending Human Gate**, not part of the 30 applied resources above.
+It adds five desired resources; E2E secret access is exact-resource scoped and
+existing Deploy/Build grants are unchanged. The dedicated Supabase key is not yet
+created; E2E WIF and full CD runtime proofs remain Open. Must 3 stays In progress,
+Must 4 Open and production CD inactive.
+
 Terraform and CD must not compete for the same mutable production state.
 
 **Cloud Run services themselves remain CD-owned.** The application image, revision template, environment/runtime configuration, Secret Manager version references, candidate tag, traffic allocation, promotion, and rollback pair form one mutable delivery contract already governed by CD and the runbook. Terraform therefore does not define or import `google_cloud_run_v2_service`, and broad `ignore_changes` is not the selected design.
@@ -158,7 +165,7 @@ Current status of that sequence:
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured. Full CD, candidate and approval integration remain future work |
+| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured. CD-C1 adds gated candidate/E2E/approval source as desired state only; activation and full CD runtime proof remain future work |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).

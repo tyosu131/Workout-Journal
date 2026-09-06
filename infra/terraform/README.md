@@ -16,6 +16,17 @@ PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-ba
 
 This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired OIDC provider state now agree on `disabled = false`. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
+## CD-C1 desired state / Pending Human Gate
+
+CD-C1 adds a separate **Proposed / Pending Human Gate** desired-state layer in
+[`candidate_e2e.tf`](./candidate_e2e.tf): E2E SA, dedicated secret metadata,
+exact-secret Accessor, disabled E2E provider and narrowly mapped impersonation
+member. These five additions are not applied; actual baseline remains 30 and the
+eventual total is 35. No secret version/key is created. Existing Deploy WIF remains
+enabled and proven. See the [CD-C1 contract](../../docs/cd-c1-candidate-delivery.md).
+The CD-B2 evidence below is the completed baseline, not a claim that CD-C1's
+desired-state plan is zero-addition.
+
 ## Completed CD-B2 provider activation
 
 CD-B1's 2026-09-05 speculative plan prepared the activation without applying it;
@@ -178,7 +189,7 @@ The provider condition requires owner ID `95160728`, repository ID `790375516`, 
 
 At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation and P1C-B operational IAM support the [CD-B2 verified manual submission path](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof). The provider is enabled and PE-P1C-01B is Closed; `cd.yml` still supplies only a manual submission-proof workflow, not full CD. Compute default Service Account Editor cleanup completed separately in P1C-D2. Production CD activation remains future work; CD-B2 added no IAM grants.
+The WIF foundation and P1C-B operational IAM support the [CD-B2 verified manual submission path](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof). The Deploy provider is enabled and PE-P1C-01B is Closed. At CD-B2, `cd.yml` supplied only manual submission proof; CD-C1 now replaces its source with gated candidate delivery desired state, without activation or full-CD runtime proof. Compute default Service Account Editor cleanup completed separately in P1C-D2. Production CD activation remains future work; CD-B2 added no IAM grants.
 
 ## Completed P1C-B operational IAM
 

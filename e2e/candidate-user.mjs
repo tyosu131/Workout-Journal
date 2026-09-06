@@ -3,7 +3,7 @@ import { hostname } from 'node:os';
 import { mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { check, SafeError, RUNS, processAlive } from './safety.mjs';
-import { candidateIdentity, SUPABASE_URL, SUPABASE_REF, APPLICATION_SHA, validateManifest } from './candidate-target.mjs';
+import { candidateIdentity, SUPABASE_URL, SUPABASE_REF, validateManifest } from './candidate-target.mjs';
 
 export const P2B_RUNS = path.join(RUNS, 'p2b');
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -17,7 +17,7 @@ export function newCandidateUser(m, now = Date.now()) {
   const runId = 'p2b-' + now + '-' + randomBytes(8).toString('hex');
   const metadata = { repository: 'tyosu131/Workout-Journal', purpose: 'portfolio-p2b',
     candidateId: m.candidateId, runId, createdAt: now, expiresAt: now + EXPIRY,
-    sourceSha: APPLICATION_SHA, version: 1, ownerNonce: randomBytes(24).toString('hex'),
+    sourceSha: m.sourceSha, version: 1, ownerNonce: randomBytes(24).toString('hex'),
     creatorPid: process.pid, creatorHost: hostname() };
   return { password: 'P2B_PASSWORD_MARKER_' + randomBytes(24).toString('hex'),
     receipt: { runId, userId: randomUUID(), email: runId + '@p2b.invalid', metadata,
@@ -29,7 +29,7 @@ export function validateReceipt(m, r) {
   check(UUID.test(r.userId) && r.email === r.runId + '@p2b.invalid' &&
     r.targetIdentity === candidateIdentity(m) && r.supabaseProject === SUPABASE_REF &&
     o?.repository === 'tyosu131/Workout-Journal' && o.purpose === 'portfolio-p2b' &&
-    o.version === 1 && o.sourceSha === APPLICATION_SHA && o.candidateId === m.candidateId &&
+    o.version === 1 && o.sourceSha === m.sourceSha && o.candidateId === m.candidateId &&
     o.runId === r.runId && o.createdAt === Number(r.runId.split('-')[1]) &&
     o.expiresAt === o.createdAt + EXPIRY && /^[a-f0-9]{48}$/.test(o.ownerNonce) &&
     Number.isSafeInteger(o.creatorPid) && o.creatorPid > 0 && o.creatorHost === hostname(),
@@ -88,7 +88,9 @@ export function candidateClient(m, secret) {
     if (operation === 'read' && response.status === 404) return null;
     check(response.ok, 'P2B_API_REJECTED');
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    let data;
+    try { data = text ? JSON.parse(text) : null; }
+    catch { throw new SafeError('P2B_API_RESPONSE_INVALID'); }
     return ['read', 'create'].includes(operation) ? data?.user || data : data;
   };
   return {
@@ -132,11 +134,14 @@ export async function credentialFromStdin(m) {
       check(bytes.length + chunk.length <= 16_384, 'CREDENTIAL_PIPE_TOO_LARGE');
       bytes = Buffer.concat([bytes, chunk]);
     }
-    const input = JSON.parse(bytes.toString('utf8'));
-    const ref = m.backend.secretRefs.SUPABASE_SECRET_KEY;
+    let input;
+    try { input = JSON.parse(bytes.toString('utf8')); }
+    catch { throw new SafeError('CREDENTIAL_PIPE_INVALID'); }
+    const ref = m.version === 2 ? m.e2eSecret : m.backend.secretRefs.SUPABASE_SECRET_KEY;
     check(input.secretRef?.project === m.project && input.secretRef.name === ref.name &&
       input.secretRef.version === ref.version && typeof input.value === 'string' && input.value.length > 20,
     'SECRET_VERSION_INJECTION_MISMATCH');
+    if (m.version === 2) check(/^sb_secret_[A-Za-z0-9_-]{10,256}$/.test(input.value), 'E2E_SECRET_FORMAT_INVALID');
     return input.value;
   } finally { clearTimeout(timer); bytes.fill(0); }
 }

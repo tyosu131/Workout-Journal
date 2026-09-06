@@ -1,5 +1,11 @@
 # CD-A: manual keyless submission proof
 
+This is the durable **CD-B2 executed-proof record** at the SHA below. CD-C1 now
+proposes [gated delivery and dedicated E2E](./cd-c1-candidate-delivery.md) in
+`cd.yml`; that source is not activated and does not supersede this runtime evidence.
+The CD-A workflow/command descriptions below refer to the recorded proof path,
+not a claim that current `cd.yml` still contains only the submission job.
+
 Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
 Must 3 In progress; WIF `ACTIVE` / `disabled = false`; production CD inactive.**
 The two repository variables are configured and privately read-back verified.
@@ -80,8 +86,10 @@ repository-variable updates, workflow dispatch, Build submission or Cloud Run op
 PE-P1C-01B is Closed. Must 3 stays In progress for remaining identity/build
 hardening. Must 4 stays Open: automatic main-merge + CI-success delivery,
 candidate deployment and exact pairing, E2E integration, runtime Environment
-approval, promotion, post-deploy verification and rollback/failure behavior still
-require implementation and evidence. Production CD remains inactive.
+approval, promotion, post-deploy verification and rollback/failure behavior were
+still unimplemented at CD-B2 closure. CD-C1 now adds their gated source contract,
+not runtime evidence; automatic triggering remains future work. Production CD
+remains inactive.
 
 ## Inputs and trust boundary
 

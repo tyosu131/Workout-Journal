@@ -1,66 +1,171 @@
-name: CD-A WIF submission proof
+name: CD-C1 gated candidate delivery
 
-# Repository implementation only: provider activation and the first dispatch need
-# a separate Human Gate. This is NOT the production CD/approval workflow.
+# Desired state only. No workflow_run trigger; activation remains Human-gated.
 on:
   workflow_dispatch:
+    inputs:
+      e2e_secret_version:
+        description: Human-approved numeric version of the dedicated E2E secret
+        required: true
+        type: string
 
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
 
 concurrency:
-  group: cd-a-submission-proof
+  group: workout-journal-production-delivery
   cancel-in-progress: false
 
+env:
+  CD_C1_ACTIVATION: ${{ vars.CD_C1_ACTIVATION }}
+  GCP_PROJECT: workout-journal-506909
+  WIF_PROVIDER: projects/437413312066/locations/global/workloadIdentityPools/github-actions/providers/workout-journal
+  DEPLOY_SERVICE_ACCOUNT: workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com
+  PYTHONDONTWRITEBYTECODE: '1'
+
 jobs:
-  submission-proof:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main'
+  preflight:
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && vars.CD_C1_ACTIVATION == 'approved'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      GCP_PROJECT: workout-journal-506909
-      WIF_PROVIDER: projects/437413312066/locations/global/workloadIdentityPools/github-actions/providers/workout-journal
-      DEPLOY_SERVICE_ACCOUNT: workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      source_sha: ${{ steps.check.outputs.source_sha }}
     steps:
-      - name: Checkout exact dispatch SHA
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-
-      - name: Fail-closed preflight and credential-free source preparation
+      - name: Exact main and successful required CI authority
+        id: check
         env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B .github/scripts/cd_release.py preflight
+
+  candidate:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    outputs:
+      manifest: ${{ steps.candidate.outputs.manifest }}
+      manifest_hash: ${{ steps.candidate.outputs.manifest_hash }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - name: Prepare credential-free exact-source archive
+        env:
+          GH_TOKEN: ${{ github.token }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-        run: python3 .github/scripts/wif_submission.py prepare
-
-      - name: Authenticate as the dedicated Deploy Service Account
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        run: python3 -B .github/scripts/cd_release.py prepare
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          project_id: ${{ env.GCP_PROJECT }}
+          project_id: workout-journal-506909
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
           create_credentials_file: true
           export_environment_variables: true
           cleanup_credentials: true
-
-      - name: Set up gcloud for WIF credentials
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           version: '>= 416.0.0'
-          project_id: ${{ env.GCP_PROJECT }}
-
-      - name: Prove submission, dedicated build execution and unchanged Cloud Run
-        id: proof
+      - name: Build once, deploy unique zero-traffic pair, capture actual manifest
+        id: candidate
         env:
+          GH_TOKEN: ${{ github.token }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-        run: python3 .github/scripts/wif_submission.py prove
+          E2E_SECRET_VERSION: ${{ inputs.e2e_secret_version }}
+        run: python3 -B .github/scripts/cd_release.py candidate
 
-      - name: Fail-closed result when any proof prerequisite or execution fails
-        if: always() && steps.proof.outcome != 'success'
-        run: |
-          printf '%s\n' '## CD-A: PE-P1C-01B FAIL / incomplete' \
-            'No submission-path closure. Review the fixed failure code, if available; do not widen IAM automatically.' \
-            >> "$GITHUB_STEP_SUMMARY"
+  candidate-e2e:
+    needs: candidate
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/candidate-e2e.yml
+    with:
+      manifest: ${{ needs.candidate.outputs.manifest }}
+      manifest_hash: ${{ needs.candidate.outputs.manifest_hash }}
+
+  verify-candidate:
+    needs: [candidate, candidate-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      e2e_hash: ${{ steps.verify.outputs.e2e_hash }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: workout-journal-506909
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+          cleanup_credentials: true
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: '>= 416.0.0'
+      - name: Re-read candidate and production after E2E cleanup
+        id: verify
+        env:
+          CD_MANIFEST: ${{ needs.candidate.outputs.manifest }}
+          CD_MANIFEST_HASH: ${{ needs.candidate.outputs.manifest_hash }}
+          CD_E2E_HASH: ${{ needs.candidate-e2e.outputs.e2e_hash }}
+        run: python3 -B .github/scripts/cd_release.py verify
+
+  production:
+    needs: [candidate, verify-candidate]
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: workout-journal-506909
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+          cleanup_credentials: true
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: '>= 416.0.0'
+      - name: Recheck captured production, CAS promotion, post-deploy and safe rollback
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CD_MANIFEST: ${{ needs.candidate.outputs.manifest }}
+          CD_MANIFEST_HASH: ${{ needs.candidate.outputs.manifest_hash }}
+          CD_E2E_HASH: ${{ needs.verify-candidate.outputs.e2e_hash }}
+        run: python3 -B .github/scripts/cd_release.py promote
