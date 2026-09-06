@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete; remote GCS state contains 30 resources. CD-B1 prepares one in-place provider update (`disabled = false` desired); actual provider remains disabled pending CD-B2 apply, so the current plan is intentionally not zero-change
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. Must 3 remains In progress, Must 4 Open, production CD inactive
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -21,9 +21,9 @@ Terraform and CD must not compete for the same mutable production state.
 | Secret Manager secret metadata | Terraform Owns | Two metadata-only resources are in remote state; secret versions and values remain excluded |
 | Backend runtime access to the two secrets | Terraform Owns | Two exact additive `secretAccessor` members are in remote state; zero-drift verified |
 | IAM, Cloud Resource Manager, IAM Credentials, and STS APIs | Terraform Owns | Four prerequisite `google_project_service` resources are enabled and protected from disable-on-destroy |
-| Deploy Service Account `workout-journal-deploy` | Terraform Owns | Keyless identity with exact P1C-A impersonation and P1C-B operational additive members; provider remains disabled |
+| Deploy Service Account `workout-journal-deploy` | Terraform Owns | Keyless identity with exact P1C-A impersonation and P1C-B operational additive members; CD-B2 verified its submission path under GitHub WIF |
 | Build Service Account `workout-journal-build` | Terraform Owns | Keyless identity with exact P1C-B build permissions; P1C-C runtime-verified its repository build, two image pushes, and Cloud Logging path |
-| WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Actual pool is `ACTIVE` / `FEDERATION_ONLY`; actual provider is `ACTIVE` / `disabled = true`. CD-B1 desired provider state is `disabled = false`, pending CD-B2 apply; no pool or trust change |
+| WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Actual pool is `ACTIVE` / `FEDERATION_ONLY`; actual provider is `ACTIVE` / `disabled = false`, matching desired state after CD-B2; no pool or trust change |
 | Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
 | P1C-B operational IAM members | Terraform Owns | Exactly 13 additive members are in remote state and actual IAM; zero-drift verified |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
@@ -40,7 +40,7 @@ Terraform and CD must not compete for the same mutable production state.
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
 | Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
 
-The current remote state contains exactly 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer. The reviewed P1C-B apply added 13 resources without changing or destroying existing infrastructure, actual IAM read-back matched every member, and the post-apply plan at P1C-B closure was zero-drift. CD-B1 now has exactly one intentional pending provider update, not unexpected drift.
+The current remote state contains exactly 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer. The reviewed P1C-B apply added 13 resources without changing or destroying existing infrastructure, actual IAM read-back matched every member, and the post-apply plan at P1C-B closure was zero-drift. CD-B2 applied CD-B1's one in-place provider update; the normally locked post-apply plan was zero-change with no refresh drift. See the [exact activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation).
 
 ## CD-owned delivery contract
 
@@ -68,9 +68,9 @@ Each release attempt gets a never-reused `CANDIDATE_ID`. A Backend tag reference
 
 ## Completed P1C-A identity foundation and P1C-B operations
 
-P1C-A created and verified the identity foundation in Terraform. Its GitHub provider is explicitly disabled, and its only new IAM grant is the additive repository-ID-scoped `roles/iam.workloadIdentityUser` member on the dedicated deploy Service Account. No operational deploy/build role is part of P1C-A.
+P1C-A created and verified the identity foundation in Terraform with its GitHub provider initially disabled. Its only new IAM grant was the additive repository-ID-scoped `roles/iam.workloadIdentityUser` member on the dedicated deploy Service Account. No operational deploy/build role was part of P1C-A; CD-B2 subsequently enabled the provider without changing IAM.
 
-Future GitHub Actions authentication is keyless Service Account impersonation:
+The CD-B2-verified GitHub Actions authentication path uses keyless Service Account impersonation:
 
 ```text
 GitHub Actions OIDC
@@ -103,7 +103,7 @@ ref                 == refs/heads/main
 workflow_ref        == tyosu131/Workout-Journal/.github/workflows/cd.yml@refs/heads/main
 ```
 
-Numeric owner/repository IDs are the stable trust anchors; name checks provide defense in depth and make intent reviewable. P1C-A owns `roles/iam.workloadIdentityUser` on the deploy Service Account, limited to repository ID `790375516` through the mapped repository principal. The actual provider resource state is `ACTIVE`, but `disabled = true` remains the authentication gate until CD-B2 apply. CD-B1 prepares only desired `disabled = false` and a neutral provider description; all trust conditions above, mappings, issuer, pool and IAM remain unchanged. P1C-B owns only the exact additive permissions needed to invoke Cloud Build and perform the approved Cloud Run delivery contract, including `actAs` only for the dedicated build and approved runtime Service Accounts. It grants no Secret Manager payload access.
+Numeric owner/repository IDs are the stable trust anchors; name checks provide defense in depth and make intent reviewable. P1C-A owns `roles/iam.workloadIdentityUser` on the deploy Service Account, limited to repository ID `790375516` through the mapped repository principal. CD-B2 read-back confirmed actual provider `ACTIVE` / `disabled = false` after applying CD-B1's activation and neutral description. All trust conditions above, mappings, issuer, pool and IAM remain unchanged. P1C-B owns only the exact additive permissions needed to invoke Cloud Build and perform the approved Cloud Run delivery contract, including `actAs` only for the dedicated build and approved runtime Service Accounts. It grants no Secret Manager payload access.
 
 Google requires mappings for claims used in provider conditions and recommends restricting a shared GitHub issuer with an attribute condition. GitHub documents `repository_owner_id`, `repository_id`, `repository_owner`, `repository`, `ref`, and `workflow_ref` as OIDC token claims. See [Google Cloud deployment-pipeline federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines) and the [GitHub OIDC claim reference](https://docs.github.com/en/actions/reference/security/oidc).
 
@@ -134,10 +134,10 @@ no wildcard, tag policy or unexpected protection rule is configured.
 This is an explicit owner release checkpoint for a solo project, not independent four-eyes approval.
 This verifies configuration, not an executed deployment-approval or bypass test.
 No workflow was created or activated during that Environment configuration phase.
-Subsequent CD-A repository implementation adds a [manual submission-proof workflow](./wif-submission-proof.md)
-at `cd.yml`, not an Environment approval job or full CD. It has not been dispatched;
-WIF remains `ACTIVE` with `disabled = true`, and production CD is inactive.
-Main protection is unchanged.
+Subsequent CD-A repository implementation added a [manual submission-proof workflow](./wif-submission-proof.md)
+at `cd.yml`, not an Environment approval job or full CD. CD-B2 activated WIF and
+verified one manual submission-proof run; it did not exercise Environment approval.
+Main protection and Environment configuration were unchanged. Production CD remains inactive.
 
 The required delivery sequence remains:
 
@@ -154,18 +154,18 @@ Current status of that sequence:
 
 | Dependency | Current status |
 | --- | --- |
-| Terraform/WIF foundation | Implemented; actual provider remains disabled. CD-B1 desired activation is prepared, pending one in-place CD-B2 apply update |
+| Terraform/WIF foundation | Implemented; CD-B2 applied the exact provider update, actual `ACTIVE` / `disabled = false`, post-apply plan zero-change |
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | CD-A manual `workflow_dispatch` proof workflow exists on `main`; CD-B1 desired activation is prepared, not applied. Next: separate CD-B2 apply, repository variables (currently unconfigured), PE-P1C-01B runtime proof, then full CD and approval integration |
+| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured. Full CD, candidate and approval integration remain future work |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
 The production Environment configuration prerequisite is also satisfied. The next
-unmet work is reviewed keyless WIF/CD integration, including use of this Environment
-for release approval and `PE-P1C-01B` Deploy-SA/WIF submission evidence, under a
-separate Human Gate. Must 4 and PE-P1C-01B remain Open. Historically, P2B did not
+unmet work is full CD integration, including use of this Environment for runtime
+release approval under a separate Human Gate. CD-B2 closed `PE-P1C-01B`
+Deploy-SA/WIF submission evidence; Must 4 remains Open. Historically, P2B did not
 activate the provider, create an Environment, implement CD, promote traffic or
 close Must 4; this subsequent Environment setup does not activate WIF/CD or
 authorize production promotion.
@@ -188,7 +188,7 @@ Branch protection was not created by P1C-A and remains externally/manually manag
 
 ## Dedicated build identity decision
 
-The dedicated build Service Account has the exact P1C-B Artifact Registry writer, Cloud Logging writer, and source-object viewer members. P1C-C runtime-verified that role set for the repository build path. The deploy Service Account has the exact build invocation, Service Usage, resource-scoped Artifact Registry/Cloud Run/Storage, and three `actAs` members required by the approved hypothesis, but its submission path under WIF remains unproven.
+The dedicated build Service Account has the exact P1C-B Artifact Registry writer, Cloud Logging writer, and source-object viewer members. P1C-C runtime-verified that role set for the repository build path. The deploy Service Account has the exact build invocation, Service Usage, resource-scoped Artifact Registry/Cloud Run/Storage, and three `actAs` members. CD-B2 runtime-verified its submission path under GitHub WIF without adding IAM grants.
 
 P1C-B correction closure: future `gcloud builds submit` runs as the dedicated deploy Service Account and stages local source into `workout-journal-506909_cloudbuild`. The current 13-member layer therefore includes deploy `roles/storage.objectCreator` and `roles/storage.bucketViewer` on that exact bucket, plus project `roles/serviceusage.serviceUsageConsumer` for `serviceusage.services.use`. The previous `10 add` and intermediate `12 add` expectations are historical and obsolete.
 
@@ -201,14 +201,15 @@ P1C-C selected `projects/workout-journal-506909/serviceAccounts/workout-journal-
 
 They are P1C-C verification artifacts, not production-deployed images. Backend and Frontend Cloud Run state remained unchanged, and there was no Cloud Run Admin Activity during the build execution window.
 
-`PE-P1C-01B — Deploy submission / WIF path` remains Open. The successful build was submitted by the current human operator and does not independently prove that the dedicated Deploy Service Account under intended GitHub WIF credentials can stage source, invoke Cloud Build, attach the Build Service Account, or complete the submission path. The provider remains disabled, production CD is not active, and no Service Account Token Creator grant may be added merely to simulate this evidence.
+`PE-P1C-01B — Deploy submission / WIF path` is Closed by [CD-B2 runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof), separately from the earlier human-submitted P1C-C build. On 2026-09-06, run `34007295086` at SHA `0f0a677f196f43681d55d90f93350dd83cff841d` authenticated through GitHub OIDC/WIF as the dedicated Deploy SA and submitted successful Build `f7735982-2596-407d-bbe6-7c6d9c0adb50` using the dedicated Build SA. The Human-confirmed Job Summary reported PASS; independent read-back matched both immutable digests and unchanged Cloud Run.
 
-CD-A adds the [manual `workflow_dispatch` submission-proof implementation](./wif-submission-proof.md)
-for that separate gate. Its required repository variables are
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; they have not
-been created in this implementation phase. No dispatch or external activation has
-occurred. The workflow performs no Cloud Run mutation and leaves PE-P1C-01B and
-Must 4 Open. P2B's Admin credential currently enters its runner via private stdin;
+CD-B2 created only the two repository variables `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, applied the exact provider update, and
+executed one dispatch/Build with source staging and two proof-image pushes.
+The proof images were not deployed. IAM grants, Service Accounts, GitHub secrets,
+Environment settings and Cloud Run were unchanged; full mutation accounting is
+in the linked evidence record. Must 3 remains In progress, Must 4 Open and production
+CD inactive. P2B's Admin credential currently enters its runner via private stdin;
 the Deploy SA has no Secret Manager payload access. Future CD credential delivery
 is a separate Human Decision, not a new grant or secret in CD-A.
 
@@ -275,11 +276,12 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | --- | --- | --- |
 | State bucket bootstrap and first remote state | High | P1B complete: read-back verified, backend initialized, and zero-drift confirmed |
 | Existing resource and IAM-member import | High | P1B complete: eight imports, no resource mutation, and zero-drift confirmed |
-| Disabled WIF foundation and exact trust condition | High | P1C-A complete: actual mapping/condition verified, provider disabled, and zero-drift confirmed |
+| Disabled WIF foundation and exact trust condition | High | P1C-A complete: initially disabled provider and exact trust verified; subsequent CD-B2 activation preserved that trust |
 | Dedicated deploy/build SA creation | High | P1C-A complete: both identities exist with zero user-managed keys and no operational roles |
 | P1C-B operational IAM | High | Complete: exact 13-member additive matrix applied, actual read-back matched, and zero-drift confirmed |
 | P1C-C dedicated Build execution | High | Complete: build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account; Cloud Run remained unchanged |
+| CD-B2 provider activation and Deploy-SA/WIF submission | High | Complete: exact saved-plan apply, post-apply zero-change, one successful workflow/Build, Human-confirmed Summary and independent read-back; PE-P1C-01B Closed |
 | Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
 | Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
-| Production CD activation | High | Protected `main`, required CI, automated candidate E2E proof and production Environment configuration are verified; keyless CD integration, runtime approval/promotion verification and PE-P1C-01B evidence remain required |
+| Production CD activation | High | Protected `main`, required CI, candidate E2E, production Environment configuration and PE-P1C-01B submission proof verified; automatic delivery, candidate/approval integration, promotion, post-deploy and rollback/failure verification remain required |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |

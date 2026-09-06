@@ -10,33 +10,50 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1C-B (Current):** Applied and verified exactly 13 additive operational IAM members for the approved deploy/build command path. The reviewed apply reported `13 added, 0 changed, 0 destroyed`, bringing remote state to 30 resources; the post-apply plan reported no changes.
 - **P1C-C dedicated Build execution (Current / Complete):** Human-gated build `44a37101-eb7c-4f12-8901-5b3854afd7ae` succeeded from exact tested commit `709c55a934783917184d09831facc085e7bc19c9` using the dedicated Build Service Account. Both exact-SHA image tags resolve to immutable digests, `CLOUD_LOGGING_ONLY` logs are readable, and Cloud Run remained unchanged.
 - **P1C-D2 Compute default SA Editor cleanup (Current / Complete):** P1C-D found zero current active dependencies and returned `SAFE_CANDIDATE`; after a separate Human Gate, P1C-D2 removed only the legacy project-level `roles/editor` binding outside Terraform. The Compute default Service Account still exists, remains enabled, and is not Terraform-managed.
-- **CD-B1 WIF activation (Desired state / Pending apply):** Prepares `disabled = false` and a neutral description on the existing provider only. Actual GCP and remote state still report `disabled = true`; activation awaits the separate CD-B2 apply gate.
+- **CD-B1 / CD-B2 WIF activation (Current / Complete):** CD-B1 prepared the provider desired state. On 2026-09-06, CD-B2 applied exactly one in-place update to `disabled = false` and the reviewed neutral description; actual provider is `ACTIVE` / `disabled = false`, and the normally locked post-apply plan reported `0 add / 0 change / 0 destroy`.
 
-PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), and PE-P1C-01A (dedicated Build execution) are Closed. Portfolio Must 3 remains In progress because PE-P1C-01B deploy submission under WIF/CD, provider activation, and subsequent hardening remain future work.
+PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress for remaining identity/build hardening; Must 4 is Open and production CD remains inactive.
 
-This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; the actual OIDC provider remains disabled pending CD-B2, while repository desired state is `disabled = false`. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
+This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired OIDC provider state now agree on `disabled = false`. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
-## CD-B1 desired state / pending CD-B2 apply
+## Completed CD-B2 provider activation
 
-Read-only verification on 2026-09-05 confirmed the pool is `ACTIVE` /
-`FEDERATION_ONLY`, the provider is `ACTIVE` / `disabled = true`, and the provider
-exists among the 30 remote-state resources. CD-B1 prepares `disabled = false`
-and replaces the contradictory `Disabled activation gate` description with neutral
-wording. Trust condition, attribute mapping, issuer, pool and IAM are unchanged.
+CD-B1's 2026-09-05 speculative plan prepared the activation without applying it;
+the provider was then `ACTIVE` / `disabled = true`. Under the separate CD-B2 Human
+Gate, a new saved plan from exact main SHA
+`0f0a677f196f43681d55d90f93350dd83cff841d` used normal state locking and passed
+machine verification: **`0 add / 1 change / 0 destroy`**, only
+`google_iam_workload_identity_pool_provider.workout_journal`, in-place. The only
+planned field changes were `disabled: true -> false` and the reviewed description
+`Keyless federation for the exact Workout Journal main-branch CD workflow.`
 
-The speculative plan reports **`0 to add, 1 to change, 0 to destroy`**, solely an
-in-place update to `google_iam_workload_identity_pool_provider.workout_journal`.
-This is an **intentional pending apply**, not unexpected drift or a current
-zero-change plan. Earlier zero-drift results below remain historical evidence.
-No apply or remote-state write was performed. This read-only plan used
-`-input=false -no-color -lock=false -detailed-exitcode` (exit `2`); no executable
-plan was saved. CD-B2 must obtain a fresh, normally locked plan before its separate
-apply gate; merging CD-B1 alone does not activate the provider.
+The Human approved only these refresh-drift exceptions:
 
-The CD-A `.github/workflows/cd.yml` is already on `main` (`workflow_dispatch` only).
-Repository variables remain unconfigured (actual count `0`); CD-B1 performed no
-workflow dispatch or Cloud Build submission.
-**PE-P1C-01B and Must 4 remain Open; CD is inactive.**
+| Resource | Computed attribute |
+| --- | --- |
+| `google_artifact_registry_repository.workout_journal` | `update_time` |
+| `google_project_iam_member.build_log_writer` | `etag` |
+| `google_project_iam_member.deploy_cloud_build_editor` | `etag` |
+| `google_project_iam_member.deploy_service_usage_consumer` | `etag` |
+
+The repository's locked Google provider `7.45.0` schema confirmed each attribute
+was `computed = true`, `optional = false`, `required = false`. Each drift changed
+only that attribute, every configured field was identical, and each corresponding
+`resource_changes` action was `no-op`. No other drift, output change, replacement,
+IAM semantic change or trust/mapping/issuer/pool change was accepted. Earlier
+rejected plans were not applied.
+
+The exact verified saved plan applied successfully: `0 added / 1 changed /
+0 destroyed`. Actual read-back confirmed `ACTIVE` / `disabled = false` and
+unchanged trust/mapping/issuer/pool. A fresh normally locked post-apply plan
+reported `0 add / 0 change / 0 destroy`, `resource_drift = 0`, with 30 resources.
+
+CD-B2 also configured exactly the two repository public-config variables and
+executed the manual workflow once. The [durable runtime proof and mutation
+accounting](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof) records
+the Human-confirmed Job Summary and independent Build/digest/Cloud Run read-back.
+**PE-P1C-01B is Closed; Must 3 remains In progress; Must 4 remains Open; production
+CD is inactive.** Its images are submission-proof artifacts, not deployed images.
 
 ## Toolchain decision
 
@@ -66,7 +83,7 @@ Official references: [Terraform installation and current release](https://develo
 | `google_service_account.deploy` | `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com` |
 | `google_service_account.build` | `workout-journal-build@workout-journal-506909.iam.gserviceaccount.com` |
 | `google_iam_workload_identity_pool.github_actions` | Federation-only pool `github-actions` |
-| `google_iam_workload_identity_pool_provider.workout_journal` | GitHub OIDC provider `workout-journal`: actual `disabled = true`; desired `disabled = false`, pending CD-B2 apply |
+| `google_iam_workload_identity_pool_provider.workout_journal` | GitHub OIDC provider `workout-journal`: actual `ACTIVE` / `disabled = false`, matching desired state after CD-B2 |
 | `google_service_account_iam_member.deploy_workload_identity_user` | Exact repository principal's additive deploy-SA impersonation member |
 | `google_project_iam_member.deploy_cloud_build_editor` | Deploy SA Cloud Build invocation member on project `workout-journal-506909` |
 | `google_project_iam_member.deploy_service_usage_consumer` | Deploy SA Service Usage consumer member on project `workout-journal-506909` |
@@ -145,7 +162,7 @@ The following Human-gated sequence was completed in P1B and is retained as adopt
 
 The bucket resource has `prevent_destroy = true`, `force_destroy = false`, versioning, uniform bucket-level access, and enforced public access prevention. `prevent_destroy` and `force_destroy` are Terraform configuration protections, not remote bucket properties, so they were not part of the bucket metadata read-back. The bucket was manually bootstrapped only to solve the backend dependency; after its successful import, Terraform owns its configuration.
 
-All eight configuration-driven import blocks remain in `imports.tf` as explicit adoption evidence. With the resources already present at the same addresses in remote state, no duplicate imports are planned. The current CD-B1 plan contains only the intentional provider update described above; the applied baseline's zero-drift result is historical.
+All eight configuration-driven import blocks remain in `imports.tf` as explicit adoption evidence. With the resources already present at the same addresses in remote state, no duplicate imports are planned. CD-B1's intentional provider update was applied in CD-B2; its post-apply plan was zero-change.
 
 ## Completed P1C-A disabled WIF foundation
 
@@ -157,11 +174,11 @@ P1C-A passed its saved-plan Human Gate and added exactly nine resources with `0 
 - the `workout-journal` GitHub OIDC provider with the default Google audience behavior and `disabled = true`; and
 - one additive `roles/iam.workloadIdentityUser` member on the deploy Service Account, scoped to repository ID `790375516` through the pool's mapped `attribute.repository_id`.
 
-The provider condition requires owner ID `95160728`, repository ID `790375516`, the expected owner and repository names, `refs/heads/main`, and the exact `cd.yml` workflow reference. Actual read-back confirmed that mapping and condition, pool state `ACTIVE` with mode `FEDERATION_ONLY`, and provider state `ACTIVE` with `disabled = true`. Here `ACTIVE` is the provider resource lifecycle state; disabled providers cannot perform new token exchanges.
+The provider condition requires owner ID `95160728`, repository ID `790375516`, the expected owner and repository names, `refs/heads/main`, and the exact `cd.yml` workflow reference. At P1C-A closure, actual read-back confirmed that mapping and condition, pool state `ACTIVE` with mode `FEDERATION_ONLY`, and provider state `ACTIVE` with `disabled = true`. Here `ACTIVE` is the provider resource lifecycle state. CD-B2 later enabled the provider without changing that trust boundary.
 
 At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation and P1C-B operational IAM exist, but production authentication and CD are not active. The provider remains disabled. [CD-A](../../docs/wif-submission-proof.md) now supplies `cd.yml` as a manual submission-proof workflow only; it has not been dispatched and does not implement full CD. P1C-C runtime-verified the dedicated Build Service Account only; PE-P1C-01B Deploy-SA submission under WIF remains Open and unproven. Compute default Service Account Editor cleanup completed separately in P1C-D2; provider activation and production CD activation remain later gates. CD-A changes no Terraform resources or IAM.
+The WIF foundation and P1C-B operational IAM support the [CD-B2 verified manual submission path](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof). The provider is enabled and PE-P1C-01B is Closed; `cd.yml` still supplies only a manual submission-proof workflow, not full CD. Compute default Service Account Editor cleanup completed separately in P1C-D2. Production CD activation remains future work; CD-B2 added no IAM grants.
 
 ## Completed P1C-B operational IAM
 
@@ -182,7 +199,7 @@ P1C-B passed its saved-plan Human Gate and applied exactly these 13 additive IAM
 
 The Service Usage grant supplies `serviceusage.services.use`, which the current Cloud Build CLI submission contract requires in addition to Cloud Build Editor. The source-staging correction is also included: the deploy identity can create the local-source archive and read bucket metadata on the exact Cloud Build source bucket, while the build identity can only read staged source objects. The previous `10 add` and intermediate `12 add` assumptions are historical and obsolete. Actual read-back confirmed all 13 exact members, remote state contains 30 resources, and the post-apply plan at P1C-B closure was zero-drift: `No changes. Your infrastructure matches the configuration.`
 
-All resources use additive `*_iam_member` forms. The Cloud Run resources own only service-level IAM membership, not service configuration, revisions, images, environment, tags, traffic, promotion, or rollback state. P1C-B grants no project-wide `serviceAccountUser`, Secret Manager access, Service Account Token Creator, basic role, or Service Account key. The WIF provider remains disabled.
+All resources use additive `*_iam_member` forms. The Cloud Run resources own only service-level IAM membership, not service configuration, revisions, images, environment, tags, traffic, promotion, or rollback state. P1C-B grants no project-wide `serviceAccountUser`, Secret Manager access, Service Account Token Creator, basic role, or Service Account key. CD-B2 enabled WIF without changing this IAM layer.
 
 ## Completed P1C-C dedicated Build execution
 
@@ -195,7 +212,7 @@ The build completed the repository source build, Backend Docker build, Frontend 
 
 These images are P1C-C verification artifacts, not production-deployed images. Backend and Frontend Cloud Run state remained unchanged, and the build execution window contained no Cloud Run Admin Activity.
 
-`PE-P1C-01B — Deploy submission / WIF path` remains Open: can the dedicated Deploy Service Account under the intended GitHub WIF credentials stage repository source, invoke Cloud Build, attach the dedicated Build Service Account, and complete the same submission path? The successful human-submitted build does not prove that path. The provider remains disabled; P1C-C added no Service Account Token Creator grant, Service Account key, IAM change, or WIF activation.
+At P1C-C closure, `PE-P1C-01B — Deploy submission / WIF path` remained Open: the human-submitted build did not prove Deploy-SA submission under GitHub WIF. That separate path is now Closed by CD-B2, as recorded above. P1C-C itself added no Service Account Token Creator grant, Service Account key, IAM change, or WIF activation.
 
 ## Completed P1C-D2 Compute default SA Editor cleanup
 

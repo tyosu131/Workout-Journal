@@ -1,20 +1,17 @@
 # CD-A: manual keyless submission proof
 
-Status: repository implementation only. **PE-P1C-01B remains Open; Must 4 remains
-Open; WIF is `ACTIVE` / `disabled = true`; production CD is inactive.** This phase
-has **not** dispatched the workflow, activated the provider, created repository
-variables or executed Cloud Build; those actions remain separately Human-gated.
+Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
+Must 3 In progress; WIF `ACTIVE` / `disabled = false`; production CD inactive.**
+The two repository variables are configured and privately read-back verified.
 
-The CD-A workflow is now on `main` (`workflow_dispatch` only). Subsequent
-[CD-B1 desired-state preparation](../infra/terraform/README.md#cd-b1-desired-state--pending-cd-b2-apply)
-sets repository provider `disabled = false`, with one intentional in-place update
-pending CD-B2 apply. Actual GCP / remote state still report `disabled = true`;
-merging that desired-state change alone is not activation or runtime proof.
-Repository variables are still unconfigured; PE-P1C-01B and Must 4 remain Open.
+CD-A supplied the `workflow_dispatch`-only implementation; CD-B1 prepared the
+provider desired state. The separately Human-approved CD-B2 applied that exact
+provider update and executed the workflow once. Merging CD-B1 alone was not
+activation or proof. See the [Terraform activation record](../infra/terraform/README.md#completed-cd-b2-provider-activation).
 
 The [workflow](../.github/workflows/cd.yml) and its
-[standard-library Python controller](../.github/scripts/wif_submission.py) prepare
-one separately Human-gated proof:
+[standard-library Python controller](../.github/scripts/wif_submission.py) verified
+this submission path in the recorded CD-B2 run:
 
 ```text
 exact main SHA -> GitHub OIDC / WIF -> Deploy SA
@@ -25,6 +22,66 @@ exact main SHA -> GitHub OIDC / WIF -> Deploy SA
 This is not full CD. There is no automatic trigger, candidate deployment, E2E job,
 Environment approval job, promotion, post-deploy smoke or rollback automation.
 The existing required [CI workflow](../.github/workflows/ci.yml) is unchanged.
+
+## CD-B2 verified runtime proof
+
+The successful job and Human-confirmed GitHub Job Summary jointly establish
+`proof = PE-P1C-01B`, `result = PASS`. The Summary was not available through the
+Check Run API; the Human read its exact JSON and confirmed identical before/after
+snapshots. Independent operator read-back matched the run, Build identity,
+source prefix/SHA, dedicated Build SA, both Artifact Registry digests and unchanged
+Cloud Run. Closure uses both evidence sources, not job success alone.
+
+| Evidence | Verified value |
+| --- | --- |
+| GitHub run / attempt | [34007295086](https://github.com/tyosu131/Workout-Journal/actions/runs/34007295086) / `1`; run and job `success` |
+| GitHub SHA | `0f0a677f196f43681d55d90f93350dd83cff841d` |
+| Project | `workout-journal-506909` |
+| Authenticated Deploy SA | `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com` |
+| Actual Build SA | `projects/workout-journal-506909/serviceAccounts/workout-journal-build@workout-journal-506909.iam.gserviceaccount.com` |
+| Cloud Build | `f7735982-2596-407d-bbe6-7c6d9c0adb50`; `SUCCESS`; `CLOUD_LOGGING_ONLY`; exact GitHub SHA as `COMMIT_SHA` |
+| Source staging prefix | `gs://workout-journal-506909_cloudbuild/source/cd-a/34007295086-1/` |
+| Backend immutable digest | `sha256:025314888aac4666c540bd247490c44c31594336b43050cd6aa2a1d4aee17d62` |
+| Frontend immutable digest | `sha256:3d7c0bf0f5d97489a9e3949fccc816b827ea86d6f7f9057ccd7a52f5fc338163` |
+| Provider | `ACTIVE` / `disabled = false`; trust condition, mapping, issuer and pool unchanged |
+| Terraform post-apply plan | `0 add / 0 change / 0 destroy`; `resource_drift = 0`; 30 resources |
+| Repository variables | `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configured; exact private value comparison passed |
+| Approved Supabase project ref | `krpnnkcipyeasddzbpma` |
+| Public-config provenance | Production Build `75c83256-303d-47f7-b57b-c473983893d0` at SHA `4fdc8f597d96e580c6c2ed8850952e5aa15c1bfc`; values matched production Backend revision `workout-journal-backend-00003-luc`; values are not reproduced here |
+
+Cloud Run before/after snapshots were identical, including generation `6`, latest
+created/ready revisions, traffic and tags for both services:
+
+| Pair | Backend revision | Frontend revision | Traffic per service | Shared tag |
+| --- | --- | --- | --- | --- |
+| Production | `workout-journal-backend-00003-luc` | `workout-journal-frontend-00003-xar` | 100% | `candidate-0829-923536` |
+| Retained P2B | `workout-journal-backend-p2b-081adb25` | `workout-journal-frontend-p2b-081adb25` | 0% | `candidate-p2b-081adb25` |
+
+The retained P2B revisions remained the latest created/ready revisions. These new
+images are **submission-proof artifacts and were not deployed to Cloud Run**.
+No candidate, promotion, E2E run or production runtime change occurred in CD-B2.
+
+### CD-B2 mutation accounting
+
+| Scope | Approved mutation performed |
+| --- | --- |
+| GitHub repository variables | Exactly the two named public-config variables created; read-back matched |
+| Terraform / WIF | One in-place provider update: `disabled true -> false` and the reviewed neutral description; remote state updated; no IAM grant, trust, mapping, issuer or pool change |
+| GitHub Actions | One manual dispatch, one run, attempt `1` |
+| Cloud Build / Storage | One Build submission/run and its source staging under the recorded prefix |
+| Artifact Registry | Backend and Frontend SHA-tagged submission-proof images, with the immutable digests above |
+
+IAM grants, Service Accounts, Secret Manager IAM/payloads, GitHub repository and
+Environment secrets, Environment configuration, Cloud Run revisions/tags/traffic
+and production application state were not changed. Publishing this documentation
+is a separate Git commit/push/PR operation; it does not repeat provider activation,
+repository-variable updates, workflow dispatch, Build submission or Cloud Run operations.
+
+PE-P1C-01B is Closed. Must 3 stays In progress for remaining identity/build
+hardening. Must 4 stays Open: automatic main-merge + CI-success delivery,
+candidate deployment and exact pairing, E2E integration, runtime Environment
+approval, promotion, post-deploy verification and rollback/failure behavior still
+require implementation and evidence. Production CD remains inactive.
 
 ## Inputs and trust boundary
 
@@ -41,7 +98,7 @@ The existing required [CI workflow](../.github/workflows/ci.yml) is unchanged.
   `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com`.
 - Build SA:
   `workout-journal-build@workout-journal-506909.iam.gserviceaccount.com`.
-- Required **repository variables**, not created by CD-A:
+- Required **repository variables**, created and verified by CD-B2:
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
   The URL must be an HTTPS hosted Supabase project origin (no path/query); the
   key must be a current `sb_publishable_…` key, not an admin secret or legacy JWT.
@@ -95,13 +152,13 @@ identity and the SDK's active account before any submission.
 Current Terraform's resource-scoped `roles/run.developer` grants include
 `run.services.get`; source-bucket `roles/storage.bucketViewer` includes
 `storage.buckets.get`. The P1C-B IAM layer was read back during implementation
-without changes. Its sufficiency under **actual GitHub WIF execution** is still
-the point of PE-P1C-01B; any permission failure stops the proof rather than adding
-IAM, impersonation grants or secret access.
+without changes. CD-B2 verified its sufficiency under **actual GitHub WIF
+execution** for this submission path. Any future permission failure must still
+stop the proof rather than add IAM, impersonation grants or secret access.
 
 ## Evidence and secret safety
 
-The successful future run must have **both** a successful job and Step Summary
+Closure requires **both** a successful job and Step Summary
 `PE-P1C-01B` result `PASS`. The controller emits an allowlisted JSON block there:
 run ID/attempt, SHA, project, authenticated Deploy SA, Build ID/result/actual SA,
 Backend/Frontend digests, sanitized Cloud Run before/after, unchanged flag and
@@ -117,15 +174,27 @@ this is not a promise that a repository variable is secret storage. Never put an
 admin key into these variables. Subprocess output is captured privately; the
 auth action removes its generated credential in post-job cleanup.
 
-Record the actual successful run URL and sanitized identities in durable Current
-documentation under the later evidence-closure gate; workflow existence or offline
-unit-test PASS does not close PE-P1C-01B.
+The durable CD-B2 record above includes the actual successful run URL and sanitized
+identities. Workflow existence or offline unit-test PASS alone does not establish
+PE-P1C-01B closure.
 
 The P2B candidate runner currently receives its Admin credential through private
 stdin. Deploy SA has **no Secret Manager payload access**. Delivery of that
 credential in future CD is an unresolved, separate Human Decision after this
 submission proof. CD-A does not add secretAccessor, repository/Environment secrets,
 new SAs or Token Creator, and does not decide that delivery mechanism.
+
+## Follow-up Should: publishable-key log hygiene
+
+Human inspection of run `34007295086` found that the preflight step's initial runner
+env metadata displayed the repository-variable publishable key once, before the
+controller's masking took effect. This is browser-visible Supabase public
+configuration, not a secret or private-credential exposure. It does not block
+PE-P1C-01B closure and does not require key rotation.
+
+Record this as a logging-hygiene improvement candidate before full CD: reduce
+unnecessary public-config values in runner metadata, including the interval before
+controller masking. This docs closure does not change the workflow or the key.
 
 ## Action selection and offline validation
 
@@ -159,5 +228,5 @@ Tests mock every external command and exercise input/source/config rejection,
 credential identity, exact digests, changed traffic, failed/timeout submissions,
 independent final read-back and secret-marker exclusion from Step Summary. Shell
 steps and YAML/action inputs also require static validation. Local lint/build/Jest
-remain the regression gates; none are a substitute for the separately approved
-future GitHub OIDC/WIF runtime proof.
+remain the regression gates; none substitute for runtime evidence such as the
+separately approved CD-B2 GitHub OIDC/WIF proof recorded above.
