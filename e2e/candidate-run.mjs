@@ -2,13 +2,15 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ROOT, EVIDENCE, STEPS, quietExec, cleanEnv, check, SafeError } from './safety.mjs';
-import { readCandidateManifest, readPrivateJson, APPLICATION_SHA, operationalIdentity } from './candidate-target.mjs';
+import { readCandidateManifest, readPrivateJson, operationalIdentity } from './candidate-target.mjs';
 import { newCandidateUser, saveCandidateReceipt, candidateClient, credentialFromStdin,
   P2B_RUNS, receiptPath, validateResume } from './candidate-user.mjs';
 import { WORK, sourceDigest, assertSafeOutputs } from './local-app.mjs';
+import { candidateExitCode } from './release-contract.mjs';
 
 let m, secret, client, user, cleanup, reportDir, runnerDigest;
 let steps = [], browser = 'chromium', passed = false;
+let cleanupFailed = false, evidenceFailed = false;
 const canary = 'P2B_ARTIFACT_MARKER_' + randomBytes(24).toString('hex');
 const abort = new AbortController();
 process.once('SIGTERM', () => abort.abort());
@@ -16,7 +18,12 @@ process.once('SIGINT', () => abort.abort());
 try {
   check(process.argv.length === 2 && process.versions.node.split('.')[0] === '24', 'P2B_INPUT_REFUSED');
   m = readCandidateManifest(); // Before reading the credential pipe.
-  await quietExec('git', ['diff', '--exit-code', APPLICATION_SHA, '--', 'frontend', 'backend', 'shared', 'cloudbuild.yaml']);
+  await quietExec('git', ['diff', '--exit-code', m.sourceSha, '--', 'frontend', 'backend', 'shared', 'cloudbuild.yaml']);
+  if (m.version === 2) {
+    check((await quietExec('git', ['rev-parse', 'HEAD'])).trim() === m.sourceSha, 'CD_CHECKOUT_MISMATCH');
+    await quietExec('git', ['diff', '--exit-code', 'HEAD', '--']);
+    check(!process.env.E2E_RESUME_AFTER_RUN, 'CD_AUTOMATIC_RESUME_FORBIDDEN');
+  }
   runnerDigest = await sourceDigest();
   // Bounded readiness; no fixed sleep, no authenticated writes or test retry.
   let ready = false;
@@ -65,7 +72,10 @@ try {
   try {
     await quietExec(process.execPath, [path.join(ROOT, 'node_modules/playwright/cli.js'),
       'test', '--config', 'e2e/playwright.config.ts'], { timeout: 270_000, signal: abort.signal,
-      env: cleanEnv({ E2E_TARGET: process.env.E2E_TARGET,
+      env: cleanEnv({ ...Object.fromEntries(['GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_REF',
+        'GITHUB_SHA', 'GITHUB_WORKFLOW_SHA', 'GITHUB_WORKFLOW_REF', 'GITHUB_EVENT_NAME',
+        'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT'].filter(k => process.env[k]).map(k => [k, process.env[k]])),
+        E2E_TARGET: process.env.E2E_TARGET,
         E2E_TARGET_MANIFEST: process.env.E2E_TARGET_MANIFEST,
         E2E_MANIFEST_SHA256: process.env.E2E_MANIFEST_SHA256,
         E2E_BROWSER_BASE_URL: m.frontend.url, E2E_BROWSER_REPORT: reportFile,
@@ -86,6 +96,7 @@ try {
     try { cleanup = await client.cleanup(user.receipt); }
     catch {
       passed = false;
+      cleanupFailed = true;
       try { cleanup = JSON.parse(await readFile(receiptPath(user.receipt.runId), 'utf8')).cleanup; } catch { /* absent proof fails */ }
       console.error('P2B exact cleanup not proven; HUMAN_DECISION_REQUIRED. No SQL/list-user fallback.');
     }
@@ -116,7 +127,8 @@ if (user) {
     console.log('P2B cleanup: ' + JSON.stringify(counts));
     console.log('P2B secret-leak check: PASS');
     console.log('P2B scenario: ' + report.result);
-  } catch { passed = false; console.error('P2B evidence rejected; HUMAN_DECISION_REQUIRED.'); }
+  } catch { passed = false; evidenceFailed = true; console.error('P2B evidence rejected; HUMAN_DECISION_REQUIRED.'); }
 }
 secret = undefined; // Process-private only; no temporary credential file exists.
-process.exitCode = passed ? 0 : 1;
+process.exitCode = m?.version === 2 ? candidateExitCode({ passed, cleanupRequired: Boolean(user),
+  cleanup, cleanupFailed, evidenceFailed }) : passed ? 0 : 1;

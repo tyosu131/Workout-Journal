@@ -1,5 +1,11 @@
 # Automated E2E smoke: P2A local foundation and P2B candidate proof
 
+CD-C1 adds a [dynamic v2 candidate contract](./cd-c1-candidate-delivery.md) and
+dedicated E2E credential path as **repository desired state only**. The P2B v1
+fixed SHA/pair below is historical proof, not active CD authority. GitHub Actions
+requires v2 metadata from the exact current release; its dedicated key is not yet
+created and E2E WIF runtime proof remains Open. Local P2A is unchanged.
+
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.
 Together they close Must 2, including fresh review of the implementation, runtime

@@ -140,6 +140,31 @@ Open and production CD inactive. The production Environment was separately
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency);
 runtime deployment-approval integration is still future work, not P2B evidence.
 
+## CD-C1 Offline Validation
+
+The [CD-C1 source contract](./cd-c1-candidate-delivery.md) is not runtime activation.
+Run these checks without a Supabase credential, OIDC token or workflow dispatch:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+npm run e2e:test
+actionlint .github/workflows/ci.yml .github/workflows/cd.yml .github/workflows/candidate-e2e.yml
+terraform -chdir=infra/terraform fmt -check -recursive
+terraform -chdir=infra/terraform validate
+terraform -chdir=infra/terraform state list
+terraform -chdir=infra/terraform plan -detailed-exitcode
+git diff --check
+```
+
+Use Node 24. All controller cloud operations in tests are mocked; v2 manifest
+validation, tampering/identity/stale-state rejection, ETag update shape, exact
+rollback, private stdin and cross-provider mapping are checked offline. Expected
+state is 30 applied resources; desired plan is five additions, no changes/destroys
+(exit 2), eventual total 35. Positive/negative WIF, dedicated-secret, actual
+candidate/promotion/rollback runtime proofs remain separate Human Gates.
+The existing required CI job also runs both offline test commands; its check name
+is unchanged. These tests never authenticate to Google or Supabase.
+
 ## Test Candidates
 
 - Expand coverage for `shared/utils/calendarUtils.ts` and `shared/utils/validationUtils.ts`.

@@ -1,7 +1,9 @@
 import { readFileSync, lstatSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { check } from './errors.cjs';
+import { validateReleaseManifest, bindWorkflow } from './release-contract.mjs';
 
+// Historical P2B v1 oracle only. The active CD path requires version 2.
 export const APPLICATION_SHA = '9b6c3c69543784b3e02e4fd9b45d8e7a4b34300d';
 export const PROJECT = 'workout-journal-506909';
 export const REGION = 'asia-northeast1';
@@ -15,6 +17,7 @@ export const sha256 = value => createHash('sha256').update(value).digest('hex');
 export const taggedUrl = (part, tag) => 'https://' + tag + '---workout-journal-' + part + '-cpbzb7lqza-an.a.run.app';
 
 export function validateManifest(m, target, now = Date.now()) {
+  if (m?.version === 2) return validateReleaseManifest(m, target, now);
   check(m?.version === 1 && m.project === PROJECT && m.region === REGION &&
     m.sourceSha === APPLICATION_SHA && /^p2b-[a-f0-9]{8}$/.test(m.candidateId) &&
     target === 'candidate:' + m.candidateId, 'CANDIDATE_IDENTITY_UNPROVEN');
@@ -69,12 +72,19 @@ export function readPrivateJson(filename, expectedHash) {
 }
 export function readCandidateManifest(env = process.env) {
   check(env.E2E_TARGET_MANIFEST && env.E2E_MANIFEST_SHA256, 'MANIFEST_REQUIRED');
-  return validateManifest(readPrivateJson(env.E2E_TARGET_MANIFEST, env.E2E_MANIFEST_SHA256), env.E2E_TARGET);
+  const m = validateManifest(readPrivateJson(env.E2E_TARGET_MANIFEST, env.E2E_MANIFEST_SHA256), env.E2E_TARGET);
+  if (env.GITHUB_ACTIONS === 'true' || m.version === 2) {
+    check(m.version === 2, 'HISTORICAL_MANIFEST_FORBIDDEN_IN_CD');
+    bindWorkflow(m, env);
+  }
+  return m;
 }
 export function candidateIdentity(m) {
   // Capture-time refresh for recovery does not broaden the approved pair/run.
-  return sha256(JSON.stringify([m.project, m.region, m.sourceSha, m.candidateId,
-    m.backend, m.frontend, m.production, m.supabase, m.build]));
+  const fields = [m.project, m.region, m.sourceSha, m.candidateId,
+    m.backend, m.frontend, m.production, m.supabase, m.build];
+  if (m.version === 2) fields.push(m.run, m.e2eSecret);
+  return sha256(JSON.stringify(fields));
 }
 export function browserBase(env = process.env) {
   if (env.E2E_TARGET?.startsWith('candidate:')) {
@@ -92,6 +102,6 @@ export function operationalIdentity(m) {
     return { service: c.service, revision: c.revision, tag: c.tag, url: c.url,
       digest: c.digest, traffic: c.traffic };
   };
-  return { project: PROJECT, region: REGION, sourceSha: APPLICATION_SHA, candidateId: m.candidateId,
+  return { project: PROJECT, region: REGION, sourceSha: m.sourceSha, candidateId: m.candidateId,
     backend: pair('backend'), frontend: pair('frontend'), backendInternalUrl: m.frontend.backendInternalUrl };
 }

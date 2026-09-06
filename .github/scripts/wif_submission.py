@@ -150,21 +150,21 @@ def prepare(env):
         output.write(f"CD_A_SOURCE_DIR={source}\nCD_A_SOURCE_DIGEST={tree_digest(source)}\n")
 
 
-def check_credentials(env):
+def check_credentials(env, *, provider=PROVIDER, service_account=DEPLOY_SA):
     # Examine only credential identity/type locally; never serialize this document.
     require(env.get("GOOGLE_APPLICATION_CREDENTIALS") ==
             env.get("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE") and
             bool(env.get("GOOGLE_APPLICATION_CREDENTIALS")), "CREDENTIAL_PATH_MISMATCH")
     credential = json.loads(Path(env["GOOGLE_APPLICATION_CREDENTIALS"]).read_bytes())
     require(credential.get("type") == "external_account" and
-            credential.get("audience") == f"//iam.googleapis.com/{PROVIDER}" and
+            credential.get("audience") == f"//iam.googleapis.com/{provider}" and
             credential.get("service_account_impersonation_url") ==
-            f"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{DEPLOY_SA}:generateAccessToken",
+            f"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account}:generateAccessToken",
             "WIF_CREDENTIAL_MISMATCH")
     require(not env.get("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"), "IMPERSONATION_OVERRIDE")
     active = cloud(["auth", "list", "--filter=status:ACTIVE"], "AUTH_IDENTITY_READ_FAILED")
     require(isinstance(active, list) and len(active) == 1 and
-            active[0].get("account") == DEPLOY_SA and active[0].get("status") == "ACTIVE",
+            active[0].get("account") == service_account and active[0].get("status") == "ACTIVE",
             "AUTH_IDENTITY_MISMATCH")
 
 
