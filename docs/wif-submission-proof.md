@@ -1,10 +1,18 @@
 # CD-A: manual keyless submission proof
 
-This is the durable **CD-B2 executed-proof record** at the SHA below. CD-C1 now
-proposes [gated delivery and dedicated E2E](./cd-c1-candidate-delivery.md) in
+This is the durable **CD-B2 executed-proof record** at the SHA below. CD-C1 merged
+[gated delivery and dedicated E2E](./cd-c1-candidate-delivery.md) source in
 `cd.yml`; that source is not activated and does not supersede this runtime evidence.
 The CD-A workflow/command descriptions below refer to the recorded proof path,
 not a claim that current `cd.yml` still contains only the submission job.
+
+CD-C2A/B completed E2E infrastructure and dedicated credential provisioning.
+Actual E2E provider is disabled, while CD-C2C proposes enabling it after reviewed
+apply and adds auth-only A/B/C proof source: Deploy control, Deploy-to-E2E denial,
+then E2E positive through `candidate-e2e.yml`. All three new runtime checks remain
+OPEN. This is separate from PE-P1C-01B, which remains Closed. No full delivery or
+secret payload consumption is authorized by the proof mode. The current runtime
+record is in the [CD-C2A/B closure](./cd-c1-candidate-delivery.md#current-cd-c2ab-runtime-record).
 
 Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
 Must 3 In progress; WIF `ACTIVE` / `disabled = false`; production CD inactive.**

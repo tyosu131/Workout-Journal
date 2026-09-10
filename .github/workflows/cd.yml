@@ -1,12 +1,20 @@
-name: CD-C1 gated candidate delivery
+name: Gated candidate delivery and isolated WIF proof
 
 # Desired state only. No workflow_run trigger; activation remains Human-gated.
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Authentication proof only, or separately activated release
+        required: true
+        type: choice
+        default: wif-proof
+        options:
+          - wif-proof
+          - release
       e2e_secret_version:
         description: Human-approved numeric version of the dedicated E2E secret
-        required: true
+        required: false
         type: string
 
 permissions: {}
@@ -16,6 +24,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  CD_MODE: ${{ inputs.mode }}
   CD_C1_ACTIVATION: ${{ vars.CD_C1_ACTIVATION }}
   GCP_PROJECT: workout-journal-506909
   WIF_PROVIDER: projects/437413312066/locations/global/workloadIdentityPools/github-actions/providers/workout-journal
@@ -23,8 +32,33 @@ env:
   PYTHONDONTWRITEBYTECODE: '1'
 
 jobs:
+  wif-control-negative:
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && inputs.mode == 'wif-proof'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Deploy control then expected E2E impersonation denial
+        run: python3 -B .github/scripts/e2e_wif_proof.py control-negative
+
+  wif-positive:
+    needs: wif-control-negative
+    if: inputs.mode == 'wif-proof'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/candidate-e2e.yml
+    with:
+      mode: wif-proof
+
   preflight:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && vars.CD_C1_ACTIVATION == 'approved'
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && inputs.mode == 'release' && vars.CD_C1_ACTIVATION == 'approved'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -41,10 +75,12 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
+          E2E_SECRET_VERSION: ${{ inputs.e2e_secret_version }}
         run: python3 -B .github/scripts/cd_release.py preflight
 
   candidate:
     needs: preflight
+    if: inputs.mode == 'release'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -90,16 +126,19 @@ jobs:
 
   candidate-e2e:
     needs: candidate
+    if: inputs.mode == 'release'
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/candidate-e2e.yml
     with:
+      mode: release
       manifest: ${{ needs.candidate.outputs.manifest }}
       manifest_hash: ${{ needs.candidate.outputs.manifest_hash }}
 
   verify-candidate:
     needs: [candidate, candidate-e2e]
+    if: inputs.mode == 'release'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -136,6 +175,7 @@ jobs:
 
   production:
     needs: [candidate, verify-candidate]
+    if: inputs.mode == 'release'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -1,10 +1,15 @@
 # Automated E2E smoke: P2A local foundation and P2B candidate proof
 
 CD-C1 adds a [dynamic v2 candidate contract](./cd-c1-candidate-delivery.md) and
-dedicated E2E credential path as **repository desired state only**. The P2B v1
+dedicated E2E credential path as merged source. The P2B v1
 fixed SHA/pair below is historical proof, not active CD authority. GitHub Actions
-requires v2 metadata from the exact current release; its dedicated key is not yet
-created and E2E WIF runtime proof remains Open. Local P2A is unchanged.
+requires v2 metadata from the exact current release. CD-C2A/B are complete:
+E2E identity/container/IAM are provisioned and runtime verified; Supabase actual
+key display name is `candidate_e2e`, Secret Manager version 1 is ENABLED (one version).
+The E2E provider is still disabled; CD-C2C proposes activation Pending reviewed
+apply and an isolated auth-only mode. That mode never reads the secret or runs
+this scenario. Positive/negative WIF and full CD runtime proof remain Open.
+Local P2A is unchanged; production CD remains inactive.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.

@@ -67,6 +67,7 @@ def github(path, env):
 
 
 def identity(env):
+    require(env.get('CD_MODE') == 'release', 'RELEASE_MODE_REQUIRED')
     require(env.get('GITHUB_REPOSITORY') == proof.REPOSITORY and
             env.get('GITHUB_REPOSITORY_ID') == '790375516' and
             env.get('GITHUB_REPOSITORY_OWNER_ID') == '95160728', 'REPOSITORY_MISMATCH')
@@ -469,6 +470,7 @@ def main():
         require(len(sys.argv) == 2, 'COMMAND_INVALID')
         action = sys.argv[1]
         if action == 'preflight':
+            require(matches(r'[1-9][0-9]{0,19}', env.get('E2E_SECRET_VERSION')), 'E2E_SECRET_VERSION_REQUIRED')
             ci = preflight(env)
             emit(env, 'source_sha', env['GITHUB_SHA'])
             emit(env, 'ci_run_id', ci)

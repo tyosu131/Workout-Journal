@@ -21,7 +21,7 @@ ENV = {'GITHUB_REPOSITORY': cd.proof.REPOSITORY, 'GITHUB_REPOSITORY_ID': '790375
        'GITHUB_REPOSITORY_OWNER_ID': '95160728', 'GITHUB_REF': 'refs/heads/main',
        'GITHUB_WORKFLOW_REF': cd.CALLER, 'GITHUB_WORKFLOW_SHA': SHA, 'GITHUB_SHA': SHA,
        'GITHUB_EVENT_NAME': 'workflow_dispatch', 'GITHUB_RUN_ID': '12345',
-       'GITHUB_RUN_ATTEMPT': '1', 'CD_C1_ACTIVATION': 'approved', 'E2E_SECRET_VERSION': '17'}
+       'GITHUB_RUN_ATTEMPT': '1', 'CD_MODE': 'release', 'CD_C1_ACTIVATION': 'approved', 'E2E_SECRET_VERSION': '17'}
 BUILD = {'buildId': '00000000-0000-4000-8000-000000000001', 'buildResult': 'SUCCESS',
          'actualBuildServiceAccount': cd.proof.BUILD_SA,
          'digests': {'workout-journal-backend': 'sha256:' + 'b' * 64,

@@ -1,25 +1,52 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Status: **Repository desired state / Pending Human Gate.** Must 3 is **In progress**,
+Status: **CD-C1 merged; CD-C2A/B runtime complete; CD-C2C source pending review.** Must 3 is **In progress**,
 Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
 runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
-The new E2E identity has not been applied. The dedicated Supabase E2E key is
-**NOT YET CREATED**; E2E WIF runtime proof and full automatic CD proof are **OPEN**.
+CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
+E2E positive/negative WIF and full CD runtime proofs remain **OPEN**.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
+
+## Current CD-C2A/B runtime record
+
+CD-C2A is **COMPLETE**: the separately approved five-resource apply provisioned
+the E2E SA, secret container, exact-secret Accessor, disabled provider and mapped
+WorkloadIdentityUser member. Terraform contains **35 resources**; the subsequent
+CD-C2B read-only plan was **0 add / 0 change / 0 destroy**. Optional empty-collection
+normalization with a no-op action is not a resource update.
+
+CD-C2B is **COMPLETE** (2026-09-10). Human-created Supabase project
+`krpnnkcipyeasddzbpma` Secret key has actual Dashboard display name **`candidate_e2e`**;
+`candidate-e2e` below denotes its logical E2E role, not its display name.
+Clipboard-to-memory-validation-to-gcloud-stdin ingestion created exactly
+`projects/437413312066/secrets/workout-journal-e2e-supabase-secret-key/versions/1`
+at `2026-09-10T10:55:20.897236Z`. Metadata read-back confirmed **1 / ENABLED**,
+exactly one total/enabled version; the clipboard was cleared. No payload read-back,
+repository storage, Terraform storage or credential-bearing evidence was used.
+
+Runtime IAM read-back verified the E2E SA's exact-secret Accessor, zero user-managed
+keys, no project-level E2E grant, no E2E access to Backend/JWT secrets, and no
+Deploy or Backend runtime SA access to the E2E secret. Existing Deploy provider
+remains enabled. E2E provider is **Current / ACTIVE lifecycle / disabled=true**.
+CD-C2C changes its **desired** state to `disabled=false`, **Pending reviewed apply**;
+the source change does not activate it. `CD_C1_ACTIVATION` is **UNCONFIGURED**.
+Neither CD-C2A nor CD-C2B dispatched CD, submitted a Build, created a Run revision,
+changed traffic or published an image. Their runtime completion does not close
+Must 3 or Must 4. Do not repeat their provisioning or secret-version insertion.
 
 ## Identity and credential ownership
 
-| Identity | Desired permissions and responsibility |
+| Identity | Current permissions and responsibility |
 | --- | --- |
 | Existing Deploy SA | Existing build/candidate/promotion/rollback grants unchanged; no privileged Supabase payload access |
 | Existing Build SA | Existing dedicated Cloud Build execution grants unchanged |
-| New `workout-journal-e2e` | Only `secretAccessor` on `workout-journal-e2e-supabase-secret-key` |
+| Provisioned `workout-journal-e2e` | Only `secretAccessor` on `workout-journal-e2e-supabase-secret-key` |
 
 The E2E SA has no project-level IAM grant, Build/Run/Artifact Registry/Storage role,
 Service Account User, Token Creator, JWT secret access, Backend Supabase secret
-access, key or Editor/Owner role. Terraform adds metadata, never a secret version
-or payload. Key creation and exact-version population remain separate Human work;
-do not duplicate this key into GitHub secrets or use the Backend key instead.
+access, key or Editor/Owner role. Terraform owns metadata, never a secret version
+or payload. CD-C2B separately populated version 1; subsequent rotation requires
+another Human Gate. Do not duplicate this key into GitHub secrets or use the Backend key instead.
 
 The dedicated Supabase logical credential `candidate-e2e` separates identity,
 lifecycle, rotation and auditability from Backend and Deploy-SA usage. A separate
@@ -48,7 +75,8 @@ Ordinary GitHub claims describe the caller; `job_workflow_ref` identifies the
 reusable workflow. The default provider-specific audience is preserved. A token
 accepted through the Deploy provider cannot gain the E2E mapped attribute merely
 by sharing a pool/repository. No pool-wide or repository-wide E2E grant is added.
-The new provider remains `disabled = true` in desired state.
+The provider remains `disabled = true` in actual runtime; CD-C2C proposes
+`disabled = false` without changing mapping, condition, pool or IAM.
 
 This is mapped-principal isolation, not a claim that arbitrarily modified
 trusted-main code could never request credentials through another provider.
@@ -65,13 +93,16 @@ Task's preferred same-pool design explicitly separates subjects and grant attrib
 
 ## Activation and source authority
 
-`cd.yml` has only `workflow_dispatch`, not `workflow_run`. It also refuses execution
-unless repository variable `CD_C1_ACTIVATION` equals `approved`; that variable is
-**not configured** in CD-C1. It is an activation latch, not a production approval.
-A later Human Gate must review source, apply/activate the E2E provider, create
-the dedicated key/version and approve activation-setting changes and dispatch.
+`cd.yml` has only `workflow_dispatch`, not `workflow_run`. CD-C2C adds a `mode`
+choice: **`wif-proof` (default)** or `release`. Only release requires repository
+variable `CD_C1_ACTIVATION == approved`; it remains **UNCONFIGURED**. The variable
+is an activation latch, not a production approval. Release also requires an exact
+numeric `e2e_secret_version`, checked by preflight before Google authentication.
+A later Human Gate must review/merge source, freshly plan and approve provider
+activation, then separately approve proof dispatch. Full release activation and
+credential consumption remain later gates; key/version creation is already complete.
 
-Dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
+Release dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
 The controller independently queries successful main **push** CI and its required
 `Lint, build, and test baseline` job. Its `head_sha` is the release authority. A
 future automatic adapter must use `workflow_run.head_sha`, validate the same CI
@@ -84,9 +115,50 @@ pinned, and checkout does not persist credentials. CI explicitly has only
 `id-token: write` is limited to Google-authenticated jobs; only CI inspection jobs
 receive `actions: read`. E2E is a same-repository, same-commit reusable call.
 
+## Isolated WIF proof (CD-C2C source; runtime OPEN)
+
+`mode=wif-proof` does not need a manifest, secret version or activation variable.
+It has exactly this dependency chain, with no production Environment:
+
+| Check | Provider / target | Required outcome |
+| --- | --- | --- |
+| A control | Deploy provider `workout-journal` / Deploy SA | STS federation and SA access-token generation succeed |
+| B isolation | The **same A federated token** / E2E SA | IAM Credentials HTTP 403, error code 403 and `PERMISSION_DENIED` |
+| C positive | E2E provider `workout-journal-e2e` / E2E SA | Federation and SA access-token generation succeed inside `candidate-e2e.yml` |
+
+A/B run in `wif-control-negative`; only its success permits `wif-positive`, which
+calls the existing reusable workflow with `mode=wif-proof`. B does not reuse the
+impersonated Deploy-SA token. Unexpected success, disabled-provider failure,
+STS failure, network error, malformed response, or any other IAM status fails
+closed and prevents C. Only A+B+C PASS proves this run; a standalone B denial
+does not establish that the E2E account exists or that its provider works.
+
+The stdlib-only `e2e_wif_proof.py` checks repository/main/caller/source/run identity
+before requesting GitHub OIDC. C additionally checks signed-token reusable-workflow
+ref/SHA consistency; STS performs signature/trust validation. HTTPS uses the GitHub
+runner OIDC endpoint, fixed STS endpoint and exact two IAM Credentials targets.
+No redirects, proxies, retries, SDK logging or credential files are used. Tokens
+stay in memory, requested SA lifetime is 600 seconds, and minted SA tokens are
+discarded without resource access. Output and step summary contain only source
+SHA, run ID/attempt, provider role, target SA, expected outcome and PASS/FAIL.
+Raw auth responses and exceptions never reach logs or evidence.
+
+Every release job is mode-guarded and depends on the release preflight chain.
+The reusable workflow has separate proof and release jobs; its release job still
+requires activation, manifest and hash, then retains existing manifest validation,
+exact secret read, private stdin, scenario and cleanup. Proof performs **no Secret
+Manager access, E2E/Playwright, Cloud Build, Cloud Run or production operation**.
+The shared concurrency group also serializes proof runs behind an outstanding
+release/approval wait; this deliberately trades convenience for a single queue.
+
+API contracts: [GitHub OIDC claims](https://docs.github.com/en/actions/reference/security/oidc),
+[STS token exchange](https://docs.cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token)
+and [IAM access-token generation](https://docs.cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateAccessToken).
+Offline tests mock all authentication endpoints; actual A/B/C proof is **OPEN**.
+
 ## Dynamic candidate provenance
 
-The active path builds a v2 manifest from Build and Cloud Run read-back, binding:
+The release path builds a v2 manifest from Build and Cloud Run read-back, binding:
 
 - repository, source/workflow SHA, caller, run ID/attempt and CI run ID;
 - actual Build ID, SUCCESS, dedicated Build SA and both immutable digests;
@@ -206,12 +278,13 @@ privileged E2E credential's strict transport boundary.
 ## Validation and runtime boundary
 
 Use [offline validation](./verification.md#cd-c1-offline-validation). Terraform
-desired state adds five resources (eventual total 35); actual baseline remains 30.
-Existing resources/grants must not change. No apply/import/state mutation, Cloud
+state is 35; CD-C2C's expected plan is **0 add / 1 change / 0 destroy**, only E2E
+provider `disabled: true -> false` and pending-to-neutral description. All other
+resources/grants must be no-op. No apply/import/state mutation, Cloud
 Build, dispatch, Supabase key creation or Cloud Run mutation is authorized by
 source validation. Fresh independent Result Audit precedes any Human runtime gate.
 
-The CD-C1 read-only plan returned `PLAN_EXIT=2`, exactly `5 add / 0 change /
+Historical CD-C1 read-only plan returned `PLAN_EXIT=2`, exactly `5 add / 0 change /
 0 destroy`; all 30 existing managed resources and outputs were no-op. Plan JSON
 also reported one refresh-only difference on
 `google_artifact_registry_repository.workout_journal.update_time`. The **locked
