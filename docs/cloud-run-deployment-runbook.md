@@ -10,6 +10,13 @@ preserve every rollback-eligible Frontend's Backend tag. Pre-approval E2E cleanu
 removes synthetic user data, not the Cloud Run pair. The manual contract below
 remains applicable; no commands here were executed by CD-C1 implementation.
 
+CD-C2A/B subsequently provisioned the E2E identity, exact-secret IAM and dedicated
+key version 1 / ENABLED (`candidate_e2e` in Supabase Dashboard), with no Cloud Run
+mutation. E2E provider is currently disabled. CD-C2C's default `wif-proof` dispatch
+mode is auth-only source, Pending review/activation/dispatch gates; it cannot run
+Build, candidates, E2E secret access or promotion. `mode=release` still requires
+`CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and an exact secret version.
+
 ## Architecture and runtime contract
 
 ```text

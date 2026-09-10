@@ -1,5 +1,5 @@
-# CD-C1 desired state only. Payload creation and runtime activation require a
-# separate Human Gate; this root never manages a Supabase key or secret version.
+# CD-C2A provisioned these resources; CD-C2C proposes provider activation only.
+# Reviewed apply requires a Human Gate. This root never manages keys or versions.
 resource "google_service_account" "e2e" {
   project      = var.project_id
   account_id   = "workout-journal-e2e"
@@ -38,8 +38,8 @@ resource "google_iam_workload_identity_pool_provider" "workout_journal_e2e" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_actions.workload_identity_pool_id
   workload_identity_pool_provider_id = "workout-journal-e2e"
   display_name                       = "Workout Journal Candidate E2E"
-  description                        = "Exact main CD caller and reusable candidate E2E workflow; pending activation."
-  disabled                           = true
+  description                        = "Exact main CD caller and reusable candidate E2E workflow."
+  disabled                           = false
 
   # Provider names are NOT an IAM principal namespace: providers share a pool.
   # Only this provider mints e2e_boundary. Do not map repository_id here: that

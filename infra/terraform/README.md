@@ -14,18 +14,30 @@ This root manages the approved Terraform foundation for project `workout-journal
 
 PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress for remaining identity/build hardening; Must 4 is Open and production CD remains inactive.
 
-This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired OIDC provider state now agree on `disabled = false`. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
+This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired **Deploy** provider state agree on `disabled = false`. The separate E2E provider's current/desired distinction is below. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
-## CD-C1 desired state / Pending Human Gate
+## CD-C2A/B complete; CD-C2C activation desired state
 
-CD-C1 adds a separate **Proposed / Pending Human Gate** desired-state layer in
-[`candidate_e2e.tf`](./candidate_e2e.tf): E2E SA, dedicated secret metadata,
-exact-secret Accessor, disabled E2E provider and narrowly mapped impersonation
-member. These five additions are not applied; actual baseline remains 30 and the
-eventual total is 35. No secret version/key is created. Existing Deploy WIF remains
-enabled and proven. See the [CD-C1 contract](../../docs/cd-c1-candidate-delivery.md).
-The CD-B2 evidence below is the completed baseline, not a claim that CD-C1's
-desired-state plan is zero-addition.
+CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`. CD-C2A separately
+applied its five resources in [`candidate_e2e.tf`](./candidate_e2e.tf): E2E SA,
+dedicated secret metadata, exact-secret Accessor, disabled E2E provider and mapped
+impersonation member. **Current state: 35 resources / no-op CD-C2B baseline**.
+CD-C2B separately populated exactly version **1 / ENABLED** from Human-created
+Supabase key display name `candidate_e2e`; no key/version/payload is Terraform-owned.
+E2E SA has zero user-managed keys; exact-secret IAM was runtime read-back verified.
+
+Actual E2E provider remains **ACTIVE lifecycle / disabled=true**. CD-C2C proposes
+only `disabled: true -> false` and a neutral description, **Pending reviewed apply**.
+Expected plan: **0 create / 1 update / 0 delete / 0 replace**, only
+`google_iam_workload_identity_pool_provider.workout_journal_e2e`; all mapping,
+condition, issuer, pool and IAM remain unchanged. No source-validation plan is
+approved for apply. Optional null-to-empty normalization with a no-op action must
+be distinguished from planned changes. Existing Deploy WIF remains enabled/proven.
+
+See the [current runtime record and isolated proof contract](../../docs/cd-c1-candidate-delivery.md).
+Positive/negative E2E WIF and full CD proof remain **OPEN**; `CD_C1_ACTIVATION` is
+**UNCONFIGURED**, Must 3 In progress, Must 4 Open and production CD inactive.
+The completed CD-B2 evidence below remains historical evidence for Deploy WIF.
 
 ## Completed CD-B2 provider activation
 
@@ -109,8 +121,13 @@ Official references: [Terraform installation and current release](https://develo
 | `google_artifact_registry_repository_iam_member.build_artifact_registry_writer` | Build SA writer member on Artifact Registry repository `workout-journal` |
 | `google_project_iam_member.build_log_writer` | Build SA Logging writer member on project `workout-journal-506909` |
 | `google_storage_bucket_iam_member.build_source_reader` | Build SA source-object reader member on `workout-journal-506909_cloudbuild` |
+| `google_service_account.e2e` | Provisioned keyless `workout-journal-e2e` |
+| `google_secret_manager_secret.e2e_supabase_secret_key` | Dedicated E2E container metadata only |
+| `google_secret_manager_secret_iam_member.e2e_supabase_secret_accessor` | E2E SA Accessor on that exact secret |
+| `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual disabled, desired enabled Pending reviewed apply |
+| `google_service_account_iam_member.e2e_workload_identity_user` | Exact `attribute.e2e_boundary/candidate-e2e-v1` impersonation member |
 
-Remote state contains exactly these 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer.
+Remote state contains exactly these 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary.
 
 The repository description, Service Account display names, automatic secret replication, and the two IAM members were rechecked against read-only GCP metadata before encoding them. The import IDs use the fully qualified formats documented for [Artifact Registry repositories](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/artifact_registry_repository), [Service Accounts](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/google_service_account), [Secret Manager secrets](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret), and [Secret Manager IAM](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret_iam).
 

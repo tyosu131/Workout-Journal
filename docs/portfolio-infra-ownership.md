@@ -8,11 +8,13 @@
 ## Core ownership rule
 
 CD-C1's [dedicated E2E identity and gated delivery source](./cd-c1-candidate-delivery.md)
-is **Proposed / Pending Human Gate**, not part of the 30 applied resources above.
-It adds five desired resources; E2E secret access is exact-resource scoped and
-existing Deploy/Build grants are unchanged. The dedicated Supabase key is not yet
-created; E2E WIF and full CD runtime proofs remain Open. Must 3 stays In progress,
-Must 4 Open and production CD inactive.
+is merged. **CD-C2A/B are COMPLETE**: five additional resources are provisioned,
+giving **35 applied resources / no-op baseline**. E2E secret access is runtime
+verified and exact-resource scoped; existing Deploy/Build grants are unchanged.
+Supabase key display name is `candidate_e2e`; Secret Manager version 1 is ENABLED.
+The E2E provider remains disabled in runtime. CD-C2C proposes activation and an
+auth-only proof path, Pending reviewed apply; positive/negative WIF and full CD
+runtime proofs remain Open. Must 3 stays In progress, Must 4 Open and production CD inactive.
 
 Terraform and CD must not compete for the same mutable production state.
 
@@ -25,13 +27,14 @@ Terraform and CD must not compete for the same mutable production state.
 | Dedicated GCS Terraform state bucket | Terraform Owns | Manually bootstrapped, verified, imported, and used by the initialized GCS backend |
 | Artifact Registry repository `workout-journal` | Terraform Owns | Imported into remote state; zero-drift verified |
 | Backend and Frontend runtime Service Accounts | Terraform Owns | Both existing runtime identities are in remote state; zero-drift verified |
-| Secret Manager secret metadata | Terraform Owns | Two metadata-only resources are in remote state; secret versions and values remain excluded |
+| Secret Manager secret metadata | Terraform Owns | Three metadata-only resources (Backend, JWT, dedicated E2E) are in remote state; secret versions and values remain excluded |
 | Backend runtime access to the two secrets | Terraform Owns | Two exact additive `secretAccessor` members are in remote state; zero-drift verified |
 | IAM, Cloud Resource Manager, IAM Credentials, and STS APIs | Terraform Owns | Four prerequisite `google_project_service` resources are enabled and protected from disable-on-destroy |
 | Deploy Service Account `workout-journal-deploy` | Terraform Owns | Keyless identity with exact P1C-A impersonation and P1C-B operational additive members; CD-B2 verified its submission path under GitHub WIF |
 | Build Service Account `workout-journal-build` | Terraform Owns | Keyless identity with exact P1C-B build permissions; P1C-C runtime-verified its repository build, two image pushes, and Cloud Logging path |
 | WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Actual pool is `ACTIVE` / `FEDERATION_ONLY`; actual provider is `ACTIVE` / `disabled = false`, matching desired state after CD-B2; no pool or trust change |
 | Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
+| E2E SA, exact-secret Accessor, E2E provider and impersonation member | Terraform Owns | CD-C2A provisioned; zero SA keys; `attribute.e2e_boundary/candidate-e2e-v1` isolates impersonation; actual provider disabled, CD-C2C desired enabled Pending reviewed apply |
 | P1C-B operational IAM members | Terraform Owns | Exactly 13 additive members are in remote state and actual IAM; zero-drift verified |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
 | Cloud Build source bucket body `workout-journal-506909_cloudbuild` | External / Manually Managed | Terraform owns only the three exact P1C-B additive bucket IAM members, not the bucket body or legacy members |
@@ -47,7 +50,7 @@ Terraform and CD must not compete for the same mutable production state.
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
 | Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
 
-The current remote state contains exactly 30 resources: the eight-resource P1B foundation, the nine-resource P1C-A identity foundation, and the 13-resource P1C-B operational IAM layer. The reviewed P1C-B apply added 13 resources without changing or destroying existing infrastructure, actual IAM read-back matched every member, and the post-apply plan at P1C-B closure was zero-drift. CD-B2 applied CD-B1's one in-place provider update; the normally locked post-apply plan was zero-change with no refresh drift. See the [exact activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation).
+The current remote state contains exactly 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary. CD-C2B's read-only baseline was no-op. Historical P1C-B added 13 without changing existing resources; CD-B2 applied one Deploy-provider update with a zero-change post-plan. See the [historical activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation). CD-C2C proposes only the existing E2E provider activation and neutral description; all IAM remains unchanged.
 
 ## CD-owned delivery contract
 

@@ -3,11 +3,14 @@ name: Dedicated candidate E2E
 on:
   workflow_call:
     inputs:
+      mode:
+        type: string
+        default: release
       manifest:
-        required: true
+        required: false
         type: string
       manifest_hash:
-        required: true
+        required: false
         type: string
     outputs:
       e2e_hash:
@@ -16,8 +19,26 @@ on:
 permissions: {}
 
 jobs:
+  wif-proof:
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'wif-proof'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Dedicated E2E provider authentication only
+        env:
+          CD_MODE: wif-proof
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -B .github/scripts/e2e_wif_proof.py positive
+
   e2e:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && vars.CD_C1_ACTIVATION == 'approved'
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'release' && inputs.manifest != '' && inputs.manifest_hash != '' && vars.CD_C1_ACTIVATION == 'approved'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -51,6 +72,7 @@ jobs:
       - name: Exact secret read, private stdin, candidate scenario and exact-user cleanup
         id: e2e
         env:
+          CD_MODE: release
           CD_C1_ACTIVATION: ${{ vars.CD_C1_ACTIVATION }}
           CD_MANIFEST: ${{ inputs.manifest }}
           CD_MANIFEST_HASH: ${{ inputs.manifest_hash }}

@@ -159,9 +159,20 @@ git diff --check
 Use Node 24. All controller cloud operations in tests are mocked; v2 manifest
 validation, tampering/identity/stale-state rejection, ETag update shape, exact
 rollback, private stdin and cross-provider mapping are checked offline. Expected
-state is 30 applied resources; desired plan is five additions, no changes/destroys
-(exit 2), eventual total 35. Positive/negative WIF, dedicated-secret, actual
-candidate/promotion/rollback runtime proofs remain separate Human Gates.
+state is **35 applied resources** after CD-C2A; CD-C2B's baseline was no-op.
+CD-C2C's expected plan is **0 create / 1 update / 0 delete / 0 replace** (exit 2),
+only E2E provider `disabled: true -> false` and its neutral description. Actual
+runtime is still disabled, Secret Manager version 1 is ENABLED, and activation
+is UNCONFIGURED. Do not apply a source-validation plan.
+
+`test_e2e_wif_proof.py` executes synthetic auth responses and reads actual YAML:
+the default proof mode cannot reach Build/candidates/secret access/production;
+A/B share the same federated token; only expected IAM denial passes B; unexpected
+success or unrelated failure blocks C; positive proof uses the existing reusable
+workflow; release still requires activation, manifest/hash and exact version.
+Tokens and raw errors cannot enter evidence. Tests never request real OIDC.
+Positive/negative WIF, credential consumption and candidate/promotion/rollback
+runtime proofs remain separate Human Gates.
 The existing required CI job also runs both offline test commands; its check name
 is unchanged. These tests never authenticate to Google or Supabase.
 
