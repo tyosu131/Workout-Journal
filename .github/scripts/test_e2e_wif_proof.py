@@ -166,6 +166,133 @@ class AuthenticationTests(unittest.TestCase):
             self.assertEqual(wif.request_json(wif.STS, body={}), DENIED)
             self.assertEqual(opener.call_args.args[0].proxies, {})
 
+    def diagnose(self, replies, *, action='control-negative', overrides=None):
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / 'summary'
+            env = {**ENV, 'GITHUB_STEP_SUMMARY': str(summary), **(overrides or {})}
+            with patch.dict(wif.os.environ, env, clear=True), \
+                 patch.object(wif.sys, 'argv', ['proof', action]), \
+                 patch.object(wif.resource, 'setrlimit'), \
+                 patch.object(wif, 'request_json', side_effect=replies) as http, \
+                 redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
+                code = wif.main()
+            evidence = json.loads(out.getvalue())
+            self.assertEqual(summary.read_text(), '```json\n' + out.getvalue() + '```\n')
+            self.assertEqual(err.getvalue(), '')
+            for value in (out.getvalue(), summary.read_text()):
+                for forbidden in (MARKER, jwt('deploy'), jwt('e2e'), 'accessToken', 'access_token',
+                                  'https://', 'Traceback', 'sourceSha', 'runId', 'runAttempt'):
+                    self.assertNotIn(forbidden, value)
+            for record in evidence['checks']:
+                self.assertLessEqual(set(record), {'phase', 'failureCode', 'providerRole',
+                                                   'targetSA', 'expected', 'result'})
+                self.assertEqual(record, wif.public_record(record))
+                if record['result'] == 'PASS':
+                    self.assertNotIn('failureCode', record)
+                else:
+                    self.assertEqual(record['phase'], wif.FAILURE_PHASES[record['failureCode']])
+            return code, evidence, http.call_count
+
+    def test_fixed_diagnostics_for_each_control_phase(self):
+        cases = [
+            ('P0', 'CONTEXT_PRECHECK_FAILED', None, None, {'CD_MODE': MARKER}, 0),
+            ('P1', 'OIDC_REQUEST_FAILED', None, None,
+             {'ACTIONS_ID_TOKEN_REQUEST_URL': 'https://evil.example/idtoken?token=' + MARKER}, 0),
+            ('P1', 'OIDC_REQUEST_FAILED', 0, RuntimeError(MARKER), {}, 1),
+            ('P1', 'OIDC_REQUEST_FAILED', 0, (401, {'message': MARKER}), {}, 1),
+            ('P2', 'OIDC_RESPONSE_INVALID', 0, wif.InvalidResponse(MARKER), {}, 1),
+            ('P2', 'OIDC_RESPONSE_INVALID', 0, (200, {'value': MARKER}), {}, 1),
+            ('P2', 'OIDC_RESPONSE_INVALID', 0, (200, {'value': 'header.x.signature'}), {}, 1),
+            ('P2', 'OIDC_RESPONSE_INVALID', 0, (200, {'value': 'header.W10.signature'}), {}, 1),
+            ('P2', 'OIDC_CLAIMS_MISMATCH', 0, (200, {'value': 'header.e30.signature'}), {}, 1),
+            ('P2', 'OIDC_CLAIMS_MISMATCH', 0, (200, {'value': jwt('deploy', aud=MARKER)}), {}, 1),
+            ('P3', 'STS_EXCHANGE_FAILED', 1, RuntimeError(MARKER), {}, 2),
+            ('P3', 'STS_EXCHANGE_FAILED', 1, (403, {'message': MARKER}), {}, 2),
+            ('P3', 'STS_EXCHANGE_FAILED', 1, wif.InvalidResponse(MARKER), {}, 2),
+            ('P3', 'STS_EXCHANGE_FAILED', 1, (200, {'access_token': MARKER}), {}, 2),
+            ('P4', 'DEPLOY_IMPERSONATION_FAILED', 2, RuntimeError(MARKER), {}, 3),
+            ('P4', 'DEPLOY_IMPERSONATION_FAILED', 2, DENIED, {}, 3),
+            ('P4', 'DEPLOY_IMPERSONATION_FAILED', 2,
+             (200, {'accessToken': MARKER, 'expireTime': MARKER}), {}, 3),
+        ]
+        for phase, failure, index, response, env, calls in cases:
+            with self.subTest(failure=failure, index=index, calls=calls):
+                replies = responses('deploy')
+                if index is not None:
+                    replies[index] = response
+                code, evidence, actual_calls = self.diagnose(replies, overrides=env)
+                self.assertEqual(code, 1)
+                self.assertEqual(evidence['wifProof'], 'FAIL')
+                self.assertEqual(len(evidence['checks']), 1)  # B never reached.
+                self.assertEqual(evidence['checks'][0]['failureCode'], failure)
+                self.assertEqual(evidence['checks'][0]['phase'], phase)
+                self.assertEqual(actual_calls, calls)
+
+    def test_negative_and_positive_diagnostics_keep_exact_success_contract(self):
+        for final in (success(), (200, {}), (401, {}), (404, {}), (429, {}), (500, {}),
+                      (503, {}), (403, {'error': {'code': 403, 'status': MARKER}}),
+                      RuntimeError(MARKER), wif.InvalidResponse(MARKER)):
+            code, evidence, calls = self.diagnose(responses('deploy', final))
+            self.assertEqual((code, calls), (1, 4))
+            self.assertEqual([r['result'] for r in evidence['checks']], ['PASS', 'FAIL'])
+            self.assertEqual(evidence['checks'][1]['failureCode'], 'NEGATIVE_DENIAL_MISMATCH')
+            self.assertEqual(evidence['checks'][1]['phase'], 'P5')
+        for role, action in [('deploy', 'control-negative'), ('e2e', 'positive')]:
+            code, evidence, calls = self.diagnose(responses(role), action=action)
+            self.assertEqual((code, evidence['wifProof']), (0, 'PASS'))
+            self.assertEqual(calls, 4 if role == 'deploy' else 3)
+            self.assertTrue(all(r['result'] == 'PASS' for r in evidence['checks']))
+        for failure in (DENIED, RuntimeError(MARKER), wif.InvalidResponse(MARKER)):
+            replies = responses('e2e')
+            replies[2] = failure
+            code, evidence, calls = self.diagnose(replies, action='positive')
+            self.assertEqual((code, calls), (1, 3))
+            self.assertEqual(evidence['checks'][0]['failureCode'], 'POSITIVE_E2E_IMPERSONATION_FAILED')
+
+    def test_public_record_drops_untrusted_keys_and_values(self):
+        record = {key: MARKER for key in ['phase', 'failureCode', 'providerRole', 'targetSA',
+                                          'expected', 'result', 'response', 'exception', 'url']}
+        self.assertEqual(wif.public_record(record), {})
+        self.assertEqual(wif.public_record({'result': 'FAIL', 'response': {'token': MARKER}}),
+                         {'result': 'FAIL'})
+
+    def test_entrypoint_precheck_failures_are_safe_and_never_authenticate(self):
+        code, evidence, calls = self.diagnose([], action=MARKER)
+        self.assertEqual((code, calls), (1, 0))
+        self.assertEqual(evidence['checks'][0]['failureCode'], 'CONTEXT_PRECHECK_FAILED')
+        for argv, setup_error in [(['proof'], None), (['proof', 'control-negative'], RuntimeError(MARKER))]:
+            with patch.dict(wif.os.environ, ENV, clear=True), \
+                 patch.object(wif.sys, 'argv', argv), \
+                 patch.object(wif.resource, 'setrlimit', side_effect=setup_error), \
+                 patch.object(wif, 'request_json') as http, \
+                 redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(wif.main(), 1)
+            http.assert_not_called()
+            self.assertEqual(err.getvalue(), '')
+            self.assertNotIn(MARKER, out.getvalue())
+            self.assertEqual(json.loads(out.getvalue()), {'wifProof': 'FAIL', 'checks': [
+                {'phase': 'P0', 'failureCode': 'CONTEXT_PRECHECK_FAILED', 'result': 'FAIL'}]})
+
+    def test_real_response_parser_classifies_oidc_invalid_body_without_disclosure(self):
+        for body in (MARKER.encode(), b'[]', b'"' + MARKER.encode() + b'"', b'x' * (wif.LIMIT + 1)):
+            record = {}
+            with patch.object(wif, 'build_opener') as opener:
+                opener.return_value.open.side_effect = HTTPError(
+                    ENV['ACTIONS_ID_TOKEN_REQUEST_URL'], 200, MARKER, {}, io.BytesIO(body))
+                with self.assertRaises(wif.InvalidResponse):
+                    wif.github_token(ENV, 'deploy', METADATA, record)
+            self.assertEqual(record, {'phase': 'P2', 'failureCode': 'OIDC_RESPONSE_INVALID'})
+
+    def test_oidc_audience_is_replaced_and_encoded_without_changing_target(self):
+        from urllib.parse import parse_qs, urlsplit
+        env = {**ENV, 'ACTIONS_ID_TOKEN_REQUEST_URL': ENV['ACTIONS_ID_TOKEN_REQUEST_URL'] +
+               '&audience=wrong&private=' + MARKER}
+        with patch.object(wif, 'request_json', return_value=(200, {'value': jwt('deploy')})) as http:
+            wif.github_token(env, 'deploy', METADATA)
+        query = parse_qs(urlsplit(http.call_args.args[0]).query)
+        self.assertEqual(query['audience'], ['//iam.googleapis.com/' + wif.PROVIDERS['deploy']])
+        self.assertEqual(query['private'], [MARKER])
+
 
 def workflow(name):
     return json.loads(subprocess.check_output(['node', '-e',

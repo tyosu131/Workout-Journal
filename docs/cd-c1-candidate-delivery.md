@@ -1,6 +1,7 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Status: **CD-C1 merged; CD-C2A/B runtime complete; CD-C2C source pending review.** Must 3 is **In progress**,
+Status: **CD-C1 merged; CD-C2A/B complete; CD-C2C provider activation COMPLETE;
+CD-C2D failed at A, WIF proof OPEN.** Must 3 is **In progress**,
 Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
 runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
@@ -27,12 +28,88 @@ repository storage, Terraform storage or credential-bearing evidence was used.
 Runtime IAM read-back verified the E2E SA's exact-secret Accessor, zero user-managed
 keys, no project-level E2E grant, no E2E access to Backend/JWT secrets, and no
 Deploy or Backend runtime SA access to the E2E secret. Existing Deploy provider
-remains enabled. E2E provider is **Current / ACTIVE lifecycle / disabled=true**.
-CD-C2C changes its **desired** state to `disabled=false`, **Pending reviewed apply**;
-the source change does not activate it. `CD_C1_ACTIVATION` is **UNCONFIGURED**.
+remains enabled. CD-C2C provider activation is now **COMPLETE**: both providers are
+**ACTIVE / disabled=false**, rechecked during CD-C2D-R1 with **35 resources /
+No changes / exit 0**. `CD_C1_ACTIVATION` is **UNCONFIGURED**.
 Neither CD-C2A nor CD-C2B dispatched CD, submitted a Build, created a Run revision,
 changed traffic or published an image. Their runtime completion does not close
 Must 3 or Must 4. Do not repeat their provisioning or secret-version insertion.
+
+## CD-C2D failed proof and CD-C2D-R1 diagnosis
+
+[Run 35229757740](https://github.com/tyosu131/Workout-Journal/actions/runs/35229757740)
+was dispatched exactly once with `mode=wif-proof`, `event=workflow_dispatch`,
+`main`, attempt **1**, source `fc93af7c4eaeebaaf831550f66aae1df6edaebe4`.
+The run was created at `2026-09-17T13:51:30Z` and concluded **failure** at
+`13:51:39Z`. Checkout of the exact SHA succeeded; the proof step ran from
+`13:51:36Z` to `13:51:37Z` and exited 1. Its only check record was
+Deploy-provider / Deploy-SA `AUTH_SUCCESS` expected, `FAIL` actual.
+
+| Check | Observed | Proof status |
+| --- | --- | --- |
+| A Deploy provider -> Deploy SA | FAIL | NOT PROVEN in this run |
+| B same Deploy-provider STS token -> E2E SA | NOT RUN | NOT PROVEN |
+| C dedicated E2E provider -> E2E SA | SKIPPED | NOT PROVEN |
+
+`preflight`, `candidate`, `candidate-e2e`, `verify-candidate` and `production`
+were all skipped. Before/after Build lists, Run revision/traffic, image inventory,
+secret version metadata, provider settings and both SA IAM policies matched;
+Terraform remained 35 / No changes. No secret payload read or delivery operation
+ran. Historical CD-B2 proof remains historical evidence, not a PASS for this run.
+
+R1 re-read the run, attempt-1 jobs and sanitized logs on 2026-09-18. The old
+source appends A's record **after** `context()` returns: P0 passed. It marks A
+PASS only after impersonation returns. Thus the failure is **UNKNOWN within
+P1-P4**; P5 was not reached. Auth audit-log lookup for
+`2026-09-17T13:51:28Z` through `13:52:00Z` returned zero STS/IAM Credentials
+entries. **Audit log absence is not call absence**, and timing does not establish
+root cause. No runtime rerun or new dispatch was performed in R1.
+
+Official-contract comparison against that exact source:
+
+| Phase | Contract and source comparison | Diagnosis |
+| --- | --- | --- |
+| P0 context | [Dispatch SHA/ref](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch) and [workflow ref/SHA variables](https://docs.github.com/en/actions/reference/workflows-and-actions/variables) match the main/exact-source checks. | Passed, from A-record ordering. |
+| P1 OIDC request | [GitHub's endpoint and bearer variables](https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token) are used with a URL-encoded custom audience. The hostname/path guard is an additional local restriction, not a documented guarantee about every runner URL. | Actual URL/response unavailable; no proven mismatch. Do not relax the guard speculatively. |
+| P2 response/claims | [GitHub OIDC claims](https://docs.github.com/en/actions/reference/security/oidc) are compared with repository, caller, source and run identity; C additionally validates reusable-workflow identity. | Actual claims unavailable; no proven mismatch. |
+| P3 STS | [Google token exchange](https://docs.cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token): provider resource audience, JSON camelCase request fields, JWT subject type, cloud-platform scope, no Authorization header; response snake_case fields and Bearer type. Source agrees with these requirements. | Request completion/response unknown. |
+| P4 SA token | [generateAccessToken](https://docs.cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateAccessToken): `projects/-/serviceAccounts/{email}`, scope array, `600s`, `accessToken` and `expireTime`. [WIF trust and impersonation](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines) use conditions and attribute principalSet WorkloadIdentityUser grants. | Source contract checked; actual response unknown. |
+| P5 negative B | Same STS token; only IAM HTTP 403, error code 403 and PERMISSION_DENIED pass. | Not reached. |
+
+**Root cause: NOT PROVEN.** The proven source issue is insufficient diagnostics;
+R1 changes diagnostics only, not authentication requests or trust policy.
+
+R1 allows only `phase`, fixed `failureCode`, `providerRole`, `targetSA`, `expected`
+and PASS/FAIL result in check output. The `wifProof` envelope remains PASS/FAIL.
+Context identity is still validated internally, but source SHA/run ID/attempt are
+obtained from GitHub run metadata instead of emitted by this script.
+
+| Phase | Fixed failure code |
+| --- | --- |
+| P0 | `CONTEXT_PRECHECK_FAILED` |
+| P1 | `OIDC_REQUEST_FAILED` |
+| P2 response decoding/shape | `OIDC_RESPONSE_INVALID` |
+| P2 claims comparison | `OIDC_CLAIMS_MISMATCH` |
+| P3 | `STS_EXCHANGE_FAILED` |
+| P4 Deploy | `DEPLOY_IMPERSONATION_FAILED` |
+| P4 E2E | `POSITIVE_E2E_IMPERSONATION_FAILED` |
+| P5 | `NEGATIVE_DENIAL_MISMATCH` |
+
+Network/request errors and non-200 OIDC responses use P1; malformed bounded
+JSON/JWT uses P2. STS and IAM response/transport failures remain in their own
+phase. Codes identify the failing operation, not its underlying cause; B's code
+does not turn unrelated failures into an expected denial. All failures still
+exit nonzero, blocking C. No exceptions, response bodies, URLs/query data or
+tokens are serialized. Offline injection tests cover each code and output sink.
+
+R1 validation on 2026-09-18: all **59 Python controller tests** and **24 offline
+E2E contract tests** passed with Node 24; actionlint **1.7.12** passed for CI/CD/
+reusable workflows. `git diff --check` and the changed-file credential/token
+literal scan passed. Workflow YAML and Terraform `.tf` files are unchanged.
+
+Provider activation **COMPLETE**; WIF proof **OPEN**; Must 3 **In progress**;
+Must 4 **Open**; production CD **inactive**. R1 source is subject to Fresh Result
+Audit. Any later runtime proof needs a separate Human Gate; R1 authorizes no rerun.
 
 ## Identity and credential ownership
 
@@ -75,8 +152,8 @@ Ordinary GitHub claims describe the caller; `job_workflow_ref` identifies the
 reusable workflow. The default provider-specific audience is preserved. A token
 accepted through the Deploy provider cannot gain the E2E mapped attribute merely
 by sharing a pool/repository. No pool-wide or repository-wide E2E grant is added.
-The provider remains `disabled = true` in actual runtime; CD-C2C proposes
-`disabled = false` without changing mapping, condition, pool or IAM.
+The provider is now `ACTIVE / disabled = false` after CD-C2C activation;
+mapping, condition, pool and IAM remain unchanged.
 
 This is mapped-principal isolation, not a claim that arbitrarily modified
 trusted-main code could never request credentials through another provider.
@@ -115,7 +192,7 @@ pinned, and checkout does not persist credentials. CI explicitly has only
 `id-token: write` is limited to Google-authenticated jobs; only CI inspection jobs
 receive `actions: read`. E2E is a same-repository, same-commit reusable call.
 
-## Isolated WIF proof (CD-C2C source; runtime OPEN)
+## Isolated WIF proof (CD-C2D failed at A; runtime OPEN)
 
 `mode=wif-proof` does not need a manifest, secret version or activation variable.
 It has exactly this dependency chain, with no production Environment:
@@ -139,8 +216,8 @@ ref/SHA consistency; STS performs signature/trust validation. HTTPS uses the Git
 runner OIDC endpoint, fixed STS endpoint and exact two IAM Credentials targets.
 No redirects, proxies, retries, SDK logging or credential files are used. Tokens
 stay in memory, requested SA lifetime is 600 seconds, and minted SA tokens are
-discarded without resource access. Output and step summary contain only source
-SHA, run ID/attempt, provider role, target SA, expected outcome and PASS/FAIL.
+discarded without resource access. Output and step summary contain only phase,
+fixed failure code on failure, provider role, target SA, expected outcome and PASS/FAIL.
 Raw auth responses and exceptions never reach logs or evidence.
 
 Every release job is mode-guarded and depends on the release preflight chain.
@@ -278,9 +355,8 @@ privileged E2E credential's strict transport boundary.
 ## Validation and runtime boundary
 
 Use [offline validation](./verification.md#cd-c1-offline-validation). Terraform
-state is 35; CD-C2C's expected plan is **0 add / 1 change / 0 destroy**, only E2E
-provider `disabled: true -> false` and pending-to-neutral description. All other
-resources/grants must be no-op. No apply/import/state mutation, Cloud
+state is 35; after completed CD-C2C activation the expected plan is
+**No changes / exit 0**. All resources/grants must be no-op. No apply/import/state mutation, Cloud
 Build, dispatch, Supabase key creation or Cloud Run mutation is authorized by
 source validation. Fresh independent Result Audit precedes any Human runtime gate.
 

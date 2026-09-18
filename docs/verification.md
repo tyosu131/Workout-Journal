@@ -159,18 +159,22 @@ git diff --check
 Use Node 24. All controller cloud operations in tests are mocked; v2 manifest
 validation, tampering/identity/stale-state rejection, ETag update shape, exact
 rollback, private stdin and cross-provider mapping are checked offline. Expected
-state is **35 applied resources** after CD-C2A; CD-C2B's baseline was no-op.
-CD-C2C's expected plan is **0 create / 1 update / 0 delete / 0 replace** (exit 2),
-only E2E provider `disabled: true -> false` and its neutral description. Actual
-runtime is still disabled, Secret Manager version 1 is ENABLED, and activation
-is UNCONFIGURED. Do not apply a source-validation plan.
+state is **35 applied resources**. CD-C2C provider activation is COMPLETE; both
+providers are **ACTIVE / disabled=false** and the R1 read-only plan was
+**No changes / exit 0**. Secret Manager version 1 is ENABLED and
+`CD_C1_ACTIVATION` is UNCONFIGURED. CD-C2D run `35229757740` failed at A; B/C are
+NOT PROVEN, WIF proof remains OPEN. Do not apply a source-validation plan or
+rerun/dispatch as part of R1.
 
 `test_e2e_wif_proof.py` executes synthetic auth responses and reads actual YAML:
 the default proof mode cannot reach Build/candidates/secret access/production;
 A/B share the same federated token; only expected IAM denial passes B; unexpected
 success or unrelated failure blocks C; positive proof uses the existing reusable
 workflow; release still requires activation, manifest/hash and exact version.
-Tokens and raw errors cannot enter evidence. Tests never request real OIDC.
+R1 injects P0-P5 failures, including separate OIDC response/claims failures, and
+checks fixed diagnostic codes and allowlisted stdout/summary fields. Tokens, raw
+errors, query data and context metadata cannot enter proof output. Tests never
+request real OIDC.
 Positive/negative WIF, credential consumption and candidate/promotion/rollback
 runtime proofs remain separate Human Gates.
 The existing required CI job also runs both offline test commands; its check name
