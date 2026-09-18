@@ -193,7 +193,10 @@ class AuthenticationTests(unittest.TestCase):
             for value in (out.getvalue(), err.getvalue(), summary.read_text()):
                 for forbidden in (MARKER, jwt('deploy'), jwt('e2e'), 'accessToken', 'access_token',
                                   'https://', 'private=', 'api-version=', 'Authorization',
-                                  'Traceback', 'sourceSha', 'runId', 'runAttempt'):
+                                  'Traceback', 'sourceSha', 'runId', 'runAttempt',
+                                  'run.actions.githubusercontent.com', 'evil.example', '/job/idtoken',
+                                  '//iam.googleapis.com/', 'Bearer ', 'WIF_PROOF_REFUSED',
+                                  'ValueError', 'RuntimeError', 'ACTIONS_ID_TOKEN_REQUEST_URL'):
                     self.assertTrue(forbidden not in value, 'Sensitive diagnostic output')
             for record in evidence['checks']:
                 self.assertLessEqual(set(record), {'phase', 'failureCode', 'providerRole',
@@ -208,7 +211,7 @@ class AuthenticationTests(unittest.TestCase):
     def test_fixed_diagnostics_for_each_control_phase(self):
         cases = [
             ('P0', 'CONTEXT_PRECHECK_FAILED', None, None, {'CD_MODE': MARKER}, 0),
-            ('P1', 'OIDC_ENDPOINT_VALIDATION_FAILED', None, None,
+            ('P1', 'OIDC_ENDPOINT_HOST_FAILED', None, None,
              {'ACTIONS_ID_TOKEN_REQUEST_URL': 'https://evil.example/idtoken?token=' + MARKER}, 0),
             ('P1', 'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', None, None,
              {'ACTIONS_ID_TOKEN_REQUEST_TOKEN': MARKER + ' '}, 0),
@@ -249,30 +252,116 @@ class AuthenticationTests(unittest.TestCase):
             'phase': phase, 'failureCode': failure, 'providerRole': role,
             'targetSA': wif.ACCOUNTS[role], 'expected': 'AUTH_SUCCESS', 'result': 'FAIL'}]})
 
-    def test_endpoint_failures_are_distinct_and_never_send_request_token(self):
-        key = 'ACTIONS_ID_TOKEN_REQUEST_URL'
-        self.assert_oidc_failure(self.diagnose([], missing=(key,)),
-                                 'OIDC_ENDPOINT_VALIDATION_FAILED', calls=0)
-        urls = ['', None, 123, 'http://run.actions.githubusercontent.com/job/idtoken',
-                'https:///job/idtoken', 'https://evil.example/idtoken',
-                'https://actions.githubusercontent.com.evil.example/idtoken',
-                'https://run.actions.githubusercontent.com:444/job/idtoken',
-                'https://run.actions.githubusercontent.com:invalid/job/idtoken',
-                'https://run.actions.githubusercontent.com:65536/job/idtoken',
-                'https://user@run.actions.githubusercontent.com/job/idtoken',
-                'https://:password@run.actions.githubusercontent.com/job/idtoken',
-                'https://run.actions.githubusercontent.com/job/idtoken#fragment',
-                'https://run.actions.githubusercontent.com/other', 'https://[invalid/idtoken']
+    def assert_endpoint_failure(self, suffix, urls):
+        # Both callers share this endpoint policy. Every case exercises main(),
+        # all three output sinks, exact diagnostics and zero HTTP calls.
         for index, url in enumerate(urls):
-            with self.subTest(case=index):
-                if isinstance(url, str) and url:
-                    url += '?private=' + MARKER
-                self.assert_oidc_failure(self.diagnose([], overrides={key: url}),
-                                         'OIDC_ENDPOINT_VALIDATION_FAILED', calls=0)
-        # Multiple invalid inputs stop at the first validation, without ambiguity.
-        self.assert_oidc_failure(self.diagnose([], overrides={key: MARKER},
-                                              missing=('ACTIONS_ID_TOKEN_REQUEST_TOKEN',)),
-                                 'OIDC_ENDPOINT_VALIDATION_FAILED', calls=0)
+            for action, role in [('control-negative', 'deploy'), ('positive', 'e2e')]:
+                with self.subTest(condition=suffix, case=index, role=role):
+                    self.assert_oidc_failure(self.diagnose(
+                        [], action=action, overrides={'ACTIONS_ID_TOKEN_REQUEST_URL': url}),
+                        'OIDC_ENDPOINT_' + suffix + '_FAILED', calls=0, role=role)
+
+    def test_endpoint_missing_diagnostic(self):
+        key = 'ACTIONS_ID_TOKEN_REQUEST_URL'
+        for action, role in [('control-negative', 'deploy'), ('positive', 'e2e')]:
+            self.assert_oidc_failure(self.diagnose([], action=action, missing=(key,)),
+                                     'OIDC_ENDPOINT_URL_MISSING_FAILED', calls=0, role=role)
+        self.assert_endpoint_failure('URL_MISSING', ['', None])
+
+    def test_endpoint_parse_diagnostic(self):
+        self.assert_endpoint_failure('PARSE', [
+            'https://[' + MARKER + '/idtoken',
+            'https://[' + MARKER + ']/idtoken',
+            'https://' + MARKER + '\uff0f.example/idtoken', 123, [MARKER]])
+        with patch.object(wif, 'urlsplit', side_effect=ValueError(MARKER)):
+            self.assert_endpoint_failure('PARSE', [ENV['ACTIONS_ID_TOKEN_REQUEST_URL']])
+
+    def test_endpoint_scheme_diagnostic(self):
+        self.assert_endpoint_failure('SCHEME', [
+            scheme + '://run.actions.githubusercontent.com/job/idtoken?private=' + MARKER
+            for scheme in ('http', 'ftp', 'other')] + [MARKER])
+
+    def test_endpoint_host_diagnostic(self):
+        self.assert_endpoint_failure('HOST', [
+            'https:///job/idtoken?private=' + MARKER,
+            *['https://' + host + '/job/idtoken?private=' + MARKER for host in (
+                'evil.example', 'actions.githubusercontent.com.evil.example',
+                'evilactions.githubusercontent.com', 'actions.githubusercontent.com')]])
+
+    def test_endpoint_port_diagnostic(self):
+        # urlsplit accepts these authorities; .port raises on invalid/range
+        # errors. They must remain PORT, never PARSE or HOST.
+        self.assert_endpoint_failure('PORT', [
+            'https://run.actions.githubusercontent.com:' + port + '/job/idtoken?private=' + MARKER
+            for port in ('444', MARKER, '65536', '-1')])
+
+    def test_endpoint_userinfo_diagnostic(self):
+        self.assert_endpoint_failure('USERINFO', [
+            'https://' + userinfo + '@run.actions.githubusercontent.com/job/idtoken'
+            for userinfo in (MARKER, ':' + MARKER, MARKER + ':' + MARKER)])
+
+    def test_endpoint_fragment_diagnostic(self):
+        self.assert_endpoint_failure('FRAGMENT', [
+            ENV['ACTIONS_ID_TOKEN_REQUEST_URL'] + '#' + MARKER])
+
+    def test_endpoint_path_diagnostic(self):
+        self.assert_endpoint_failure('PATH', [
+            'https://run.actions.githubusercontent.com' + path + '?private=' + MARKER
+            for path in ('', '/other', '/idtoken/', '/IDTOKEN')])
+
+    def test_endpoint_query_build_diagnostic(self):
+        # Inject into existing operations; no production-only test branches.
+        for operation in ('parse_qsl', 'urlencode', 'urlunsplit'):
+            with self.subTest(operation=operation), \
+                 patch.object(wif, operation, side_effect=ValueError(MARKER)):
+                self.assert_endpoint_failure('QUERY_BUILD', [ENV['ACTIONS_ID_TOKEN_REQUEST_URL']])
+        parts = wif.urlsplit(ENV['ACTIONS_ID_TOKEN_REQUEST_URL'])
+        with patch.object(type(parts), '_replace', side_effect=ValueError(MARKER)):
+            self.assert_endpoint_failure('QUERY_BUILD', [ENV['ACTIONS_ID_TOKEN_REQUEST_URL']])
+
+    def test_endpoint_checks_preserve_first_failure_order(self):
+        cases = [
+            ('PARSE', 'http://[' + MARKER),
+            ('SCHEME', 'http://' + MARKER + '@evil.example:invalid/other#fragment'),
+            ('HOST', 'https://' + MARKER + '@evil.example:invalid/other#fragment'),
+            ('PORT', 'https://' + MARKER + '@run.actions.githubusercontent.com:invalid/other#fragment'),
+            ('USERINFO', 'https://' + MARKER + '@run.actions.githubusercontent.com/other#fragment'),
+            ('FRAGMENT', 'https://run.actions.githubusercontent.com/other#' + MARKER),
+            ('PATH', 'https://run.actions.githubusercontent.com/' + MARKER),
+        ]
+        # Query building and token validation must not run after an earlier
+        # failure. In particular do not eagerly read .port before scheme/host.
+        with patch.object(wif, 'parse_qsl', side_effect=ValueError(MARKER)) as query, \
+             patch.object(wif, 'token_value', side_effect=ValueError(MARKER)) as token:
+            for suffix, url in cases:
+                self.assert_endpoint_failure(suffix, [url])
+            query.assert_not_called()
+            token.assert_not_called()
+
+    def test_endpoint_accepted_variants_keep_exact_query_semantics(self):
+        # Empty userinfo/fragment/port were allowed by the original predicates;
+        # diagnostics must neither tighten those nor change query normalization.
+        from urllib.parse import urlsplit
+        query = 'x=one+two&empty=&x=three&audience=old&%61udience=older&private=' + MARKER
+        expected_query = ('x=one+two&x=three&private=' + MARKER +
+                          '&audience=%2F%2Fiam.googleapis.com%2F' +
+                          wif.PROVIDERS['deploy'].replace('/', '%2F'))
+        for authority in ('run.actions.githubusercontent.com',
+                          'RUN.actions.githubusercontent.com:443',
+                          'run.actions.githubusercontent.com:0443',
+                          'run.actions.githubusercontent.com:',
+                          ':@run.actions.githubusercontent.com'):
+            url = 'HTTPS://' + authority + '/prefix/idtoken?' + query + '#'
+            with self.subTest(authority=authority), \
+                 patch.object(wif, 'request_json', return_value=(200, {'value': jwt('deploy')})) as http:
+                self.assertEqual(wif.github_token({**ENV, 'ACTIONS_ID_TOKEN_REQUEST_URL': url},
+                                                 'deploy', METADATA), jwt('deploy'))
+                actual = urlsplit(http.call_args.args[0])
+                self.assertEqual(actual.query, expected_query)
+                self.assertEqual(actual._replace(query=''), urlsplit(url)._replace(query=''))
+                self.assertEqual(http.call_args.kwargs, {'token': MARKER})
+                http.assert_called_once()
 
     def test_request_token_failures_are_distinct_and_never_attempt_transport(self):
         key = 'ACTIONS_ID_TOKEN_REQUEST_TOKEN'
@@ -330,7 +419,7 @@ class AuthenticationTests(unittest.TestCase):
 
     def test_p1_codes_also_classify_positive_provider_without_impersonation(self):
         for overrides, replies, failure, calls in [
-            ({'ACTIONS_ID_TOKEN_REQUEST_URL': MARKER}, [], 'OIDC_ENDPOINT_VALIDATION_FAILED', 0),
+            ({'ACTIONS_ID_TOKEN_REQUEST_URL': MARKER}, [], 'OIDC_ENDPOINT_SCHEME_FAILED', 0),
             ({'ACTIONS_ID_TOKEN_REQUEST_TOKEN': MARKER + ' '}, [],
              'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', 0),
             ({}, [RuntimeError(MARKER)], 'OIDC_TRANSPORT_FAILED', 1),

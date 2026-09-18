@@ -33,7 +33,15 @@ ACCESS_TYPE = 'urn:ietf:params:oauth:token-type:access_token'
 LIMIT = 64 * 1024
 FAILURE_PHASES = {
     'CONTEXT_PRECHECK_FAILED': 'P0',
-    'OIDC_ENDPOINT_VALIDATION_FAILED': 'P1',
+    'OIDC_ENDPOINT_URL_MISSING_FAILED': 'P1',
+    'OIDC_ENDPOINT_PARSE_FAILED': 'P1',
+    'OIDC_ENDPOINT_SCHEME_FAILED': 'P1',
+    'OIDC_ENDPOINT_HOST_FAILED': 'P1',
+    'OIDC_ENDPOINT_PORT_FAILED': 'P1',
+    'OIDC_ENDPOINT_USERINFO_FAILED': 'P1',
+    'OIDC_ENDPOINT_FRAGMENT_FAILED': 'P1',
+    'OIDC_ENDPOINT_PATH_FAILED': 'P1',
+    'OIDC_ENDPOINT_QUERY_BUILD_FAILED': 'P1',
     'OIDC_REQUEST_TOKEN_VALIDATION_FAILED': 'P1',
     'OIDC_TRANSPORT_FAILED': 'P1',
     'OIDC_HTTP_STATUS_FAILED': 'P1',
@@ -124,13 +132,27 @@ def token_value(value):
 
 def github_token(env, role, metadata, record=None):
     record = {} if record is None else record
-    checkpoint(record, 'OIDC_ENDPOINT_VALIDATION_FAILED')
+    checkpoint(record, 'OIDC_ENDPOINT_URL_MISSING_FAILED')
     # GitHub supplies this runner endpoint; never accept arbitrary token recipients.
-    parts = urlsplit(env.get('ACTIONS_ID_TOKEN_REQUEST_URL', ''))
-    require(parts.scheme == 'https' and parts.hostname is not None and
-            parts.hostname.endswith('.actions.githubusercontent.com') and
-            parts.port in (None, 443) and not parts.username and not parts.password and
-            not parts.fragment and parts.path.endswith('/idtoken'))
+    endpoint = env.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+    require(endpoint)
+    checkpoint(record, 'OIDC_ENDPOINT_PARSE_FAILED')
+    parts = urlsplit(endpoint)
+    # Preserve the original short-circuit order and every policy predicate.
+    checkpoint(record, 'OIDC_ENDPOINT_SCHEME_FAILED')
+    require(parts.scheme == 'https')
+    checkpoint(record, 'OIDC_ENDPOINT_HOST_FAILED')
+    require(parts.hostname is not None and parts.hostname.endswith('.actions.githubusercontent.com'))
+    checkpoint(record, 'OIDC_ENDPOINT_PORT_FAILED')
+    # Invalid/out-of-range port access also belongs to this condition.
+    require(parts.port in (None, 443))
+    checkpoint(record, 'OIDC_ENDPOINT_USERINFO_FAILED')
+    require(not parts.username and not parts.password)
+    checkpoint(record, 'OIDC_ENDPOINT_FRAGMENT_FAILED')
+    require(not parts.fragment)
+    checkpoint(record, 'OIDC_ENDPOINT_PATH_FAILED')
+    require(parts.path.endswith('/idtoken'))
+    checkpoint(record, 'OIDC_ENDPOINT_QUERY_BUILD_FAILED')
     audience = '//iam.googleapis.com/' + PROVIDERS[role]
     query = [(k, v) for k, v in parse_qsl(parts.query) if k != 'audience']
     query.append(('audience', audience))

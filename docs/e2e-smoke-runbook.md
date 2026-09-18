@@ -6,11 +6,11 @@ fixed SHA/pair below is historical proof, not active CD authority. GitHub Action
 requires v2 metadata from the exact current release. CD-C2A/B are complete:
 E2E identity/container/IAM are provisioned and runtime verified; Supabase actual
 key display name is `candidate_e2e`, Secret Manager version 1 is ENABLED (one version).
-CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). Latest CD-C2D-R2
-run `35313988444` failed at A with `OIDC_REQUEST_FAILED / P1`; P1 internal root
-cause and B/C remain NOT PROVEN. The isolated auth-only mode
+CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). Latest CD-C2D-R4
+run `35318084987` failed at A with `OIDC_ENDPOINT_VALIDATION_FAILED / P1`.
+The specific endpoint condition, root cause and B/C remain NOT PROVEN. The isolated auth-only mode
 never reads the secret or runs this scenario. WIF and full CD runtime proof remain
-Open; see [R3 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r2-runtime-evidence-and-r3-p1-diagnostics).
+Open; see [R4 evidence / R5 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r4-runtime-evidence-and-r5-endpoint-diagnostics).
 Local P2A is unchanged; production CD remains inactive.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
