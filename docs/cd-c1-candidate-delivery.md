@@ -1,7 +1,7 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
 Status: **CD-C1 merged; CD-C2A/B complete; CD-C2C provider activation COMPLETE;
-CD-C2D-R2 failed at A / P1, internal root cause NOT PROVEN, WIF proof OPEN.** Must 3 is **In progress**,
+CD-C2D-R4 failed at A / P1 endpoint validation, specific condition and root cause NOT PROVEN, WIF proof OPEN.** Must 3 is **In progress**,
 Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
 runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
@@ -196,6 +196,147 @@ No new runtime proof or infrastructure/settings mutation was performed by this a
 These diagnostics improve evidence resolution for a separately authorized next
 single runtime proof after merge; they do not establish an OIDC fix, close WIF
 proof or authorize execution.
+
+## CD-C2D-R4 runtime evidence and R5 endpoint diagnostics
+
+PR #102 merged at `fc57e92323bd08290f3cbbd8c4b1ba8e74d161a8` on
+2026-09-18. Required main-push [CI 35317453412](https://github.com/tyosu131/Workout-Journal/actions/runs/35317453412)
+succeeded. R4 dispatched `mode=wif-proof` exactly once, with no rerun.
+R5 freshly re-read [run 35318084987](https://github.com/tyosu131/Workout-Journal/actions/runs/35318084987),
+attempt-1 jobs and safe logs on 2026-09-18:
+
+- Workflow `.github/workflows/cd.yml`, event `workflow_dispatch`, branch `main`,
+  SHA `fc57e92323bd08290f3cbbd8c4b1ba8e74d161a8`, attempt **1**, created
+  `2026-09-18T07:09:21Z`, conclusion **failure**.
+- [Job 105514115657](https://github.com/tyosu131/Workout-Journal/actions/runs/35318084987/job/105514115657)
+  completed checkout successfully; step 3, `Deploy control then expected E2E
+  impersonation denial`, failed with exit 1. Its safe JSON has `wifProof=FAIL`
+  and only A: `phase=P1`, `failureCode=OIDC_ENDPOINT_VALIDATION_FAILED`,
+  `providerRole=deploy`, the fixed Deploy `targetSA`, `expected=AUTH_SUCCESS`,
+  `result=FAIL`. B **NOT RUN / NOT PROVEN**; C **SKIPPED / NOT PROVEN**;
+  all release jobs **SKIPPED**.
+- **Proven:** local endpoint processing failed before request-token validation
+  or an OIDC HTTP request. **Not proven:** the specific endpoint condition,
+  actual URL properties, why the runner supplied them, or a defect in the guard.
+  **ROOT_CAUSE_NOT_PROVEN.** No sensitive endpoint value is retained in this record.
+
+Evidence resolution: `35229757740` **UNKNOWN P1-P4** -> `35313988444`
+**P1 / OIDC_REQUEST_FAILED** -> `35318084987`
+**P1 / OIDC_ENDPOINT_VALIDATION_FAILED**. The last code is historical R4 evidence;
+R5 replaces it in source with the fixed codes below, without a new runtime proof.
+
+### Official contract and unchanged repository policy
+
+[GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token)
+documents runner-provided `ACTIONS_ID_TOKEN_REQUEST_URL`, the bearer request token
+`ACTIONS_ID_TOKEN_REQUEST_TOKEN`, and custom audience addition.
+[`id-token: write`](https://docs.github.com/en/actions/reference/security/oidc#workflow-permissions-for-the-requesting-the-oidc-token)
+is required to request the JWT; both proof jobs already grant it.
+The [Toolkit OIDC source at 193fa46](https://github.com/actions/toolkit/blob/193fa46c20fde8b0ed54194bc08b841c78c0776d/packages/core/src/oidc-utils.ts)
+checks URL/token presence, appends the encoded audience to the supplied URL,
+uses a bearer-authenticated JSON GET and reads response `value`.
+The [HTTP client at 602cbaf](https://github.com/actions/http-client/blob/602cbafdf5b9de6e5a68995f6d8ccf4f318c5fde/index.ts)
+parses the URL and selects host, port, pathname and search; its
+[Bearer handler](https://github.com/actions/http-client/blob/602cbafdf5b9de6e5a68995f6d8ccf4f318c5fde/auth.ts)
+sets the request Authorization header. These are reviewed source snapshots,
+not evidence of R4's actual endpoint value.
+
+| Component | Documented / Toolkit behavior | Workout-Journal policy, unchanged |
+| --- | --- | --- |
+| Scheme | OIDC helper consumes the supplied URL; HTTP client selects transport by scheme. | Explicit HTTPS-only guard. |
+| Hostname | No fixed hostname suffix contract in the reviewed OIDC documentation/helper. Client uses parsed hostname. | Host must exist and end with `.actions.githubusercontent.com`. |
+| Port | Client uses parsed port or transport default; no OIDC-specific port allowlist. | Only absent port or numeric 443. |
+| Userinfo | No OIDC-helper rejection of URL userinfo; bearer handler supplies authentication. | Both parsed username and password must be falsey. |
+| Fragment | No OIDC-helper fragment guard; HTTP request path uses pathname plus search. | Parsed fragment must be falsey. |
+| Path | No documented `/idtoken` suffix guarantee or OIDC-helper suffix guard. | Path must end with `/idtoken`. |
+| Query / audience | Docs show audience addition; Toolkit appends an encoded audience. | Existing `parse_qsl` defaults, removal of decoded `audience` keys, one provider audience appended, `urlencode` and `urlunsplit`. |
+
+These explicit guard predicates and the query reconstruction algorithm are
+repository-specific defense in depth / implementation choices, not the documented
+GitHub endpoint contract. Their narrower assumptions are a **compatibility risk /
+possible cause** only. Neither Toolkit's lack of those guards nor R4's broad code
+proves which rule failed. **No proven defect or policy change is established.**
+
+### Sequential endpoint diagnostics
+
+On actual R4/main source, one checkpoint covered environment lookup, `urlsplit`,
+the short-circuited scheme/hostname/suffix/port/userinfo/fragment/path predicates,
+provider audience construction, `parse_qsl`, audience replacement, `urlencode`
+and `urlunsplit`. R5 records the checkpoint immediately before each operation:
+
+| First failing boundary (all P1) | Fixed diagnostic |
+| --- | --- |
+| Missing/empty endpoint; already rejected by the old scheme gate | `OIDC_ENDPOINT_URL_MISSING_FAILED` |
+| `urlsplit`, including malformed authority / normalization errors | `OIDC_ENDPOINT_PARSE_FAILED` |
+| Scheme is not HTTPS | `OIDC_ENDPOINT_SCHEME_FAILED` |
+| Host missing or not matching the existing suffix | `OIDC_ENDPOINT_HOST_FAILED` |
+| Port outside policy, or invalid/out-of-range `.port` access | `OIDC_ENDPOINT_PORT_FAILED` |
+| Nonempty username or password | `OIDC_ENDPOINT_USERINFO_FAILED` |
+| Nonempty fragment | `OIDC_ENDPOINT_FRAGMENT_FAILED` |
+| Missing/wrong path suffix | `OIDC_ENDPOINT_PATH_FAILED` |
+| Existing query/audience construction, encoding or URL assembly | `OIDC_ENDPOINT_QUERY_BUILD_FAILED` |
+
+Only the first failure is reported. The original predicate order is preserved;
+port access is not moved ahead of scheme/host checks. Query/build is one boundary
+because it changes the same reconstruction decision; host, port and userinfo
+remain separate. The next authorized single proof can identify a fixed failing
+rule/operation boundary, but will not disclose its actual value or necessarily
+prove the underlying cause. No raw URL, component, port value, audience URL,
+exception, response, header, token or credential is added to output. Existing
+allowlisted fields and source-controlled values alone reach stdout/summary.
+
+P1 request-token / transport / HTTP-status semantics and P2/P3/P4/P5 are unchanged,
+including parser-before-status precedence, claims, request/Bearer policy, A/B's
+same federated token, exact B 403 + PERMISSION_DENIED, C dependency and release
+isolation. Empty userinfo/fragment/port and other previously accepted forms remain
+accepted. This is diagnostic classification only, not an OIDC or guard fix.
+
+R5 validation: **77 Python tests**, **24 offline E2E tests** with Node **24.18.0**,
+actionlint **1.7.12**, and `git diff --check` passed. Each endpoint condition is
+tested through both callers, with exact first-failure assertions, zero HTTP calls,
+and marker checks on stdout/stderr/summary. Existing query operations are fault
+injected; no test-only production branches are added. All five required wrong
+implementation categories were detected in **seven in-memory variants** (host as
+scheme, port as host, generic path code, raw URL, raw exception to each output
+sink). Authentication AST comparison passed after removing diagnostics, inlining
+the endpoint local and joining the ordered predicates; the new missing-input
+check only rejects inputs that the old gate already rejected.
+
+The R5 implementation session performed runtime mutation **NONE**, dispatch **0**,
+rerun **0**, and no commit/push/PR. Workflow YAML, Terraform and application source
+are unchanged. Provider
+activation remains **COMPLETE** from the existing record (not reverified by R5),
+`CD_C1_ACTIVATION` **UNCONFIGURED** from R4 read-back, WIF proof **OPEN**, A **FAIL**,
+B/C **NOT PROVEN**, Must 3 **In progress**, Must 4 **Open**, production CD **inactive**.
+The implementation handoff was **READY FOR FRESH RESULT AUDIT** with a PASS self-check.
+
+The separate **R5 Fresh Result Audit / Pre-PR passed on 2026-09-18**. First Pass
+re-acquired R4 run/jobs/safe logs and the current main SHA, inspected the complete
+nine-file working diff, rechecked official OIDC/Toolkit sources, and reproduced
+**77 Python tests / 24 offline E2E tests / actionlint 1.7.12 / diff check PASS**.
+Node **24.18.0** meets the repository's `>=24 <25` requirement and reproduced the
+checks despite the existing default-PATH Node shared-library failure.
+
+Independent AST comparison confirmed identical ordered endpoint predicates and
+query construction, identical request-token-through-claims statements, and
+unchanged remaining authentication functions. A separate **28-case caller matrix**
+verified all nine codes, first-failure ownership, all output sinks and zero HTTP
+requests. A synthetic surrogate query also reached the real `urlencode` failure
+boundary and safely produced QUERY_BUILD without patching URL operations; this
+is offline classification evidence, not evidence of R4's actual input. The seven
+required-category in-memory mutants were detected again, as were **nine additional
+premature-HTTP mutants**, one for each endpoint checkpoint.
+
+First Pass closed with **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**.
+No code/docs/staging changes occurred before closure; no code remediation was
+needed. Only audit-state documentation was updated afterward and rechecked for
+Pre-PR. Commit/push/PR and required CI verification may proceed under this gate;
+no runtime dispatch, rerun, cloud operation or settings mutation was performed.
+`CD_C1_ACTIVATION` was freshly rechecked **UNCONFIGURED**. Historical R4 remains
+**OIDC_ENDPOINT_VALIDATION_FAILED**, never reclassified into an R5 subcode.
+Any endpoint policy fix or next single runtime proof remains a separate phase
+and Human Gate after reviewed source is merged. Root cause is still NOT PROVEN;
+WIF proof, Must 3/4 and production CD status above remain unchanged.
 
 ## Identity and credential ownership
 

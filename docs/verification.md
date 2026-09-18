@@ -162,35 +162,56 @@ rollback, private stdin and cross-provider mapping are checked offline. Expected
 state is **35 applied resources**. CD-C2C provider activation is COMPLETE; both
 providers are **ACTIVE / disabled=false** and the R1 read-only plan was
 **No changes / exit 0**. Secret Manager version 1 is ENABLED and
-`CD_C1_ACTIVATION` is UNCONFIGURED. Latest CD-C2D-R2 run `35313988444` failed at A
-with `OIDC_REQUEST_FAILED / P1`; P1 internal root cause and B/C are NOT PROVEN,
-WIF proof remains OPEN. R3 performs no Terraform operations or runtime proof;
-do not apply a source-validation plan or rerun/dispatch as part of R3.
+`CD_C1_ACTIVATION` is UNCONFIGURED (R4 read-back). Latest CD-C2D-R4 run
+`35318084987` failed at A with `OIDC_ENDPOINT_VALIDATION_FAILED / P1`, before
+request-token validation / HTTP request. The specific endpoint condition and root
+cause are NOT PROVEN; B was not run, C skipped, and WIF proof remains OPEN.
+Provider/secret state above is the existing record, not a fresh R5 cloud check.
+R5 performs no Terraform operations or runtime proof; do not run the Terraform
+commands above, apply, rerun or dispatch as part of R5.
 
 `test_e2e_wif_proof.py` executes synthetic auth responses and reads actual YAML:
 the default proof mode cannot reach Build/candidates/secret access/production;
 A/B share the same federated token; only expected IAM denial passes B; unexpected
 success or unrelated failure blocks C; positive proof uses the existing reusable
 workflow; release still requires activation, manifest/hash and exact version.
-R1 injects P0-P5 failures, including separate OIDC response/claims failures, and
-checks fixed diagnostic codes and allowlisted stdout/summary fields. Tokens, raw
-errors, query data and context metadata cannot enter proof output. Tests never
-request real OIDC. [R3 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r2-runtime-evidence-and-r3-p1-diagnostics)
-split P1 into endpoint, request-token, transport and parseable non-200 response
-codes without changing authentication. Body parsing retains P2 precedence.
-The 67-test Python suite includes missing/invalid URL and token inputs, mocked
-transport exceptions, HTTP rejections, P2 boundaries and marker checks across
-stdout/stderr/summary. Five in-memory diagnostic/output mutants were detected;
-24 offline E2E tests and actionlint 1.7.12 also passed. The subsequent Fresh Result
-Audit reproduced these results and detected all five required mutant categories
-across seven variants. First Pass closed with zero Must/Should/Pending/Decision
-Needed and no code remediation; only audit-state docs changed before Pre-PR.
-Commit/push/PR and required CI verification are permitted after this gate;
-runtime proof still requires merge and a separate Human Gate.
+R1/R3 diagnostics retain P0-P5, request-token, transport, HTTP-status and P2
+parser-before-status semantics. [R5 endpoint diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r4-runtime-evidence-and-r5-endpoint-diagnostics)
+add missing / parse / scheme / host / port / userinfo / fragment / path /
+query-build codes while preserving the original policy and predicate order.
+
+R5 passed **77 Python tests**, **24 offline E2E tests** under Node **24.18.0**,
+actionlint **1.7.12** and `git diff --check`. All endpoint failure tests run both
+callers through the entrypoint, assert exact codes/zero HTTP calls, and inspect
+stdout/stderr/summary for synthetic credential/URL/exception leakage. Multi-fault
+cases verify first-failure precedence; accepted forms and exact query normalization
+verify unchanged policy. Invalid/out-of-range port property access maps to PORT;
+malformed URL parsing maps to PARSE. Query parsing/encoding/assembly exceptions
+are injected into existing operations without production test hooks.
+Five wrong-implementation categories were detected in seven in-memory variants:
+host as scheme, port as host, path as generic endpoint, raw URL, and raw exception
+output independently to stdout/stderr/summary. No mutation experiment writes
+repository source. Authentication AST comparison matched after diagnostic removal,
+endpoint inlining and ordered-predicate normalization; missing input was already
+rejected by the previous scheme check. The standard PATH Node still has a missing
+shared library; the existing compatible Node 24 binary completed all checks.
+
+R5's separate Fresh Result Audit / Pre-PR on 2026-09-18 reproduced the results
+above and closed First Pass with **Must 0 / Should 0 / Pending Evidence 0 /
+Decision Needed 0** before any code/docs/staging change. Its independent AST and
+28-case caller checks confirmed policy preservation, exact codes, first-failure
+ownership, all output sinks and zero HTTP requests. A real synthetic query-encoding
+failure mapped to QUERY_BUILD without patched URL operations. All seven required
+mutants plus nine premature-HTTP mutants were detected in memory. No code fix
+was required; only audit-state docs changed afterward. Commit/push/PR and required
+CI verification may proceed. This does not establish a root-cause fix or authorize
+runtime proof. Workflow YAML, Terraform and application source remain unchanged;
+audit runtime mutation is NONE. Details are in the canonical R4/R5 record.
 Positive/negative WIF, credential consumption and candidate/promotion/rollback
-runtime proofs remain separate Human Gates.
-The existing required CI job also runs both offline test commands; its check name
-is unchanged. These tests never authenticate to Google or Supabase.
+runtime proofs remain separate Human Gates. Must 3 stays In progress, Must 4 Open,
+production CD inactive. The existing required CI job runs both offline test
+commands; its check name is unchanged. These tests never authenticate to Google
+or Supabase.
 
 ## Test Candidates
 

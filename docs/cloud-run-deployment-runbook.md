@@ -13,11 +13,11 @@ remains applicable; no commands here were executed by CD-C1 implementation.
 CD-C2A/B subsequently provisioned the E2E identity, exact-secret IAM and dedicated
 key version 1 / ENABLED (`candidate_e2e` in Supabase Dashboard), with no Cloud Run
 mutation. CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false).
-Latest CD-C2D-R2 `wif-proof` run `35313988444` failed at A with
-`OIDC_REQUEST_FAILED / P1`; P1 internal root cause and B/C remain NOT PROVEN and
-WIF proof remains OPEN. This auth-only mode cannot run Build, candidates, E2E
-secret access or promotion; [R3 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r2-runtime-evidence-and-r3-p1-diagnostics)
-authorizes no rerun or new dispatch. `mode=release` still requires
+Latest CD-C2D-R4 `wif-proof` run `35318084987` failed at A with
+`OIDC_ENDPOINT_VALIDATION_FAILED / P1`. The specific endpoint condition, root cause
+and B/C remain NOT PROVEN; WIF proof remains OPEN. This auth-only mode cannot run Build, candidates, E2E
+secret access or promotion; [R4 evidence / R5 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r4-runtime-evidence-and-r5-endpoint-diagnostics)
+authorize no rerun or new dispatch. `mode=release` still requires
 `CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and an exact secret version.
 
 ## Architecture and runtime contract
