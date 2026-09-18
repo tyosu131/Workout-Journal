@@ -40,7 +40,6 @@ FAILURE_PHASES = {
     'OIDC_ENDPOINT_PORT_FAILED': 'P1',
     'OIDC_ENDPOINT_USERINFO_FAILED': 'P1',
     'OIDC_ENDPOINT_FRAGMENT_FAILED': 'P1',
-    'OIDC_ENDPOINT_PATH_FAILED': 'P1',
     'OIDC_ENDPOINT_QUERY_BUILD_FAILED': 'P1',
     'OIDC_REQUEST_TOKEN_VALIDATION_FAILED': 'P1',
     'OIDC_TRANSPORT_FAILED': 'P1',
@@ -138,7 +137,7 @@ def github_token(env, role, metadata, record=None):
     require(endpoint)
     checkpoint(record, 'OIDC_ENDPOINT_PARSE_FAILED')
     parts = urlsplit(endpoint)
-    # Preserve the original short-circuit order and every policy predicate.
+    # Preserve the origin/security predicates and their short-circuit order.
     checkpoint(record, 'OIDC_ENDPOINT_SCHEME_FAILED')
     require(parts.scheme == 'https')
     checkpoint(record, 'OIDC_ENDPOINT_HOST_FAILED')
@@ -150,8 +149,7 @@ def github_token(env, role, metadata, record=None):
     require(not parts.username and not parts.password)
     checkpoint(record, 'OIDC_ENDPOINT_FRAGMENT_FAILED')
     require(not parts.fragment)
-    checkpoint(record, 'OIDC_ENDPOINT_PATH_FAILED')
-    require(parts.path.endswith('/idtoken'))
+    # The runner-provided path is opaque; change only the audience query below.
     checkpoint(record, 'OIDC_ENDPOINT_QUERY_BUILD_FAILED')
     audience = '//iam.googleapis.com/' + PROVIDERS[role]
     query = [(k, v) for k, v in parse_qsl(parts.query) if k != 'audience']

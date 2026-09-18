@@ -19,6 +19,8 @@ import cd_release as release
 
 SHA = 'a' * 40
 MARKER = 'OFFLINE_CREDENTIAL_MARKER'
+PATH_MARKER = 'OFFLINE_PATH_MARKER'
+QUERY_MARKER = 'OFFLINE_QUERY_MARKER'
 ENV = {'CD_MODE': 'wif-proof', 'GITHUB_REPOSITORY': wif.REPOSITORY,
        'GITHUB_REPOSITORY_ID': '790375516', 'GITHUB_REPOSITORY_OWNER_ID': '95160728',
        'GITHUB_REF': 'refs/heads/main', 'GITHUB_WORKFLOW_REF': wif.CALLER,
@@ -132,7 +134,7 @@ class AuthenticationTests(unittest.TestCase):
                     'https://evil.example/idtoken', 'https://actions.githubusercontent.com.evil.example/idtoken',
                     'https://run.actions.githubusercontent.com:444/job/idtoken',
                     'https://user@run.actions.githubusercontent.com/job/idtoken',
-                    'https://run.actions.githubusercontent.com/other'):
+                    'https://run.actions.githubusercontent.com/other#fragment'):
             with patch.object(wif, 'request_json') as http:
                 with self.assertRaises(Exception):
                     wif.github_token({**ENV, 'ACTIONS_ID_TOKEN_REQUEST_URL': url}, 'e2e', METADATA)
@@ -191,7 +193,8 @@ class AuthenticationTests(unittest.TestCase):
             self.assertEqual(summary.read_text(), '```json\n' + out.getvalue() + '```\n')
             self.assertEqual(err.getvalue(), '')
             for value in (out.getvalue(), err.getvalue(), summary.read_text()):
-                for forbidden in (MARKER, jwt('deploy'), jwt('e2e'), 'accessToken', 'access_token',
+                for forbidden in (MARKER, PATH_MARKER, QUERY_MARKER,
+                                  jwt('deploy'), jwt('e2e'), 'accessToken', 'access_token',
                                   'https://', 'private=', 'api-version=', 'Authorization',
                                   'Traceback', 'sourceSha', 'runId', 'runAttempt',
                                   'run.actions.githubusercontent.com', 'evil.example', '/job/idtoken',
@@ -305,10 +308,73 @@ class AuthenticationTests(unittest.TestCase):
         self.assert_endpoint_failure('FRAGMENT', [
             ENV['ACTIONS_ID_TOKEN_REQUEST_URL'] + '#' + MARKER])
 
-    def test_endpoint_path_diagnostic(self):
-        self.assert_endpoint_failure('PATH', [
-            'https://run.actions.githubusercontent.com' + path + '?private=' + MARKER
-            for path in ('', '/other', '/idtoken/', '/IDTOKEN')])
+    def test_opaque_paths_reach_request_token_validation(self):
+        # Synthetic paths exercise opacity, not a replacement production pattern.
+        for path in ('', '/', '/other', '/idtoken/', '/IDTOKEN',
+                     '/' + PATH_MARKER + '/A%2fb//./../leaf;v=1/'):
+            for action, role in [('control-negative', 'deploy'), ('positive', 'e2e')]:
+                with self.subTest(path_case=len(path), role=role):
+                    self.assert_oidc_failure(self.diagnose([], action=action, overrides={
+                        'ACTIONS_ID_TOKEN_REQUEST_URL':
+                            'https://run.actions.githubusercontent.com' + path,
+                        'ACTIONS_ID_TOKEN_REQUEST_TOKEN': MARKER + ' '}),
+                        'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', calls=0, role=role)
+
+    def test_opaque_paths_and_query_are_preserved_in_actual_request(self):
+        from urllib.parse import parse_qsl, urlsplit
+        # Real Request/JSON client, mocked transport only. No OIDC/network calls.
+        query = 'x=one+two&empty=&x=three&opaque=%2Fkeep%2Bvalue&private=' + QUERY_MARKER
+        paths = ('', '/', '/other', '/idtoken/', '/IDTOKEN',
+                 '/' + PATH_MARKER + '/A%2fb//./../leaf;v=1/')
+        for role in ('deploy', 'e2e'):
+            for path in paths:
+                for old_audience in ('', '&audience=old&%61udience=older'):
+                    with self.subTest(role=role, path_case=len(path), replacing=bool(old_audience)), \
+                         patch.object(wif, 'build_opener') as opener:
+                        response = opener.return_value.open.return_value
+                        response.code = 200
+                        response.read.return_value = json.dumps({'value': jwt(role)}).encode()
+                        url = 'https://run.actions.githubusercontent.com:443' + path + '?' + query + old_audience
+                        self.assertEqual(wif.github_token(
+                            {**ENV, 'ACTIONS_ID_TOKEN_REQUEST_URL': url}, role, METADATA), jwt(role))
+                        request = opener.return_value.open.call_args.args[0]
+                        actual = urlsplit(request.full_url)
+                        self.assertEqual(actual.path, path)
+                        self.assertEqual(actual._replace(query=''), urlsplit(url)._replace(query=''))
+                        self.assertEqual(parse_qsl(actual.query), [
+                            ('x', 'one two'), ('x', 'three'), ('opaque', '/keep+value'),
+                            ('private', QUERY_MARKER),
+                            ('audience', '//iam.googleapis.com/' + wif.PROVIDERS[role])])
+                        # HTTP uses '/' for an empty path; every nonempty path is exact.
+                        self.assertEqual(request.selector, (path or '/') + '?' + actual.query)
+                        self.assertEqual(request.get_method(), 'GET')
+                        self.assertIsNone(request.data)
+                        self.assertEqual(request.get_header('Authorization'), 'Bearer ' + MARKER)
+                        opener.return_value.open.assert_called_once()
+
+    def test_opaque_endpoint_data_stays_private_in_all_output_sinks(self):
+        url = ('https://run.actions.githubusercontent.com/' + PATH_MARKER +
+               '/arbitrary?private=' + QUERY_MARKER)
+        for action, role in [('control-negative', 'deploy'), ('positive', 'e2e')]:
+            for failure in (None, RuntimeError(url + ' Authorization: Bearer ' + MARKER),
+                            (200, {'value': MARKER, 'raw': url})):
+                with self.subTest(role=role, failure_type=type(failure).__name__):
+                    replies = responses(role)
+                    if failure is not None:
+                        replies[0] = failure
+                    outcome = self.diagnose(replies, action=action,
+                        overrides={'ACTIONS_ID_TOKEN_REQUEST_URL': url})
+                    if failure is None:
+                        code, evidence, calls = outcome
+                        self.assertEqual((code, evidence['wifProof']), (0, 'PASS'))
+                        self.assertEqual(calls, 4 if role == 'deploy' else 3)
+                        self.assertEqual([r['result'] for r in evidence['checks']],
+                                         ['PASS', 'PASS'] if role == 'deploy' else ['PASS'])
+                    else:
+                        self.assert_oidc_failure(outcome,
+                            'OIDC_TRANSPORT_FAILED' if isinstance(failure, Exception)
+                            else 'OIDC_RESPONSE_INVALID',
+                            phase='P1' if isinstance(failure, Exception) else 'P2', role=role)
 
     def test_endpoint_query_build_diagnostic(self):
         # Inject into existing operations; no production-only test branches.
@@ -328,7 +394,6 @@ class AuthenticationTests(unittest.TestCase):
             ('PORT', 'https://' + MARKER + '@run.actions.githubusercontent.com:invalid/other#fragment'),
             ('USERINFO', 'https://' + MARKER + '@run.actions.githubusercontent.com/other#fragment'),
             ('FRAGMENT', 'https://run.actions.githubusercontent.com/other#' + MARKER),
-            ('PATH', 'https://run.actions.githubusercontent.com/' + MARKER),
         ]
         # Query building and token validation must not run after an earlier
         # failure. In particular do not eagerly read .port before scheme/host.

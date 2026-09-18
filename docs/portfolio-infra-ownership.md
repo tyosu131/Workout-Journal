@@ -13,9 +13,11 @@ giving **35 applied resources / no-op baseline**. E2E secret access is runtime
 verified and exact-resource scoped; existing Deploy/Build grants are unchanged.
 Supabase key display name is `candidate_e2e`; Secret Manager version 1 is ENABLED.
 CD-C2C provider activation is COMPLETE: both providers are ACTIVE / disabled=false.
-Latest CD-C2D-R4 run `35318084987` failed at A with `OIDC_ENDPOINT_VALIDATION_FAILED / P1`;
-the specific endpoint condition, root cause and B/C are NOT PROVEN. WIF and full CD runtime proofs
-remain Open; see [R4 evidence / R5 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r4-runtime-evidence-and-r5-endpoint-diagnostics).
+Latest CD-C2D-R6 run `35323990499` failed at A with `OIDC_ENDPOINT_PATH_FAILED / P1`;
+the undocumented fixed path suffix rejection is PROVEN. R7 removes that source
+restriction while preserving origin/security checks; IAM/WIF are unchanged.
+B/C are NOT PROVEN. WIF and full CD runtime proofs remain Open; see
+[R6 evidence / R7 remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path).
 Must 3 stays In progress, Must 4 Open and production CD inactive.
 
 Terraform and CD must not compete for the same mutable production state.

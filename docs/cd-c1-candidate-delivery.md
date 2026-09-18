@@ -1,7 +1,7 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
 Status: **CD-C1 merged; CD-C2A/B complete; CD-C2C provider activation COMPLETE;
-CD-C2D-R4 failed at A / P1 endpoint validation, specific condition and root cause NOT PROVEN, WIF proof OPEN.** Must 3 is **In progress**,
+CD-C2D-R6 failed at A / P1 path guard; R7 removes the undocumented fixed path suffix in source, runtime verification pending, WIF proof OPEN.** Must 3 is **In progress**,
 Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
 runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
@@ -199,6 +199,9 @@ proof or authorize execution.
 
 ## CD-C2D-R4 runtime evidence and R5 endpoint diagnostics
 
+Historical R4/R5 record: the policy and diagnostic tables in this section describe
+that source version. R6 localized the failure and R7 changes the path rule below.
+
 PR #102 merged at `fc57e92323bd08290f3cbbd8c4b1ba8e74d161a8` on
 2026-09-18. Required main-push [CI 35317453412](https://github.com/tyosu131/Workout-Journal/actions/runs/35317453412)
 succeeded. R4 dispatched `mode=wif-proof` exactly once, with no rerun.
@@ -337,6 +340,96 @@ no runtime dispatch, rerun, cloud operation or settings mutation was performed.
 Any endpoint policy fix or next single runtime proof remains a separate phase
 and Human Gate after reviewed source is merged. Root cause is still NOT PROVEN;
 WIF proof, Must 3/4 and production CD status above remain unchanged.
+
+## CD-C2D-R6 runtime evidence and R7 opaque endpoint path
+
+Historical [R6 run 35323990499](https://github.com/tyosu131/Workout-Journal/actions/runs/35323990499)
+used post-PR-103 main `fdc017ba4e7e2756fefde9c6ac2b8cd1379e2fab`, after required
+[CI 35323409365](https://github.com/tyosu131/Workout-Journal/actions/runs/35323409365)
+succeeded. Identity: `.github/workflows/cd.yml`, `workflow_dispatch`, `main`,
+`mode=wif-proof`, attempt **1**, created `2026-09-18T08:21:50Z`, conclusion
+**failure**. R6 dispatched exactly once, with no rerun or second dispatch.
+Checkout succeeded; `Deploy control then expected E2E impersonation denial`
+failed with exit **1**. Its allowlisted evidence was A **FAIL**, phase **P1**,
+diagnostic **`OIDC_ENDPOINT_PATH_FAILED`**. B was **NOT RUN / NOT PROVEN**;
+C and every release job were **SKIPPED**. Artifacts: **0**.
+
+**Failure rule: PROVEN.** The tested source required
+`parts.path.endswith('/idtoken')`; the runner-provided endpoint failed that
+predicate after presence, parsing, scheme, host, port, userinfo and fragment
+checks passed. Query construction, request-token validation and the OIDC HTTP
+request were not reached. No endpoint/component, credential, raw response or
+exception value was retained. R6 localized the rule without changing it; its
+historical diagnostic remains unchanged by R7.
+
+R7 rechecked [GitHub's current OIDC reference](https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token)
+and [Actions Toolkit OIDC source](https://github.com/actions/toolkit/blob/main/packages/core/src/oidc-utils.ts)
+on 2026-09-18. GitHub requires `id-token: write` and documents the runner-provided
+URL, bearer request token and optional custom audience. The Toolkit checks URL
+presence, appends an encoded audience, requests JSON by GET and reads `value`.
+Neither reference requires a fixed `/idtoken` suffix. Combined with R6, this
+establishes the source defect: **the repository required an undocumented path
+suffix incompatible with its runner-provided endpoint**. This does not prove a
+malformed GitHub URL, a GitHub contract change or successful downstream auth.
+
+R7 removes only that path requirement and its checkpoint. The unused
+`OIDC_ENDPOINT_PATH_FAILED` entry is removed from current `FAILURE_PHASES`;
+it remains historical R6 evidence here, not a reachable current diagnostic.
+The runner path is opaque and is neither replaced nor normalized by audience
+rebuilding. URL presence/parsing, HTTPS, the existing hostname suffix rule,
+absent-or-443 port, userinfo and fragment predicates remain in the same order.
+Query behavior is unchanged: existing `parse_qsl` defaults (including dropping
+blank values), non-audience pairs retained in order, decoded audience keys
+removed, and exactly one provider audience appended with `urlencode`.
+Only the query is replaced in the parsed URL.
+
+Request-token validation, Bearer handling, GET/response/claims checks, STS,
+service accounts, A/B's same STS token and strict HTTP 403 + error code 403 +
+PERMISSION_DENIED oracle, C dependency and release isolation are unchanged.
+The remaining endpoint codes and P1-P5 diagnostics keep their existing meanings.
+No URL/path/query or credential data is added to any output sink.
+
+R7 self-check: **79 Python tests**, **24 offline E2E tests** with Node **24.18.0**,
+actionlint **1.7.12**, and `git diff --check` passed. Three regression tests failed
+against the old path guard before remediation. Both providers accept synthetic
+non-fixed paths; real Request objects with mocked transport preserve path bytes,
+query pairs and one audience. Existing endpoint rejection tests still assert
+zero HTTP calls. All six required wrong-remediation categories were detected in
+**14 in-memory variants**, including URL/path/query leaks to each of stdout,
+stderr and summary. AST comparison against the R6 SHA confirms the only changes
+are the path requirement, its checkpoint and its diagnostic-map entry removal.
+
+R7 implementation handoff was **READY FOR FRESH RESULT AUDIT**; that session
+performed no commit, push or PR creation.
+Workflow YAML, Terraform and application source are unchanged. Runtime mutation
+**NONE**, dispatch **0**, rerun **0**. WIF proof remains **OPEN**, A **FAIL** from
+R6, B/C **NOT PROVEN**, Must 3 **In progress**, Must 4 **Open**, production CD
+**inactive**. Provider activation **COMPLETE** is the existing record, not a new
+cloud check; `CD_C1_ACTIVATION` remains **UNCONFIGURED** from R6 read-back.
+Offline success is not runtime proof. Fresh review, merge, post-merge CI and a
+separate Human Gate are required before another WIF proof.
+
+The separate **R7 Fresh Result Audit / Pre-PR passed on 2026-09-18**. Before any
+code/docs/staging change, First Pass re-acquired R6 run/attempt-1 jobs/safe logs
+and the exact tested source from GitHub, reviewed the full nine-file working
+diff and current official OIDC/Toolkit sources, and independently reproduced
+**79 Python tests / 24 offline E2E tests / actionlint 1.7.12 / diff check PASS**.
+The three new regressions failed against R6 source and passed against R7 in memory.
+Whole-module AST comparison confirmed only the path predicate, checkpoint and
+diagnostic-map entry removal. All **six categories / 14 independently constructed
+AST mutants** were detected, including URL/path/query leakage to each output
+sink. A separate **16-case real Request matrix** verified opaque paths, query,
+audience and Bearer preservation; five origin/security rejection cases stopped
+before HTTP. All inputs were synthetic; transport was mocked.
+
+First Pass closed with **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**.
+No code remediation was needed. Only audit-state docs changed after closure and
+were rechecked for Pre-PR. Commit/push/PR and required CI verification may proceed;
+merge and the next WIF proof remain separate Human Gates. Audit runtime mutation
+is **NONE**; workflow YAML, Terraform and application source are unchanged.
+`CD_C1_ACTIVATION` was freshly rechecked **UNCONFIGURED**. R6 remains historical
+A **FAIL / OIDC_ENDPOINT_PATH_FAILED**, B/C **NOT PROVEN**, WIF proof **OPEN**,
+Must 3 **In progress**, Must 4 **Open**, production CD **inactive**.
 
 ## Identity and credential ownership
 

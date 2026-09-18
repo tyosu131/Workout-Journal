@@ -162,13 +162,13 @@ rollback, private stdin and cross-provider mapping are checked offline. Expected
 state is **35 applied resources**. CD-C2C provider activation is COMPLETE; both
 providers are **ACTIVE / disabled=false** and the R1 read-only plan was
 **No changes / exit 0**. Secret Manager version 1 is ENABLED and
-`CD_C1_ACTIVATION` is UNCONFIGURED (R4 read-back). Latest CD-C2D-R4 run
-`35318084987` failed at A with `OIDC_ENDPOINT_VALIDATION_FAILED / P1`, before
-request-token validation / HTTP request. The specific endpoint condition and root
-cause are NOT PROVEN; B was not run, C skipped, and WIF proof remains OPEN.
-Provider/secret state above is the existing record, not a fresh R5 cloud check.
-R5 performs no Terraform operations or runtime proof; do not run the Terraform
-commands above, apply, rerun or dispatch as part of R5.
+`CD_C1_ACTIVATION` is UNCONFIGURED (R6 read-back). Latest CD-C2D-R6 run
+`35323990499` failed at A with `OIDC_ENDPOINT_PATH_FAILED / P1`, before
+request-token validation / HTTP request. The undocumented fixed path suffix
+rejection is PROVEN; B was not run, C skipped, and WIF proof remains OPEN.
+Provider/secret state above is the existing record, not a fresh R7 cloud check.
+R7 performs no Terraform operations or runtime proof; do not run the Terraform
+commands above, apply, rerun or dispatch as part of R7.
 
 `test_e2e_wif_proof.py` executes synthetic auth responses and reads actual YAML:
 the default proof mode cannot reach Build/candidates/secret access/production;
@@ -176,11 +176,45 @@ A/B share the same federated token; only expected IAM denial passes B; unexpecte
 success or unrelated failure blocks C; positive proof uses the existing reusable
 workflow; release still requires activation, manifest/hash and exact version.
 R1/R3 diagnostics retain P0-P5, request-token, transport, HTTP-status and P2
-parser-before-status semantics. [R5 endpoint diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r4-runtime-evidence-and-r5-endpoint-diagnostics)
-add missing / parse / scheme / host / port / userinfo / fragment / path /
-query-build codes while preserving the original policy and predicate order.
+parser-before-status semantics. [R7 path remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path)
+removes only the fixed path suffix requirement and its unreachable current code.
+Missing / parse / scheme / host / port / userinfo / fragment / query-build
+diagnostics remain; the origin/security predicates and their order are unchanged.
 
-R5 passed **77 Python tests**, **24 offline E2E tests** under Node **24.18.0**,
+R7 passed **79 Python tests**, **24 offline E2E tests** with Node **24.18.0**,
+actionlint **1.7.12** and `git diff --check`. Three new regression tests failed on
+the R6 source before remediation. Both callers now pass arbitrary synthetic paths
+through to request-token validation; the real HTTP Request with mocked transport
+retains the original path, ordered existing non-audience query pairs and exactly
+one expected audience. Empty query values keep the existing `parse_qsl` behavior.
+No new path pattern or path normalization is introduced. Tests still reject
+insecure scheme, wrong host, disallowed port, userinfo and fragment before HTTP.
+stdout/stderr/summary safety is checked for success, transport errors and invalid
+response data with synthetic URL/path/query/credential markers.
+
+All **six wrong-remediation categories / 14 in-memory variants** were detected:
+guessed suffix, all endpoint guards removed, weakened hostname, path rewritten,
+runner query dropped, and URL/path/query disclosure to each of the three sinks.
+No mutant was written to repository source. Whole-module AST comparison against
+R6 SHA `fdc017ba4e7e2756fefde9c6ac2b8cd1379e2fab` matches after removing only the
+path requirement, its checkpoint and its diagnostic-map entry. Workflow YAML,
+Terraform and application source are unchanged. R7 runtime mutation is **NONE**;
+no commit/push/PR in the implementation session. Its handoff was
+**READY FOR FRESH RESULT AUDIT**, not runtime closure.
+
+The separate R7 Fresh Result Audit / Pre-PR reproduced all checks above and
+closed First Pass with **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**
+before any code/docs/staging change. GitHub R6 run/jobs/safe logs and tested source
+were re-acquired read-only. The three regression tests failed on R6 and passed
+on R7 in memory. An independent AST comparison and 14 AST mutants confirmed
+minimal policy change and detection force. A separate 16-case Request matrix and
+five origin rejection cases passed with synthetic inputs and mocked transport.
+No code fix was needed; only audit-state docs changed after closure. Pre-PR permits
+commit/push/PR and required CI verification. No dispatch, rerun, cloud operation
+or settings mutation occurred; runtime verification remains a separate Human Gate
+after review, merge and post-merge CI.
+
+Historical R5 verification: **77 Python tests**, **24 offline E2E tests** under Node **24.18.0**,
 actionlint **1.7.12** and `git diff --check`. All endpoint failure tests run both
 callers through the entrypoint, assert exact codes/zero HTTP calls, and inspect
 stdout/stderr/summary for synthetic credential/URL/exception leakage. Multi-fault
