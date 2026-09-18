@@ -13,8 +13,10 @@ giving **35 applied resources / no-op baseline**. E2E secret access is runtime
 verified and exact-resource scoped; existing Deploy/Build grants are unchanged.
 Supabase key display name is `candidate_e2e`; Secret Manager version 1 is ENABLED.
 CD-C2C provider activation is COMPLETE: both providers are ACTIVE / disabled=false.
-CD-C2D run `35229757740` failed at A; B/C are NOT PROVEN. WIF and full CD
-runtime proofs remain Open; see [R1 diagnosis](./cd-c1-candidate-delivery.md#cd-c2d-failed-proof-and-cd-c2d-r1-diagnosis). Must 3 stays In progress, Must 4 Open and production CD inactive.
+Latest CD-C2D-R2 run `35313988444` failed at A with `OIDC_REQUEST_FAILED / P1`;
+P1 internal root cause and B/C are NOT PROVEN. WIF and full CD runtime proofs
+remain Open; see [R3 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r2-runtime-evidence-and-r3-p1-diagnostics).
+Must 3 stays In progress, Must 4 Open and production CD inactive.
 
 Terraform and CD must not compete for the same mutable production state.
 

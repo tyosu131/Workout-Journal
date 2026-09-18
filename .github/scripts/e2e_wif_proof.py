@@ -33,7 +33,10 @@ ACCESS_TYPE = 'urn:ietf:params:oauth:token-type:access_token'
 LIMIT = 64 * 1024
 FAILURE_PHASES = {
     'CONTEXT_PRECHECK_FAILED': 'P0',
-    'OIDC_REQUEST_FAILED': 'P1',
+    'OIDC_ENDPOINT_VALIDATION_FAILED': 'P1',
+    'OIDC_REQUEST_TOKEN_VALIDATION_FAILED': 'P1',
+    'OIDC_TRANSPORT_FAILED': 'P1',
+    'OIDC_HTTP_STATUS_FAILED': 'P1',
     'OIDC_RESPONSE_INVALID': 'P2',
     'OIDC_CLAIMS_MISMATCH': 'P2',
     'STS_EXCHANGE_FAILED': 'P3',
@@ -121,7 +124,7 @@ def token_value(value):
 
 def github_token(env, role, metadata, record=None):
     record = {} if record is None else record
-    checkpoint(record, 'OIDC_REQUEST_FAILED')
+    checkpoint(record, 'OIDC_ENDPOINT_VALIDATION_FAILED')
     # GitHub supplies this runner endpoint; never accept arbitrary token recipients.
     parts = urlsplit(env.get('ACTIONS_ID_TOKEN_REQUEST_URL', ''))
     require(parts.scheme == 'https' and parts.hostname is not None and
@@ -132,11 +135,16 @@ def github_token(env, role, metadata, record=None):
     query = [(k, v) for k, v in parse_qsl(parts.query) if k != 'audience']
     query.append(('audience', audience))
     url = urlunsplit(parts._replace(query=urlencode(query)))
+    checkpoint(record, 'OIDC_REQUEST_TOKEN_VALIDATION_FAILED')
+    request_token = token_value(env.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN'))
+    checkpoint(record, 'OIDC_TRANSPORT_FAILED')
     try:
-        status, data = request_json(url, token=token_value(env.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')))
+        status, data = request_json(url, token=request_token)
     except InvalidResponse:
+        # Preserve parser-before-status precedence, including non-200 bodies.
         checkpoint(record, 'OIDC_RESPONSE_INVALID')
         raise
+    checkpoint(record, 'OIDC_HTTP_STATUS_FAILED')
     require(status == 200)
     checkpoint(record, 'OIDC_RESPONSE_INVALID')
     token = token_value(data.get('value'))
