@@ -7,10 +7,10 @@ The CD-A workflow/command descriptions below refer to the recorded proof path,
 not a claim that current `cd.yml` still contains only the submission job.
 
 CD-C2A/B completed E2E infrastructure and dedicated credential provisioning.
-Actual E2E provider is disabled, while CD-C2C proposes enabling it after reviewed
-apply and adds auth-only A/B/C proof source: Deploy control, Deploy-to-E2E denial,
-then E2E positive through `candidate-e2e.yml`. All three new runtime checks remain
-OPEN. This is separate from PE-P1C-01B, which remains Closed. No full delivery or
+CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). The auth-only
+CD-C2D run `35229757740` failed at Deploy control A; B was not run and C skipped.
+A/B/C proof remains OPEN; [R1 diagnosis](./cd-c1-candidate-delivery.md#cd-c2d-failed-proof-and-cd-c2d-r1-diagnosis)
+adds safe diagnostics without rerunning the proof. This is separate from PE-P1C-01B, which remains Closed. No full delivery or
 secret payload consumption is authorized by the proof mode. The current runtime
 record is in the [CD-C2A/B closure](./cd-c1-candidate-delivery.md#current-cd-c2ab-runtime-record).
 

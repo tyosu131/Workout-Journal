@@ -31,6 +31,35 @@ IAM = 'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/'
 SCOPE = 'https://www.googleapis.com/auth/cloud-platform'
 ACCESS_TYPE = 'urn:ietf:params:oauth:token-type:access_token'
 LIMIT = 64 * 1024
+FAILURE_PHASES = {
+    'CONTEXT_PRECHECK_FAILED': 'P0',
+    'OIDC_REQUEST_FAILED': 'P1',
+    'OIDC_RESPONSE_INVALID': 'P2',
+    'OIDC_CLAIMS_MISMATCH': 'P2',
+    'STS_EXCHANGE_FAILED': 'P3',
+    'DEPLOY_IMPERSONATION_FAILED': 'P4',
+    'NEGATIVE_DENIAL_MISMATCH': 'P5',
+    'POSITIVE_E2E_IMPERSONATION_FAILED': 'P4',
+}
+
+
+def checkpoint(record, code):
+    # Only source-controlled codes; never derive diagnostics from remote data.
+    record.update(phase=FAILURE_PHASES[code], failureCode=code)
+
+
+def public_record(record):
+    """Allowlist keys AND values. Validated context metadata stays private too."""
+    allowed = {'phase': set(FAILURE_PHASES.values()), 'failureCode': set(FAILURE_PHASES),
+               'providerRole': set(ACCOUNTS), 'targetSA': set(ACCOUNTS.values()),
+               'expected': {'AUTH_SUCCESS', 'IAM_PERMISSION_DENIED'},
+               'result': {'PASS', 'FAIL'}}
+    return {key: value for key, value in record.items()
+            if key in allowed and isinstance(value, str) and value in allowed[key]}
+
+
+class InvalidResponse(ValueError):
+    """Bounded response could not be decoded; its contents remain private."""
 
 
 def require(ok):
@@ -76,9 +105,12 @@ def request_json(url, *, token=None, body=None):
         response = error
     with response:
         raw = response.read(LIMIT + 1)
-        require(len(raw) <= LIMIT)
-        data = json.loads(raw)
-        require(isinstance(data, dict))
+        try:
+            require(len(raw) <= LIMIT)
+            data = json.loads(raw)
+            require(isinstance(data, dict))
+        except (ValueError, UnicodeError):
+            raise InvalidResponse() from None
         return response.code, data
 
 
@@ -87,7 +119,9 @@ def token_value(value):
     return value
 
 
-def github_token(env, role, metadata):
+def github_token(env, role, metadata, record=None):
+    record = {} if record is None else record
+    checkpoint(record, 'OIDC_REQUEST_FAILED')
     # GitHub supplies this runner endpoint; never accept arbitrary token recipients.
     parts = urlsplit(env.get('ACTIONS_ID_TOKEN_REQUEST_URL', ''))
     require(parts.scheme == 'https' and parts.hostname is not None and
@@ -98,12 +132,19 @@ def github_token(env, role, metadata):
     query = [(k, v) for k, v in parse_qsl(parts.query) if k != 'audience']
     query.append(('audience', audience))
     url = urlunsplit(parts._replace(query=urlencode(query)))
-    status, data = request_json(url, token=token_value(env.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')))
+    try:
+        status, data = request_json(url, token=token_value(env.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')))
+    except InvalidResponse:
+        checkpoint(record, 'OIDC_RESPONSE_INVALID')
+        raise
     require(status == 200)
+    checkpoint(record, 'OIDC_RESPONSE_INVALID')
     token = token_value(data.get('value'))
     pieces = token.split('.')
     require(len(pieces) == 3)
     claims = json.loads(base64.urlsafe_b64decode(pieces[1] + '=' * (-len(pieces[1]) % 4)))
+    require(isinstance(claims, dict))
+    checkpoint(record, 'OIDC_CLAIMS_MISMATCH')
     expected = {'iss': 'https://token.actions.githubusercontent.com', 'aud': audience,
                 'repository': REPOSITORY, 'repository_id': '790375516',
                 'repository_owner': 'tyosu131', 'repository_owner_id': '95160728',
@@ -119,8 +160,10 @@ def github_token(env, role, metadata):
     return token
 
 
-def federate(env, role, metadata):
-    token = github_token(env, role, metadata)
+def federate(env, role, metadata, record=None):
+    record = {} if record is None else record
+    token = github_token(env, role, metadata, record)
+    checkpoint(record, 'STS_EXCHANGE_FAILED')
     status, data = request_json(STS, body={
         'audience': '//iam.googleapis.com/' + PROVIDERS[role],
         'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -151,22 +194,28 @@ def impersonate(token, target, *, expect_denial=False):
 
 
 def run(env, action, records):
+    control = {'result': 'FAIL'}
+    checkpoint(control, 'CONTEXT_PRECHECK_FAILED')
+    records.append(control)
     metadata = context(env)
     require(action in ('control-negative', 'positive'))
     role = 'deploy' if action == 'control-negative' else 'e2e'
-    control = {**metadata, 'providerRole': role, 'targetSA': ACCOUNTS[role],
-               'expected': 'AUTH_SUCCESS', 'result': 'FAIL'}
-    records.append(control)
-    token = federate(env, role, metadata)
+    control.update(providerRole=role, targetSA=ACCOUNTS[role], expected='AUTH_SUCCESS')
+    token = federate(env, role, metadata, control)
+    checkpoint(control, 'DEPLOY_IMPERSONATION_FAILED' if role == 'deploy'
+               else 'POSITIVE_E2E_IMPERSONATION_FAILED')
     impersonate(token, role)
     control['result'] = 'PASS'
+    del control['failureCode']
     if action == 'control-negative':
-        negative = {**metadata, 'providerRole': 'deploy', 'targetSA': ACCOUNTS['e2e'],
+        negative = {'providerRole': 'deploy', 'targetSA': ACCOUNTS['e2e'],
                     'expected': 'IAM_PERMISSION_DENIED', 'result': 'FAIL'}
+        checkpoint(negative, 'NEGATIVE_DENIAL_MISMATCH')
         records.append(negative)
         # Same federated token as A, not A's impersonated Deploy-SA access token.
         impersonate(token, 'e2e', expect_denial=True)
         negative['result'] = 'PASS'
+        del negative['failureCode']
 
 
 def main():
@@ -179,8 +228,11 @@ def main():
         result = 'PASS'
     except Exception:
         # Never print response bodies, exception strings, JWTs or credential data.
-        pass
-    evidence = json.dumps({'wifProof': result, 'checks': records}, sort_keys=True)
+        if not records:
+            records.append({'result': 'FAIL'})
+            checkpoint(records[0], 'CONTEXT_PRECHECK_FAILED')
+    evidence = json.dumps({'wifProof': result, 'checks': [public_record(r) for r in records]},
+                          sort_keys=True)
     print(evidence)
     try:
         if os.environ.get('GITHUB_STEP_SUMMARY'):

@@ -16,7 +16,7 @@ PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-ba
 
 This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired **Deploy** provider state agree on `disabled = false`. The separate E2E provider's current/desired distinction is below. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
-## CD-C2A/B complete; CD-C2C activation desired state
+## CD-C2A/B complete; CD-C2C activation complete; WIF proof open
 
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`. CD-C2A separately
 applied its five resources in [`candidate_e2e.tf`](./candidate_e2e.tf): E2E SA,
@@ -26,11 +26,10 @@ CD-C2B separately populated exactly version **1 / ENABLED** from Human-created
 Supabase key display name `candidate_e2e`; no key/version/payload is Terraform-owned.
 E2E SA has zero user-managed keys; exact-secret IAM was runtime read-back verified.
 
-Actual E2E provider remains **ACTIVE lifecycle / disabled=true**. CD-C2C proposes
-only `disabled: true -> false` and a neutral description, **Pending reviewed apply**.
-Expected plan: **0 create / 1 update / 0 delete / 0 replace**, only
-`google_iam_workload_identity_pool_provider.workout_journal_e2e`; all mapping,
-condition, issuer, pool and IAM remain unchanged. No source-validation plan is
+CD-C2C activation is **COMPLETE**. Both providers are **ACTIVE / disabled=false**;
+R1 read-back confirmed **35 resources / No changes / exit 0**. Mapping, condition,
+issuer, pool and IAM remain unchanged. CD-C2D run `35229757740` failed at A;
+B was not run and C skipped. A/B/C proof remains OPEN. No source-validation plan is
 approved for apply. Optional null-to-empty normalization with a no-op action must
 be distinguished from planned changes. Existing Deploy WIF remains enabled/proven.
 
@@ -124,7 +123,7 @@ Official references: [Terraform installation and current release](https://develo
 | `google_service_account.e2e` | Provisioned keyless `workout-journal-e2e` |
 | `google_secret_manager_secret.e2e_supabase_secret_key` | Dedicated E2E container metadata only |
 | `google_secret_manager_secret_iam_member.e2e_supabase_secret_accessor` | E2E SA Accessor on that exact secret |
-| `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual disabled, desired enabled Pending reviewed apply |
+| `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual ACTIVE / disabled=false; activation COMPLETE, WIF proof OPEN |
 | `google_service_account_iam_member.e2e_workload_identity_user` | Exact `attribute.e2e_boundary/candidate-e2e-v1` impersonation member |
 
 Remote state contains exactly these 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary.

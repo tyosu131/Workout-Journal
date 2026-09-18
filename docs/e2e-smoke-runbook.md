@@ -6,9 +6,10 @@ fixed SHA/pair below is historical proof, not active CD authority. GitHub Action
 requires v2 metadata from the exact current release. CD-C2A/B are complete:
 E2E identity/container/IAM are provisioned and runtime verified; Supabase actual
 key display name is `candidate_e2e`, Secret Manager version 1 is ENABLED (one version).
-The E2E provider is still disabled; CD-C2C proposes activation Pending reviewed
-apply and an isolated auth-only mode. That mode never reads the secret or runs
-this scenario. Positive/negative WIF and full CD runtime proof remain Open.
+CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). CD-C2D run
+`35229757740` failed at A; B/C remain NOT PROVEN. The isolated auth-only mode
+never reads the secret or runs this scenario. WIF and full CD runtime proof remain
+Open; see [R1 diagnosis](./cd-c1-candidate-delivery.md#cd-c2d-failed-proof-and-cd-c2d-r1-diagnosis).
 Local P2A is unchanged; production CD remains inactive.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
