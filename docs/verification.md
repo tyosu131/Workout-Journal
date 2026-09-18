@@ -162,9 +162,10 @@ rollback, private stdin and cross-provider mapping are checked offline. Expected
 state is **35 applied resources**. CD-C2C provider activation is COMPLETE; both
 providers are **ACTIVE / disabled=false** and the R1 read-only plan was
 **No changes / exit 0**. Secret Manager version 1 is ENABLED and
-`CD_C1_ACTIVATION` is UNCONFIGURED. CD-C2D run `35229757740` failed at A; B/C are
-NOT PROVEN, WIF proof remains OPEN. Do not apply a source-validation plan or
-rerun/dispatch as part of R1.
+`CD_C1_ACTIVATION` is UNCONFIGURED. Latest CD-C2D-R2 run `35313988444` failed at A
+with `OIDC_REQUEST_FAILED / P1`; P1 internal root cause and B/C are NOT PROVEN,
+WIF proof remains OPEN. R3 performs no Terraform operations or runtime proof;
+do not apply a source-validation plan or rerun/dispatch as part of R3.
 
 `test_e2e_wif_proof.py` executes synthetic auth responses and reads actual YAML:
 the default proof mode cannot reach Build/candidates/secret access/production;
@@ -174,7 +175,18 @@ workflow; release still requires activation, manifest/hash and exact version.
 R1 injects P0-P5 failures, including separate OIDC response/claims failures, and
 checks fixed diagnostic codes and allowlisted stdout/summary fields. Tokens, raw
 errors, query data and context metadata cannot enter proof output. Tests never
-request real OIDC.
+request real OIDC. [R3 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r2-runtime-evidence-and-r3-p1-diagnostics)
+split P1 into endpoint, request-token, transport and parseable non-200 response
+codes without changing authentication. Body parsing retains P2 precedence.
+The 67-test Python suite includes missing/invalid URL and token inputs, mocked
+transport exceptions, HTTP rejections, P2 boundaries and marker checks across
+stdout/stderr/summary. Five in-memory diagnostic/output mutants were detected;
+24 offline E2E tests and actionlint 1.7.12 also passed. The subsequent Fresh Result
+Audit reproduced these results and detected all five required mutant categories
+across seven variants. First Pass closed with zero Must/Should/Pending/Decision
+Needed and no code remediation; only audit-state docs changed before Pre-PR.
+Commit/push/PR and required CI verification are permitted after this gate;
+runtime proof still requires merge and a separate Human Gate.
 Positive/negative WIF, credential consumption and candidate/promotion/rollback
 runtime proofs remain separate Human Gates.
 The existing required CI job also runs both offline test commands; its check name

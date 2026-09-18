@@ -6,11 +6,13 @@ import io
 import json
 from pathlib import Path
 import re
+import socket
+import ssl
 import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch, Mock
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import e2e_wif_proof as wif
 import cd_release as release
@@ -166,23 +168,33 @@ class AuthenticationTests(unittest.TestCase):
             self.assertEqual(wif.request_json(wif.STS, body={}), DENIED)
             self.assertEqual(opener.call_args.args[0].proxies, {})
 
-    def diagnose(self, replies, *, action='control-negative', overrides=None):
+    def diagnose(self, replies, *, action='control-negative', overrides=None, missing=()):
         with tempfile.TemporaryDirectory() as directory:
             summary = Path(directory) / 'summary'
-            env = {**ENV, 'GITHUB_STEP_SUMMARY': str(summary), **(overrides or {})}
-            with patch.dict(wif.os.environ, env, clear=True), \
+            env = {**ENV, 'GITHUB_STEP_SUMMARY': str(summary),
+                   'ACTIONS_ID_TOKEN_REQUEST_URL': ENV['ACTIONS_ID_TOKEN_REQUEST_URL'] +
+                   '&private=' + MARKER, **(overrides or {})}
+            for key in missing:
+                env.pop(key, None)
+            # A mapping permits synthetic non-string runner inputs. No real env
+            # or credential is used. None replies exercises the real JSON client
+            # with build_opener mocked by the caller.
+            http_patch = (patch.object(wif, 'request_json', wraps=wif.request_json) if replies is None
+                          else patch.object(wif, 'request_json', side_effect=replies))
+            with patch.object(wif.os, 'environ', env), \
                  patch.object(wif.sys, 'argv', ['proof', action]), \
                  patch.object(wif.resource, 'setrlimit'), \
-                 patch.object(wif, 'request_json', side_effect=replies) as http, \
+                 http_patch as http, \
                  redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
                 code = wif.main()
             evidence = json.loads(out.getvalue())
             self.assertEqual(summary.read_text(), '```json\n' + out.getvalue() + '```\n')
             self.assertEqual(err.getvalue(), '')
-            for value in (out.getvalue(), summary.read_text()):
+            for value in (out.getvalue(), err.getvalue(), summary.read_text()):
                 for forbidden in (MARKER, jwt('deploy'), jwt('e2e'), 'accessToken', 'access_token',
-                                  'https://', 'Traceback', 'sourceSha', 'runId', 'runAttempt'):
-                    self.assertNotIn(forbidden, value)
+                                  'https://', 'private=', 'api-version=', 'Authorization',
+                                  'Traceback', 'sourceSha', 'runId', 'runAttempt'):
+                    self.assertTrue(forbidden not in value, 'Sensitive diagnostic output')
             for record in evidence['checks']:
                 self.assertLessEqual(set(record), {'phase', 'failureCode', 'providerRole',
                                                    'targetSA', 'expected', 'result'})
@@ -196,10 +208,12 @@ class AuthenticationTests(unittest.TestCase):
     def test_fixed_diagnostics_for_each_control_phase(self):
         cases = [
             ('P0', 'CONTEXT_PRECHECK_FAILED', None, None, {'CD_MODE': MARKER}, 0),
-            ('P1', 'OIDC_REQUEST_FAILED', None, None,
+            ('P1', 'OIDC_ENDPOINT_VALIDATION_FAILED', None, None,
              {'ACTIONS_ID_TOKEN_REQUEST_URL': 'https://evil.example/idtoken?token=' + MARKER}, 0),
-            ('P1', 'OIDC_REQUEST_FAILED', 0, RuntimeError(MARKER), {}, 1),
-            ('P1', 'OIDC_REQUEST_FAILED', 0, (401, {'message': MARKER}), {}, 1),
+            ('P1', 'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', None, None,
+             {'ACTIONS_ID_TOKEN_REQUEST_TOKEN': MARKER + ' '}, 0),
+            ('P1', 'OIDC_TRANSPORT_FAILED', 0, RuntimeError(MARKER), {}, 1),
+            ('P1', 'OIDC_HTTP_STATUS_FAILED', 0, (401, {'message': MARKER}), {}, 1),
             ('P2', 'OIDC_RESPONSE_INVALID', 0, wif.InvalidResponse(MARKER), {}, 1),
             ('P2', 'OIDC_RESPONSE_INVALID', 0, (200, {'value': MARKER}), {}, 1),
             ('P2', 'OIDC_RESPONSE_INVALID', 0, (200, {'value': 'header.x.signature'}), {}, 1),
@@ -227,6 +241,124 @@ class AuthenticationTests(unittest.TestCase):
                 self.assertEqual(evidence['checks'][0]['failureCode'], failure)
                 self.assertEqual(evidence['checks'][0]['phase'], phase)
                 self.assertEqual(actual_calls, calls)
+
+    def assert_oidc_failure(self, outcome, failure, *, phase='P1', calls=1, role='deploy'):
+        code, evidence, actual_calls = outcome
+        self.assertEqual((code, actual_calls), (1, calls))
+        self.assertEqual(evidence, {'wifProof': 'FAIL', 'checks': [{
+            'phase': phase, 'failureCode': failure, 'providerRole': role,
+            'targetSA': wif.ACCOUNTS[role], 'expected': 'AUTH_SUCCESS', 'result': 'FAIL'}]})
+
+    def test_endpoint_failures_are_distinct_and_never_send_request_token(self):
+        key = 'ACTIONS_ID_TOKEN_REQUEST_URL'
+        self.assert_oidc_failure(self.diagnose([], missing=(key,)),
+                                 'OIDC_ENDPOINT_VALIDATION_FAILED', calls=0)
+        urls = ['', None, 123, 'http://run.actions.githubusercontent.com/job/idtoken',
+                'https:///job/idtoken', 'https://evil.example/idtoken',
+                'https://actions.githubusercontent.com.evil.example/idtoken',
+                'https://run.actions.githubusercontent.com:444/job/idtoken',
+                'https://run.actions.githubusercontent.com:invalid/job/idtoken',
+                'https://run.actions.githubusercontent.com:65536/job/idtoken',
+                'https://user@run.actions.githubusercontent.com/job/idtoken',
+                'https://:password@run.actions.githubusercontent.com/job/idtoken',
+                'https://run.actions.githubusercontent.com/job/idtoken#fragment',
+                'https://run.actions.githubusercontent.com/other', 'https://[invalid/idtoken']
+        for index, url in enumerate(urls):
+            with self.subTest(case=index):
+                if isinstance(url, str) and url:
+                    url += '?private=' + MARKER
+                self.assert_oidc_failure(self.diagnose([], overrides={key: url}),
+                                         'OIDC_ENDPOINT_VALIDATION_FAILED', calls=0)
+        # Multiple invalid inputs stop at the first validation, without ambiguity.
+        self.assert_oidc_failure(self.diagnose([], overrides={key: MARKER},
+                                              missing=('ACTIONS_ID_TOKEN_REQUEST_TOKEN',)),
+                                 'OIDC_ENDPOINT_VALIDATION_FAILED', calls=0)
+
+    def test_request_token_failures_are_distinct_and_never_attempt_transport(self):
+        key = 'ACTIONS_ID_TOKEN_REQUEST_TOKEN'
+        self.assert_oidc_failure(self.diagnose([], missing=(key,)),
+                                 'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', calls=0)
+        for index, token in enumerate(('', None, 123, [MARKER], {'value': MARKER}, MARKER.encode(),
+                                       MARKER + ' ', MARKER + '\n', 'Bearer ' + MARKER,
+                                       MARKER + '===', MARKER + ('x' * 16384))):
+            with self.subTest(case=index):
+                self.assert_oidc_failure(self.diagnose([], overrides={key: token}),
+                                         'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', calls=0)
+
+    def test_real_client_transport_exceptions_have_exact_safe_diagnostic(self):
+        errors = [TimeoutError(MARKER), socket.gaierror(MARKER),
+                  URLError(MARKER), ssl.SSLError(MARKER), RuntimeError(MARKER)]
+        for error in errors:
+            with self.subTest(kind=type(error).__name__), patch.object(wif, 'build_opener') as opener:
+                opener.return_value.open.side_effect = error
+                self.assert_oidc_failure(self.diagnose(None), 'OIDC_TRANSPORT_FAILED')
+                self.assertEqual(opener.return_value.open.call_count, 1)
+        with patch.object(wif, 'build_opener') as opener:
+            opener.return_value.open.return_value.read.side_effect = TimeoutError(MARKER)
+            self.assert_oidc_failure(self.diagnose(None), 'OIDC_TRANSPORT_FAILED')
+
+    def test_real_client_parseable_http_rejections_are_not_transport_or_p2(self):
+        # Refused redirects with a parseable body are HTTP responses, not a
+        # followed request. Invalid redirect bodies retain the P2 parser gate.
+        for status in (201, 204, 301, 302, 307, 308, 401, 403, 404, 429, 500, 503):
+            with self.subTest(status=status), patch.object(wif, 'build_opener') as opener:
+                opener.return_value.open.side_effect = HTTPError(
+                    ENV['ACTIONS_ID_TOKEN_REQUEST_URL'], status, MARKER,
+                    {'Location': 'https://evil.example/' + MARKER},
+                    io.BytesIO(json.dumps({'message': MARKER}).encode()))
+                self.assert_oidc_failure(self.diagnose(None), 'OIDC_HTTP_STATUS_FAILED')
+                self.assertEqual(opener.return_value.open.call_count, 1)
+
+    def test_real_client_invalid_body_remains_p2_before_status_check(self):
+        for status in (200, 302, 401, 503):
+            for index, body in enumerate((MARKER.encode(), b'[]', b'"' + MARKER.encode() + b'"',
+                                          b'\xff' + MARKER.encode(), MARKER.encode() * wif.LIMIT)):
+                with self.subTest(status=status, case=index), patch.object(wif, 'build_opener') as opener:
+                    opener.return_value.open.side_effect = HTTPError(
+                        ENV['ACTIONS_ID_TOKEN_REQUEST_URL'], status, MARKER, {}, io.BytesIO(body))
+                    self.assert_oidc_failure(self.diagnose(None), 'OIDC_RESPONSE_INVALID', phase='P2')
+
+    def test_missing_or_invalid_jwt_remains_p2(self):
+        for index, data in enumerate(({}, {'value': None}, {'value': 123}, {'value': MARKER},
+                                     {'value': MARKER + ' '}, {'value': 'header.x.signature'},
+                                     {'value': 'header.W10.signature'})):
+            with self.subTest(case=index):
+                self.assert_oidc_failure(self.diagnose([(200, {**data, 'private': MARKER})]),
+                                         'OIDC_RESPONSE_INVALID', phase='P2')
+        self.assert_oidc_failure(self.diagnose([(200, {'value': jwt('deploy', aud=MARKER)})]),
+                                 'OIDC_CLAIMS_MISMATCH', phase='P2')
+
+    def test_p1_codes_also_classify_positive_provider_without_impersonation(self):
+        for overrides, replies, failure, calls in [
+            ({'ACTIONS_ID_TOKEN_REQUEST_URL': MARKER}, [], 'OIDC_ENDPOINT_VALIDATION_FAILED', 0),
+            ({'ACTIONS_ID_TOKEN_REQUEST_TOKEN': MARKER + ' '}, [],
+             'OIDC_REQUEST_TOKEN_VALIDATION_FAILED', 0),
+            ({}, [RuntimeError(MARKER)], 'OIDC_TRANSPORT_FAILED', 1),
+            ({}, [(403, {'message': MARKER})], 'OIDC_HTTP_STATUS_FAILED', 1),
+        ]:
+            self.assert_oidc_failure(self.diagnose(replies, action='positive', overrides=overrides),
+                                     failure, calls=calls, role='e2e')
+
+    def test_real_oidc_request_keeps_get_bearer_audience_and_transport_policy(self):
+        from urllib.parse import parse_qs, urlsplit
+        with patch.object(wif, 'build_opener') as opener:
+            response = opener.return_value.open.return_value
+            response.code = 200
+            response.read.return_value = json.dumps({'value': jwt('deploy')}).encode()
+            self.assertEqual(wif.github_token(ENV, 'deploy', METADATA), jwt('deploy'))
+            request = opener.return_value.open.call_args.args[0]
+            self.assertEqual(request.get_method(), 'GET')
+            self.assertIsNone(request.data)
+            self.assertEqual(request.get_header('Authorization'), 'Bearer ' + MARKER)
+            self.assertEqual(request.get_header('Accept'), 'application/json')
+            self.assertFalse(request.has_header('Content-type'))
+            self.assertEqual(parse_qs(urlsplit(request.full_url).query), {
+                'api-version': ['2.0'], 'audience': ['//iam.googleapis.com/' + wif.PROVIDERS['deploy']]})
+            self.assertEqual(opener.return_value.open.call_count, 1)
+            self.assertEqual(opener.return_value.open.call_args.kwargs, {'timeout': 30})
+            self.assertEqual(opener.call_args.args[0].proxies, {})
+            self.assertIsInstance(opener.call_args.args[1], wif.NoRedirect)
+            response.read.assert_called_once_with(wif.LIMIT + 1)
 
     def test_negative_and_positive_diagnostics_keep_exact_success_contract(self):
         for final in (success(), (200, {}), (401, {}), (404, {}), (429, {}), (500, {}),
@@ -320,6 +452,7 @@ class WorkflowTests(unittest.TestCase):
         cls.main, cls.reusable = workflow('cd.yml'), workflow('candidate-e2e.yml')
 
     def test_dispatch_default_and_complete_proof_reachability(self):
+        self.assertEqual(self.main['permissions'], {})
         dispatch = self.main['on']['workflow_dispatch']['inputs']
         self.assertEqual(dispatch['mode']['default'], 'wif-proof')
         self.assertEqual(dispatch['mode']['options'], ['wif-proof', 'release'])

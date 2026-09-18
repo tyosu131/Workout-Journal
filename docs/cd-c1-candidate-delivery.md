@@ -1,7 +1,7 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
 Status: **CD-C1 merged; CD-C2A/B complete; CD-C2C provider activation COMPLETE;
-CD-C2D failed at A, WIF proof OPEN.** Must 3 is **In progress**,
+CD-C2D-R2 failed at A / P1, internal root cause NOT PROVEN, WIF proof OPEN.** Must 3 is **In progress**,
 Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
 runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
@@ -107,9 +107,95 @@ E2E contract tests** passed with Node 24; actionlint **1.7.12** passed for CI/CD
 reusable workflows. `git diff --check` and the changed-file credential/token
 literal scan passed. Workflow YAML and Terraform `.tf` files are unchanged.
 
-Provider activation **COMPLETE**; WIF proof **OPEN**; Must 3 **In progress**;
-Must 4 **Open**; production CD **inactive**. R1 source is subject to Fresh Result
-Audit. Any later runtime proof needs a separate Human Gate; R1 authorizes no rerun.
+At R1 handoff: provider activation **COMPLETE**; WIF proof **OPEN**; Must 3
+**In progress**; Must 4 **Open**; production CD **inactive**. R1 source subsequently
+passed its separate Fresh Result Audit and merged as PR #101. R1 itself authorized
+no rerun; the separately authorized R2 observation follows.
+
+## CD-C2D-R2 runtime evidence and R3 P1 diagnostics
+
+R3 re-acquired [run 35313988444](https://github.com/tyosu131/Workout-Journal/actions/runs/35313988444)
+and attempt-1 jobs/logs read-only on 2026-09-18. Identity: `workflow_dispatch`,
+`main`, SHA `53123894391637393ad4581ded5847611c6ae11e`, attempt **1**, created
+`2026-09-18T06:13:47Z`, conclusion **failure**. PR #101 is MERGED at that SHA.
+Exact-SHA checkout succeeded; `Deploy control then expected E2E impersonation denial`
+failed with exit 1. Its safe JSON contains `wifProof=FAIL` and one A record:
+`phase=P1`, `failureCode=OIDC_REQUEST_FAILED`, `providerRole=deploy`,
+`targetSA=workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com`,
+`expected=AUTH_SUCCESS`, `result=FAIL`. B was **NOT RUN / NOT PROVEN**;
+`wif-positive` (C) and all release jobs were **SKIPPED**. C is **NOT PROVEN**.
+
+Evidence resolution improved from the old run's **UNKNOWN P1-P4** to **P1**.
+**P1 internal root cause: NOT PROVEN.** The old checkpoint covers endpoint parsing/
+validation, request-token validation, request/transport exceptions, and parseable
+non-200 HTTP responses. Neither actual request transmission nor any one of these
+four candidates is proven. P0 passed; P2 completion, STS and impersonation were not
+reached. No URL, token, response body or exception was retained as evidence.
+
+Official-contract comparison (2026-09-18):
+
+| Boundary | Official source and current implementation | Classification / significance |
+| --- | --- | --- |
+| Permissions | GitHub permits [job-level `id-token: write`](https://docs.github.com/en/actions/reference/security/oidc#workflow-permissions-for-the-requesting-the-oidc-token). [Permission calculation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#how-permissions-are-calculated-for-a-workflow-job) applies workflow settings before job settings. Actual `wif-control-negative` has `contents: read` and `id-token: write` over workflow `permissions: {}`. | **NO ISSUE** found in YAML; the empty workflow default does not negate this job override. No permission defect proven by R2. |
+| Endpoint / audience | [Manual retrieval](https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token) uses the runner URL and an audience query. Our client parses that URL, replaces audience and URL-encodes the query; the [official toolkit](https://github.com/actions/toolkit/blob/main/packages/core/src/oidc-utils.ts) appends an encoded audience. Our host/path/port/userinfo/fragment guard and query normalization are additional local restrictions. | **POSSIBLE CAUSE**, not a proven endpoint mismatch: the documented contract does not guarantee this exact URL shape, and R2 does not expose it. Guard and URL construction are unchanged. |
+| Request credential | Manual retrieval uses the runner request token as a bearer credential. Our regex/type/length check is stricter than the toolkit's presence check. | **POSSIBLE CAUSE**, not proven: R2 does not identify validation failure. Token validation and bearer handling are unchanged. |
+| Method / headers / response | Manual curl retrieval is GET with Authorization; toolkit `getJson` reads the `value` field. Our GET has no body, uses Bearer authorization and `Accept: application/json`, then requires 200 plus a dictionary with a valid JWT in `value`. The manual example specifies no additional required header. | **NO ISSUE** established for GET/bearer/JSON retrieval. A parseable HTTP rejection remains a **POSSIBLE CAUSE**; its status and body are unknown. Invalid body/JWT remains P2. |
+| Transport policy | Our client disables proxies, redirects and retries. The [toolkit HTTP client](https://github.com/actions/http-client/blob/main/index.ts) supports proxy routing and redirects; the OIDC toolkit enables retries. Those implementation choices are not mandatory manual-retrieval requirements. | **POSSIBLE CAUSE** only if runtime transport evidence supports it. No transport dependency is proven. Existing fail-closed policy is unchanged. |
+
+There is **no PROVEN ROOT CAUSE** or source-only evidence requiring an
+authentication/workflow change. R3 refines observability only. It replaces the
+historical `OIDC_REQUEST_FAILED` code (retained above for R2 traceability) with
+four fixed codes, all still in phase **P1**:
+
+| Subphase | Fixed code | Exact boundary |
+| --- | --- | --- |
+| P1-A | `OIDC_ENDPOINT_VALIDATION_FAILED` | URL parsing/guard and audience URL construction, before request-token validation |
+| P1-B | `OIDC_REQUEST_TOKEN_VALIDATION_FAILED` | Request-token validation, before any HTTP request |
+| P1-C | `OIDC_TRANSPORT_FAILED` | Request construction/open/read exceptions other than the existing `InvalidResponse` parser gate; does not by itself prove network transmission |
+| P1-D | `OIDC_HTTP_STATUS_FAILED` | Parsed dictionary response with status other than 200 |
+
+The first failing operation owns the code; the old broad P1 code is no longer
+emitted. Invalid/oversized/non-dictionary bodies keep **P2 / OIDC_RESPONSE_INVALID**
+before the status check, including non-200 bodies. A refused redirect is not
+followed: its parseable HTTP response maps to P1-D, invalid body to P2, and a
+transport exception to P1-C. Invalid/missing JWT and claims mismatch retain their
+separate P2 codes. P3/P4/P5, identities, audience/claims, STS payload, B's same-token
+403 + PERMISSION_DENIED oracle, C dependency and release isolation are unchanged.
+Only existing allowlisted fields and fixed codes are public. Raw status metadata
+is unnecessary for this four-way decision and is not added; URLs/query, credentials,
+headers, request/response bodies and exceptions stay private.
+
+R3 validation: baseline **59 Python tests** passed; refined suite **67 passed**,
+**24 offline E2E tests** passed using Node **24.18.0**, actionlint **1.7.12** passed
+for CI/CD/reusable YAML, and `git diff --check` passed. Marker injection covers
+stdout/stderr/step summary; real JSON-client tests use mocked transport, never OIDC.
+Five in-memory wrong implementations were all detected: endpoint/transport merge,
+request-token/transport merge, HTTP rejection moved to P2, raw exception output,
+and raw response output. No mutation experiment changed repository files.
+
+The R3 implementation session performed **no runtime mutation**, dispatch, rerun,
+commit, push or PR creation.
+Workflow YAML and Terraform source are unchanged. Provider activation remains
+**COMPLETE** (existing record, not reverified by R3), `CD_C1_ACTIVATION`
+**UNCONFIGURED** (last read-back R2), WIF proof **OPEN**, A **FAIL**, B/C **NOT PROVEN**,
+Must 3 **In progress**, Must 4 **Open**, production CD **inactive**.
+At implementation handoff R3 was **READY FOR FRESH RESULT AUDIT**. The subsequent
+Fresh Result Audit / Pre-PR pass on 2026-09-18 re-acquired the runtime evidence,
+reviewed the actual diff and official contracts, and reproduced **59 baseline /
+67 current Python tests**, **24 offline E2E tests**, actionlint **1.7.12** and
+`git diff --check`. All five required wrong-implementation categories were detected
+in seven in-memory variants, including exception output to stdout, stderr and
+summary. Authentication AST equivalence was independently checked. The standard
+PATH Node has a missing local shared library; repository-compatible Node **24.18.0**
+reproduced validation, so this is not a source blocker.
+
+First Pass: **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**.
+No code remediation was required; only audit-state documentation was advanced
+after First Pass. Pre-PR permits commit/push/PR and required CI verification.
+No new runtime proof or infrastructure/settings mutation was performed by this audit.
+These diagnostics improve evidence resolution for a separately authorized next
+single runtime proof after merge; they do not establish an OIDC fix, close WIF
+proof or authorize execution.
 
 ## Identity and credential ownership
 
