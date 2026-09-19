@@ -161,6 +161,10 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual([p for p, _ in changes], ['backend', 'frontend', 'frontend', 'backend'])
         self.assertEqual(changes[-2:], [(p, m['production'][p]['revision']) for p in ('frontend', 'backend')])
         self.assertEqual(record['rollback'], 'EXACT_PREVIOUS_PAIR_VERIFIED')
+        self.assertEqual(record['promotionFailureCode'], 'POST_DEPLOY_SMOKE_FAILED')
+        self.assertEqual(record['promotionFailureStage'], 'post-deploy-smoke')
+        self.assertIsNone(record['rollbackFailureCode'])
+        self.assertIsNone(record['rollbackFailureStage'])
 
     def test_stale_promotion_never_writes(self):
         m = fixture()[3]

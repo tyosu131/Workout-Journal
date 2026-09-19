@@ -138,7 +138,112 @@ activation. Subsequent [CD-B2 evidence](./wif-submission-proof.md#cd-b2-verified
 closed PE-P1C-01B and confirmed WIF `ACTIVE` / `disabled = false`; Must 4 remains
 Open and production CD inactive. The production Environment was separately
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency);
-runtime deployment-approval integration is still future work, not P2B evidence.
+runtime deployment-approval integration was later exercised in C3G, not in P2B.
+
+## CD-C3I Promotion Diagnostic Durability Validation
+
+C3I starts from clean main `8ac592abcfeee607229fada3f5685e8c1630ddef` and fresh
+GitHub main / activation read-backs (same SHA / UNCONFIGURED). The
+[C3F/G/H incident record](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
+preserves candidate delivery PASS, C3G promotion FAIL, actual previous-pair
+restoration and post-rollback smoke PASS. **Technical root cause: NOT PROVEN.**
+The original promotion GateError was lost after rollback; that independent Must
+source defect is the sole implementation target. Must 3 stays In progress;
+Must 4 stays Open; production CD stays inactive/fail-closed.
+
+The [controller](../.github/scripts/cd_release.py) now retains separate allowlisted
+promotion and rollback failure codes/stages in the step summary and a fixed-field
+canonical stdout line. Existing pair evidence and top-level failure compatibility
+are retained. Promotion, CAS, traffic comparisons, rollback, timing and
+reconciliation behavior are unchanged. This is local source validation only;
+no runtime remediation result is claimed.
+
+Validation on 2026-09-19 uses installed Node 24.18.0 through a per-command PATH:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -q
+actionlint .github/workflows/ci.yml .github/workflows/cd.yml .github/workflows/candidate-e2e.yml
+git diff --check
+```
+
+Results: **94 Python tests PASS**, actionlint **1.7.12 PASS**, diff check PASS.
+Actionlint was invoked from the existing local tool installation; no dependency
+or host configuration was changed. All **52** relative documentation links/anchors
+and changed-file credential-pattern inspection passed. AST comparison with the
+baseline confirmed **29 existing functions/classes unchanged** and identical
+promotion control flow after removing diagnostic assignments/capture; all **102**
+existing fixed GateError codes are included in the diagnostic allowlist.
+No browser E2E or unrelated
+application build/test was run for this Python controller/docs change.
+
+[`test_cd_diagnostics.py`](../.github/scripts/test_cd_diagnostics.py) injects
+Backend post-update, Frontend precheck/update, post-deploy smoke, rollback
+read/precheck/update/final-check/smoke failures, arbitrary exceptions and unlisted
+GateError values. It checks both error identities, operation stages, restoration,
+write order, success-path null diagnostics and stdout/stderr/summary safety.
+The existing post-deploy rollback test is strengthened; partial/uncertain update,
+external-change refusal, ETag and no-retry safety tests remain in force.
+
+[`test_cd_diagnostic_detection.py`](../.github/scripts/test_cd_diagnostic_detection.py)
+uses disposable offline copies, following the existing detection-test pattern.
+Fresh detection after normal validation: **required 6; detected 6/6**, each by
+semantic AssertionError, with no syntax/import/runtime-error credit:
+
+| Wrong implementation | Detecting contract |
+| --- | --- |
+| Original promotion code replaced | Exact original code survives successful rollback |
+| Stage always generic promotion | Exact Backend post-update stage |
+| Rollback overwrites promotion failure | Original promotion code remains in the final record |
+| Rollback failure code lost | Both distinct failures retained with their stages |
+| Arbitrary exception text emitted | Fixed generic code and forbidden-marker exclusion across output/summary |
+| Backend/Frontend stage reversed | Exact side-specific update stage assertions |
+
+C3I implementation runtime mutation: **NONE**. No dispatch, rerun, activation/approval,
+cloud write, secret access, Supabase, Terraform or IAM/WIF operation. The implementation
+stage performed no commit, push or PR and stopped at **READY FOR FRESH RESULT AUDIT**. Diagnostic
+runtime verification and the unknown technical root cause remain future work.
+
+## CD-C3I Fresh Result Audit and Pre-PR
+
+First Pass on 2026-09-19 completed **before edits, staging, commit, push or PR**:
+**PASS — Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0** for C3I
+source acceptance. Local main/HEAD/origin and freshly read remote main were
+`8ac592abcfeee607229fada3f5685e8c1630ddef`; activation was UNCONFIGURED. The index
+was empty, with exactly the reported eight files. Their sorted path + NUL +
+content + NUL SHA-256 was
+`58696d8a4c0dc7785c8fbcd262864203408c2362ab0ecd39347e7733f08a7341` and remained
+unchanged throughout First Pass.
+
+The auditor read Source Map/Core/Router/Review/Pre-PR Harness and compared actual
+files with the exact GitHub baseline source. Fresh GitHub metadata confirmed
+run `35421684166`, attempt 1: pre-production jobs succeeded, production failed;
+required baseline CI `35421082860` succeeded. Only the fixed
+`CD-C1: FAIL / promotion` line was extracted from the in-memory run-log archive.
+Checks summary/text were both null. C3G/H traffic restoration and smoke remain
+historical evidence; no cloud access or runtime probe was repeated.
+
+Independent AST comparison confirmed unchanged existing control constants and
+29 functions/classes, plus identical promotion operations, ordering and conditions
+after removing only diagnostic capture. Recheck/CAS/smoke, timeouts, operation
+polling, single PATCH behavior and safe reverse-order rollback remain unchanged.
+All 102 current fixed codes survive normalization; arbitrary types, multiple
+exception arguments and non-string payloads normalize safely. No source fix was
+needed; post-First-Pass edits only record audit closure in the existing documents.
+
+Fresh validation: **94 Python tests PASS; 6/6 mutants detected by semantic
+AssertionError; actionlint 1.7.12 PASS; diff check PASS; 52 relative links/anchors
+PASS** on the initial artifact. After recording this audit, the same checks passed
+again with **53 links/anchors**. Added-content inspection found no credential
+payload or runtime synthetic identity; the UUID-shaped addition is the public
+Build ID and the email-shaped addition is an offline exception test marker.
+Captured stdout/stderr/summary safety passed. New test files separate result/output
+contracts from disposable-copy mutation detection; standard CI discovers both.
+
+Pre-PR scope is the same eight files; runtime mutation is **NONE**. This audit
+authorizes the requested branch/commit/push/PR workflow only. Human merge and
+post-merge required CI precede any separate runtime Human Gate. Technical root
+cause remains **NOT PROVEN**, new diagnostic runtime proof **NOT YET**, Must 3
+**In progress**, Must 4 **Open**, and production CD **inactive/fail-closed**.
 
 ## CD-C3C Recovery Contract Validation
 

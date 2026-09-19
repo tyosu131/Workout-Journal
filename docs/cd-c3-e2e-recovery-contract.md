@@ -1,6 +1,6 @@
 # CD-C3: candidate incident and E2E recovery contract
 
-Current status: **full candidate delivery FAIL / incomplete; Must 4 Open;
+Current status: **C3F candidate delivery PASS; C3G production promotion FAIL; Must 4 Open;
 production CD inactive; `CD_C1_ACTIVATION` UNCONFIGURED**. Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
 CD-C3C source remediation is merged via [PR #106](https://github.com/tyosu131/Workout-Journal/pull/106)
@@ -8,8 +8,75 @@ at main `a332289c95b846aed10c6f9d31c9339e7fc279ed`; required post-merge
 [CI run 35418949564](https://github.com/tyosu131/Workout-Journal/actions/runs/35418949564)
 passed. C3D separately closed current historical-run residual uncertainty:
 **HISTORICAL_RESIDUAL_PROVEN_ZERO under verified current schema contract**.
-C3C remains source-reviewed / CI-passed, runtime not yet proven. Neither closure
-nor source remediation authorizes a release retry.
+C3F subsequently proved the C3C successful candidate/E2E/cleanup path at runtime.
+C3G restored the previous production pair after promotion failed; the technical
+root cause remains **NOT PROVEN**. C3I addresses diagnostic durability in source
+only. No release retry is authorized by this source remediation.
+
+## C3F / C3G incident and C3H diagnosis
+
+[Run 35421684166](https://github.com/tyosu131/Workout-Journal/actions/runs/35421684166)
+used main `8ac592abcfeee607229fada3f5685e8c1630ddef`, attempt 1, with required
+[CI 35421082860](https://github.com/tyosu131/Workout-Journal/actions/runs/35421082860)
+SUCCESS. The following records come from C3F/G/H evidence; C3I does not repeat
+runtime probes, cloud reads, Secret Manager access or E2E.
+
+| Evidence | Established outcome |
+| --- | --- |
+| C3F preflight / candidate / candidate-e2e / verify-candidate | All PASS; Build `aa228d36-0631-4e9d-b6d1-c23e1c149b13`; candidate `cd-35421684166-1` |
+| Candidate scenario | All eight steps PASS; `httpsCookieVerified: true` |
+| Cleanup / evidence | PROVEN_ZERO; auth/users/notes/user_tags = 0/0/0/0; localReceiptState PERSISTED; evidenceState PASS |
+| C3G approval / production job | One approval; [job 105841544261](https://github.com/tyosu131/Workout-Journal/actions/runs/35421684166/job/105841544261) failed; safe log `CD-C1: FAIL / promotion` |
+| Backend writes | Promotion UpdateService SUCCESS, then rollback UpdateService SUCCESS; candidate 0% → 100% → 0% |
+| Frontend writes | Successful UpdateService not observed; candidate final 0%. This does not prove no request was sent |
+| Actual restored pair | Backend `workout-journal-backend-00003-luc` and Frontend `workout-journal-frontend-00003-xar`, each 100% |
+| Post-rollback probes | Frontend `/login` 200, `/api/auth/session` 401; Backend `/` 404 |
+| Workflow-recorded rollback field | NOT PROVEN: Checks output.summary/text null; step summary not programmatically available |
+| Activation | Deleted once after terminal C3G; read-back UNCONFIGURED; freshly confirmed before C3I edits |
+
+C3H localized failure no further than **P1 post-send handling, P3, P4, or P5
+pre-send / failed-response boundary**. The Cloud Run reconciliation hypothesis
+remains a future investigation topic, not a proven cause. Restored runtime state
+does not prove the missing workflow field was `EXACT_PREVIOUS_PAIR_VERIFIED`.
+The historical source did prove a separate **Must diagnostic durability defect**:
+promotion exceptions were replaced by `RELEASE_NOT_VERIFIED` after rollback, and
+rollback exceptions were discarded behind `HUMAN_DECISION_REQUIRED`.
+
+## C3I source contract: durable promotion diagnostics
+
+[`cd_release.py`](../.github/scripts/cd_release.py) preserves fixed allowlisted
+`promotionFailureCode` and `promotionFailureStage` before attempting rollback.
+Rollback independently retains `rollbackFailureCode` and `rollbackFailureStage`.
+Unused fields, including `rollback` when not attempted, are explicitly null.
+The existing top-level `RELEASE_NOT_VERIFIED`, coarse phase, pair summary and
+pre-write failure boundary remain compatible. Only listed GateError codes are
+published; unlisted GateError values and arbitrary exceptions become
+`CD_CONTROLLER_FAILED`, without exception text or traceback.
+
+Stages are assigned immediately before their operation:
+
+- Promotion: `pre-promotion-recheck`; Backend/Frontend `pre-update-recheck`,
+  `traffic-update`, `post-update-recheck`; `post-deploy-smoke`, `post-deploy-final-recheck`.
+- Rollback: `rollback-state-read`, `rollback-state-recheck`; Frontend/Backend
+  `rollback-precheck`, `rollback-update`; `rollback-final-recheck`, `rollback-smoke`,
+  `rollback-post-smoke-recheck`.
+
+The existing `GITHUB_STEP_SUMMARY` record retains the pair metadata. A single
+canonical `CD-C1 diagnostic: {...}` stdout line for the promote command contains
+only result, phase, failureCode, promotionFailureCode, promotionFailureStage,
+rollback, rollbackFailureCode and rollbackFailureStage. It contains no pair,
+manifest, URL, revision payload or raw exception. Successful rollback records
+`EXACT_PREVIOUS_PAIR_VERIFIED` with null rollback diagnostics; failed rollback
+records `HUMAN_DECISION_REQUIRED` with its own fixed code/stage, preserving the
+promotion diagnosis.
+
+This is **diagnostic durability remediation**, with local offline validation in
+the [C3I verification record](./verification.md#cd-c3i-promotion-diagnostic-durability-validation).
+It adds no sleep, convergence polling, retry, PATCH resend or timeout change;
+CAS, recheck, traffic comparison and Backend→Frontend promotion / Frontend→Backend
+rollback ordering remain unchanged. **C3G technical root cause: NOT PROVEN.**
+The new diagnostic path has not been release-runtime verified, and does not
+retroactively recover the lost C3G error.
 
 ## Historical C3A execution record
 
@@ -105,7 +172,7 @@ On 2026-09-19, `CD_C1_ACTIVATION` was read as `approved`, deleted once from
 This closes the release latch; it is distinct from production Environment approval.
 No other runtime mutation is authorized or performed in C3C.
 
-Read-only Cloud Run checks retain both service generations at 7, the original
+Historical C3C/D read-only Cloud Run checks retained both service generations at 7, the original
 traffic entries/tags/URLs, and these revisions:
 
 | Service | Retained C3A candidate / traffic | Production / traffic |
@@ -113,7 +180,8 @@ traffic entries/tags/URLs, and these revisions:
 | Backend | `workout-journal-backend-cd-35414003825-1` / 0% | `workout-journal-backend-00003-luc` / 100% |
 | Frontend | `workout-journal-frontend-cd-35414003825-1` / 0% | `workout-journal-frontend-00003-xar` / 100% |
 
-Neither the C3A pair nor older retained candidates are deleted or changed.
+Neither the C3A pair nor older retained candidates were deleted or changed in
+C3C/D. The later C3F/G pair and restoration are recorded above.
 
 ## Future source contract: deterministic identity and ownership
 
@@ -209,20 +277,22 @@ generic discovery or destructive fallback is added.
 
 ## Completion boundary
 
-C3C improves future retry/recovery safety; C3D closes the historical incident
+C3C improves recovery safety; C3D closes the historical incident
 for current residual/data-hygiene concerns only. Scenario NOT PROVEN and cleanup
 execution UNPROVEN remain historical limitations. Must 3 remains In progress (monitoring/alert resources deferred
-to Must 5 design); Must 4 remains Open. Remaining CD work includes successful
-dynamic candidate E2E/cleanup and candidate re-verification, approval/promotion,
-post-deploy/failure/rollback verification, automatic main-merge + CI-success
-triggering, and separately authorized production activation. Build and candidate
-creation have C3A runtime evidence; the whole chain is not proved.
+to Must 5 design); Must 4 remains Open. C3F closes the successful candidate
+E2E/cleanup/re-verification portion; C3G proves approval integration and actual
+previous-pair restoration after failed promotion. Successful production promotion
+and post-deploy verification, remaining failure/rollback contract evidence,
+runtime durability of the new diagnostics, automatic main-merge + CI-success
+triggering and final documentation closure remain open. C3F successful result
+transport is not runtime failure-injection or cross-run recovery evidence.
 
-C3C subsequently merged and passed required post-merge CI; C3D closed residual
-Pending Evidence. C3E stops before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.
-After closure review/merge, the next state is **FRESH_RELEASE_PROOF_READY** for
-separately authorized runtime proof under the remediated source. No release retry,
-activation, production approval or promotion is authorized by this closure.
+C3I implementation stopped before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.
+The subsequent [Fresh Result Audit](./verification.md#cd-c3i-fresh-result-audit-and-pre-pr)
+passed the source acceptance; runtime verification remains unperformed. Runtime
+mutation is **NONE**. No release retry, activation, production approval or promotion
+is authorized by this remediation or audit.
 
 
 ## Fresh Result Audit and Pre-PR

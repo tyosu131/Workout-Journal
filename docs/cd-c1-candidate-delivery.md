@@ -12,6 +12,10 @@ C3A built and created the paired 0% candidates but failed at cleanup proof;
 current fail-closed state, merged source remediation and C3D residual closure.
 PR #106 merged at `a332289c95b846aed10c6f9d31c9339e7fc279ed`; required
 post-merge CI run `35418949564` passed.
+C3F at main `8ac592abcfeee607229fada3f5685e8c1630ddef` subsequently passed the
+complete candidate/E2E/cleanup/verify portion. C3G production promotion failed
+and restored the previous pair. [C3F/G/H evidence and C3I source diagnostics](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
+retain technical root cause **NOT PROVEN**; C3I changes diagnostics only.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
@@ -67,8 +71,10 @@ The [C3C source contract](./cd-c3-e2e-recovery-contract.md) adds deterministic
 candidate-bound UUIDv5 identity, exact pre-create zero checks, separate read-only
 recovery ownership, and a strict private child result channel. Only validated
 safe results reach logs/summary, including failed-child sub-results. These are
-merged source changes with required post-merge CI PASS and future runtime verification
-pending; they do not retroactively recover the old v1 identity or prove C3A cleanup execution.
+merged source changes with required post-merge CI PASS; C3F later runtime-proved
+the successful candidate/E2E/cleanup path. Failure-path transport and cross-run
+recovery are not runtime-proved by that success. They do not retroactively recover
+the old v1 identity or prove C3A cleanup execution.
 
 ## CD-C2D-R8 runtime proof and R9 closure
 
@@ -636,6 +642,9 @@ Provider activation completed in CD-C2C; merged R7 source passed the separately
 approved R8 proof. C3A subsequently activated release and consumed the dedicated secret once, but
 failed cleanup proof. C3C returned the latch to UNCONFIGURED. Any future activation,
 credential consumption or retry needs a new Human Gate; provisioning is complete.
+C3F/G used separate authorization for one release and one production approval;
+C3G deleted the latch again after the failed run was terminal. C3I freshly
+confirmed UNCONFIGURED without changing it.
 
 Release dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
 The controller independently queries successful main **push** CI and its required
@@ -719,6 +728,14 @@ run/CI identity, Build ID/SA, each candidate revision/tag/URL/digest, previous
 revision/digest/configuration hash and traffic, and both paired Backend URLs.
 Promotion/rollback result is recorded alongside it. No credential value or
 arbitrary manifest extension is included.
+
+C3I adds [durable promotion/rollback diagnostics](./cd-c3-e2e-recovery-contract.md#c3i-source-contract-durable-promotion-diagnostics):
+fixed original failure codes and operation stages, separate from the existing
+top-level `RELEASE_NOT_VERIFIED`. The pair summary is unchanged. A single canonical
+job-log line exposes only the eight fixed diagnostic fields, allowing incident
+read-back when Checks summary/text are null. Unknown exceptions normalize to
+`CD_CONTROLLER_FAILED`. This source-only change does not alter traffic behavior
+or establish the unknown C3G technical root cause.
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
