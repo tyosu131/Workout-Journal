@@ -27,6 +27,46 @@ SUPABASE_URL = f'https://{SUPABASE_REF}.supabase.co'
 E2E_SECRET = 'workout-journal-e2e-supabase-secret-key'
 TTL_MS = 60 * 60_000
 MAX_TAGS, MAX_REVISIONS = 20, 40
+# Only repository-owned GateError codes may enter durable diagnostics. In
+# particular, being a GateError is not permission to serialize arbitrary text.
+DIAGNOSTIC_CODES = frozenset('''
+ARCHIVE_ENTRY_INVALID ARCHIVE_FAILED AUTH_IDENTITY_MISMATCH AUTH_IDENTITY_READ_FAILED
+BACKEND_CANDIDATE_UNPROVEN BUILD_CONFIG_MISMATCH BUILD_DIGEST_MISSING
+BUILD_IDENTITY_MISMATCH BUILD_ID_INVALID BUILD_IMAGES_MISMATCH BUILD_LOGGING_MISMATCH
+BUILD_NOT_SUCCESSFUL BUILD_READ_FAILED BUILD_SA_MISMATCH BUILD_SOURCE_BUCKET_MISMATCH
+BUILD_SOURCE_SHA_MISMATCH BUILD_STATUS_INVALID BUILD_SUBMISSION_FAILED BUILD_WAIT_TIMEOUT
+CALLER_MISMATCH CANDIDATE_DEPLOY_FAILED CANDIDATE_IMAGE_MISMATCH CANDIDATE_REUSE_REFUSED
+CANDIDATE_TAG_MISMATCH CANDIDATE_TAG_TOO_LONG CD_C1_NOT_ACTIVATED CD_CONTROLLER_FAILED
+CI_AUTHORITY_CHANGED CI_SOURCE_UNPROVEN CI_SUCCESS_MISSING CLOUD_RUN_CHANGED COMMAND_INVALID
+CREDENTIAL_PATH_MISMATCH DIGEST_READ_FAILED DUPLICATE_ENV_REFUSED E2E_CLEANUP_PROOF_MISSING
+E2E_SECRET_VERSION_REQUIRED EVENT_MISMATCH GITHUB_CREDENTIAL_MISSING GITHUB_READ_FAILED
+IMPERSONATION_OVERRIDE LATEST_TEMPLATE_DIFFERS_FROM_PRODUCTION MAIN_MOVED MAIN_READ_FAILED
+MANIFEST_HASH_MISMATCH MANIFEST_RUN_MISMATCH MANIFEST_TOO_LARGE MANIFEST_VALIDATION_FAILED
+MULTI_CONTAINER_REFUSED OUTPUT_REFUSED PAIR_MISSING POST_DEPLOY_SMOKE_FAILED
+PREVIOUS_PAIR_UNPROVEN PRODUCTION_CHANGED_BEFORE_APPROVAL PRODUCTION_UNPROVEN PUBLIC_KEY_INVALID
+PUBLIC_URL_INVALID REF_MISMATCH REGISTRY_DIGEST_MISMATCH RELEASE_MODE_REQUIRED
+RELEASE_NOT_VERIFIED REPOSITORY_MISMATCH REQUIRED_CI_NOT_SUCCESSFUL REVISION_CHANGED
+REVISION_INVALID REVISION_NOT_READY REVISION_READ_FAILED REVISION_RETIREMENT_REQUIRED
+ROLLBACK_UNSAFE RUNTIME_CONFIGURATION_CHANGED RUN_API_FAILED RUN_API_PATH_INVALID
+RUN_GENERATION_INVALID RUN_IDENTITY_MISMATCH RUN_ID_MISMATCH RUN_NOT_READY RUN_READ_FAILED
+RUN_REVISION_INVALID RUN_TRAFFIC_INVALID SERVICE_CONCURRENT_CHANGE SERVICE_INVALID
+SERVICE_POLICY_CHANGED SERVICE_READ_FAILED SERVING_TARGET_UNPROVEN SOURCE_BUCKET_MISMATCH
+SOURCE_BUCKET_READ_FAILED SOURCE_FILE_INVALID SOURCE_LINK_FORBIDDEN SOURCE_PATH_INVALID
+SOURCE_SHA_MISMATCH SPLIT_TRAFFIC_REFUSED STAGED_SOURCE_CHANGED STALE_PRODUCTION_OR_TAGS
+SUPABASE_PROJECT_MISMATCH TAG_RETIREMENT_REQUIRED TOKEN_UNAVAILABLE TRACKED_SOURCE_DIRTY
+TRAFFIC_CONCURRENT_CHANGE TRAFFIC_OPERATION_FAILED TRAFFIC_OPERATION_INCOMPLETE
+WIF_CREDENTIAL_MISMATCH WIF_INPUT_MISMATCH WORKFLOW_MISMATCH
+'''.split())
+DIAGNOSTIC_FIELDS = ('result', 'phase', 'failureCode', 'promotionFailureCode',
+                     'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage')
+
+
+def safe_failure_code(error):
+    if isinstance(error, proof.GateError) and len(error.args) == 1:
+        code = error.args[0]
+        if type(code) is str and code in DIAGNOSTIC_CODES:
+            return code
+    return 'CD_CONTROLLER_FAILED'
 
 
 def canonical(value):
@@ -418,6 +458,8 @@ def smoke(m):
 
 
 def promote(env, record):
+    record.update(promotionFailureCode=None, promotionFailureStage=None,
+                  rollback=None, rollbackFailureCode=None, rollbackFailureStage=None)
     m = input_manifest(env)
     require(env.get('CD_E2E_HASH') == env['CD_MANIFEST_HASH'], 'E2E_CLEANUP_PROOF_MISSING')
     require(preflight(env) == m['run']['ciRunId'], 'CI_AUTHORITY_CHANGED')
@@ -426,40 +468,64 @@ def promote(env, record):
     prior = {p: m['production'][p]['revision'] for p in PARTS}
     serving_pair = dict(prior)
     record['phase'] = 'pre-promotion-stale-state'
-    recheck(m, serving_pair)
+    stage = 'pre-promotion-recheck'
+    try:
+        recheck(m, serving_pair)
+    except Exception as error:
+        record['promotionFailureCode'] = safe_failure_code(error)
+        record['promotionFailureStage'] = stage
+        raise  # Preserve the original pre-write failure and no-rollback boundary.
     attempted = False
     try:
         record['phase'] = 'promotion'
         for part in PARTS:
+            stage = f'{part}-pre-update-recheck'
             state = recheck(m, serving_pair)
             attempted = True
+            stage = f'{part}-traffic-update'
             cas_traffic(part, state[part], expected_traffic(m, part, m[part]['revision']))
             serving_pair[part] = m[part]['revision']
+            stage = f'{part}-post-update-recheck'
             recheck(m, serving_pair)
         record['phase'] = 'post-deploy-verification'
+        stage = 'post-deploy-smoke'
         smoke(m)
+        stage = 'post-deploy-final-recheck'
         recheck(m, serving_pair)
         record['promotion'] = 'VERIFIED'
-    except Exception:
+    except Exception as error:
+        # C3G technical root cause is NOT PROVEN. Preserve diagnostics without
+        # changing traffic/CAS, convergence, retry or rollback behavior.
+        record['promotionFailureCode'] = safe_failure_code(error)
+        record['promotionFailureStage'] = stage
         if attempted:
             try:
                 # An uncertain update response is NOT retried. Read actual state;
                 # rollback only if every target/tag/config is still ours or prior.
+                rollback_stage = 'rollback-state-read'
                 state = read_state()
                 actual = {p: state[p]['production']['metadata']['name'] for p in PARTS}
                 require(all(actual[p] in {prior[p], m[p]['revision']} for p in PARTS), 'ROLLBACK_UNSAFE')
+                rollback_stage = 'rollback-state-recheck'
                 recheck(m, actual)
                 for part in ('frontend', 'backend'):
+                    rollback_stage = f'{part}-rollback-precheck'
                     state = recheck(m, actual)
                     if actual[part] != prior[part]:
+                        rollback_stage = f'{part}-rollback-update'
                         cas_traffic(part, state[part], expected_traffic(m, part, prior[part]))
                         actual[part] = prior[part]
+                rollback_stage = 'rollback-final-recheck'
                 recheck(m, prior)
+                rollback_stage = 'rollback-smoke'
                 smoke(m)
+                rollback_stage = 'rollback-post-smoke-recheck'
                 recheck(m, prior)
                 record['rollback'] = 'EXACT_PREVIOUS_PAIR_VERIFIED'
-            except Exception:
+            except Exception as rollback_error:
                 record['rollback'] = 'HUMAN_DECISION_REQUIRED'
+                record['rollbackFailureCode'] = safe_failure_code(rollback_error)
+                record['rollbackFailureStage'] = rollback_stage
         raise proof.GateError('RELEASE_NOT_VERIFIED') from None
 
 
@@ -492,9 +558,13 @@ def main():
             raise proof.GateError('COMMAND_INVALID')
         record['result'] = 'PASS'
     except Exception as error:
-        record['failureCode'] = str(error) if isinstance(error, proof.GateError) else 'CD_CONTROLLER_FAILED'
+        record['failureCode'] = safe_failure_code(error)
     # No arbitrary exception, service body, variable value or credential enters evidence.
     print('CD-C1: ' + record['result'] + ' / ' + record['phase'])
+    if len(sys.argv) == 2 and sys.argv[1] == 'promote':
+        # Checks API may omit step summaries. Keep this log record fixed-field;
+        # pair/manifest metadata remains exclusively in the existing summary.
+        print('CD-C1 diagnostic: ' + canonical({key: record.get(key) for key in DIAGNOSTIC_FIELDS}))
     if env.get('GITHUB_STEP_SUMMARY'):
         with Path(env['GITHUB_STEP_SUMMARY']).open('a') as output:
             output.write('## CD-C1 execution\n\n```json\n' + canonical(record) + '\n```\n')
