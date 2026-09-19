@@ -1,6 +1,6 @@
 """Offline tests: synthetic read-backs only; all cloud/auth/mutations mocked."""
 from copy import deepcopy
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 import base64
 import io
 import json
@@ -289,12 +289,20 @@ class ProvenanceTests(unittest.TestCase):
                         self.assertEqual(state[part]['traffic'], m['trafficCurrent'][part])
 
 
+def passing_result(m):
+    r = e2e.result_contract.initial(m, cd.digest(m))
+    r.update(scenario='PASS', cleanup=dict.fromkeys(e2e.result_contract.TABLES, 0),
+             cleanupState='PROVEN_ZERO', localReceiptState='PERSISTED', evidenceState='PASS', httpsCookieVerified=True)
+    for row in r['steps']: row['result'] = 'PASS'
+    return r
+
+
 class SecretBoundaryTests(unittest.TestCase):
     def test_child_failure_and_timeout_never_retry_or_forward_streams(self):
         m = fixture()[3]
         cases = [(20, 'E2E_SCENARIO_FAILED'), (21, 'E2E_CLEANUP_UNPROVEN'),
-                 (22, 'E2E_EVIDENCE_REJECTED'), (-9, 'E2E_CHILD_CLEANUP_UNPROVEN'),
-                 (1, 'E2E_CHILD_CLEANUP_UNPROVEN'), (0, 'E2E_INTERRUPTED_CLEANUP_UNPROVEN')]
+                 (22, 'E2E_EVIDENCE_REJECTED'), (-9, 'E2E_CHILD_RESULT_MISMATCH'),
+                 (1, 'E2E_CHILD_RESULT_MISMATCH'), (0, 'E2E_CHILD_INTERRUPTED')]
         for status, code in cases:
             with self.subTest(status=status), tempfile.TemporaryDirectory() as temp:
                 child = MagicMock(); child.returncode = status
@@ -303,7 +311,18 @@ class SecretBoundaryTests(unittest.TestCase):
                     child.communicate.side_effect = [subprocess.TimeoutExpired('node', 600),
                                                      (SECRET.encode(), SECRET.encode())]
                 env = {**ENV, 'RUNNER_TEMP': temp, 'CD_MANIFEST': cd.canonical(m), 'CD_MANIFEST_HASH': cd.digest(m)}
-                with patch.object(e2e.subprocess, 'Popen', return_value=child) as spawn, \
+                def start(*args, **kwargs):
+                    result = passing_result(m)
+                    if status == 20: result['scenario'] = 'FAIL'
+                    if status == 21:
+                        result.update(cleanup=dict.fromkeys(e2e.result_contract.TABLES), cleanupState='UNPROVEN')
+                    if status == 22: result['evidenceState'] = 'FAIL'
+                    Path(kwargs['env']['E2E_RESULT_FILE']).write_text(json.dumps(result))
+                    self.assertEqual(kwargs['stdout'], subprocess.DEVNULL)
+                    self.assertEqual(kwargs['stderr'], subprocess.DEVNULL)
+                    return child
+                with patch.object(e2e.subprocess, 'Popen', side_effect=start) as spawn, \
+                     redirect_stdout(io.StringIO()) as output, \
                      redirect_stderr(io.StringIO()) as log, self.assertRaisesRegex(cd.proof.GateError, '^' + code + '$'):
                     e2e.controller(env, m, SECRET)
                 spawn.assert_called_once()
@@ -312,7 +331,7 @@ class SecretBoundaryTests(unittest.TestCase):
                 if status == 0:
                     child.terminate.assert_called_once()
                     self.assertNotIn('input', child.communicate.call_args_list[1].kwargs)
-                self.assertNotIn(SECRET, log.getvalue())
+                self.assertNotIn(SECRET, log.getvalue() + output.getvalue())
                 self.assertEqual(list(Path(temp).iterdir()), [])
 
     def test_failure_classification_blocks_approval_without_exposing_error_payload(self):
@@ -325,11 +344,11 @@ class SecretBoundaryTests(unittest.TestCase):
                  patch.object(e2e.proof, 'check_source'), patch.object(e2e.proof, 'check_credentials'), \
                  patch.object(e2e, 'access_secret', return_value=SECRET), \
                  patch.object(e2e, 'controller', side_effect=cd.proof.GateError(code)), \
-                 patch.object(e2e, 'check_report') as report, patch.object(e2e.release, 'emit') as emit, \
+                 patch.object(e2e.release, 'emit') as emit, \
                  patch.object(e2e.resource, 'setrlimit'), patch.object(e2e.sys, 'argv', ['candidate_e2e.py']), \
                  redirect_stderr(io.StringIO()) as log:
                 self.assertEqual(e2e.main(), 1)
-                emit.assert_not_called(); report.assert_not_called()
+                emit.assert_not_called()
             self.assertIn('FAIL / ' + phase + ' / ', log.getvalue())
             self.assertNotIn(SECRET, log.getvalue())
             self.assertIn('E2E_CONTROLLER_FAILED' if code == SECRET else code, log.getvalue())
@@ -379,9 +398,12 @@ catch(e) { process.stderr.write(e.message); process.exitCode=1; }'''
                 manifest = Path(kwargs['env']['E2E_TARGET_MANIFEST'])
                 self.assertEqual(manifest.stat().st_mode & 0o777, 0o600)
                 self.assertNotIn(SECRET, manifest.read_text())
+                result = Path(kwargs['env']['E2E_RESULT_FILE'])
+                self.assertEqual(result.stat().st_mode & 0o777, 0o600)
+                result.write_text(json.dumps(passing_result(m)))
                 return child
 
-            with patch.object(e2e.subprocess, 'Popen', side_effect=inspect_spawn), redirect_stderr(io.StringIO()) as log:
+            with patch.object(e2e.subprocess, 'Popen', side_effect=inspect_spawn), redirect_stderr(io.StringIO()) as log, redirect_stdout(io.StringIO()):
                 e2e.controller(env, m, SECRET)
             payload = json.loads(child.communicate.call_args.kwargs['input'])
             self.assertEqual(payload, {'secretRef': m['e2eSecret'], 'value': SECRET})

@@ -140,6 +140,85 @@ Open and production CD inactive. The production Environment was separately
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency);
 runtime deployment-approval integration is still future work, not P2B evidence.
 
+## CD-C3C Recovery Contract Validation
+
+On 2026-09-19, C3C implemented the [future recovery/result contract](./cd-c3-e2e-recovery-contract.md)
+against main `ea3d0919eba549538da2346001ba45409e4a9465`. This is local source
+verification; the separate Fresh Result Audit below passed. It is not a new release or cleanup proof.
+Fresh GitHub read-back reconfirmed incident `35414003825`, exact SHA, attempt 1,
+failure: preflight/candidate success, candidate-e2e failure, verify/production skipped,
+and zero artifacts. Scenario remains NOT PROVEN, residual UNKNOWN, old random
+identity/recovery handle LOST. Historical R2/R4/R6 records remain unchanged.
+
+Passed with Node **24.18.0**:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -q
+npm run e2e:test
+npm test -- --runInBand
+actionlint .github/workflows/ci.yml .github/workflows/cd.yml .github/workflows/candidate-e2e.yml
+git diff --check
+```
+
+Results: **85 Python tests**, **65 offline E2E tests** (including TypeScript check),
+**46 Jest suites / 403 tests**, actionlint **1.7.12**, and diff check PASS.
+The existing default Homebrew Node 25 binary had a missing library; validation used
+the installed Node 24 binary through a per-command PATH, without changing the host.
+No application build or Terraform plan is claimed.
+
+Coverage includes the RFC UUIDv5 known vector, candidate/process/host stability,
+all four pre-create collision checks, exact read-only cross-run recovery metadata,
+independent scenario/cleanup outcomes, API/malformed-response/residual classifications,
+remote-zero versus local receipt failure, and actual child-controller execution with
+mocked external adapters. Python tests cover failed-child results, missing/malformed/
+foreign/oversized/duplicate-key envelopes, inode/mode/symlink guards, and real Node
+writer compatibility. Injected UUID/email/password/secret/token/URL/response/exception
+markers do not enter published logs, summary or GitHub success outputs on failure.
+No live Supabase, browser E2E scenario or cloud mutation runs in these tests.
+
+Detection-force tests run nine source mutants in disposable offline copies and
+require assertion failures: random UUID; missing candidate binding; public email;
+raw child stderr forwarding; unknown counts as zero; receipt failure treated as
+remote cleanup unproven; generic Auth user listing fallback; host/PID-bound recovery;
+and missing parent result binding. **9/9 detected**; repository source is not mutated
+by these tests. Prior exit-code tests were replaced by this structured-result and
+controller coverage, rather than retaining the obsolete conflated cleanup semantics.
+
+Runtime audit: only the explicitly authorized **one** deletion of
+`CD_C1_ACTIVATION` occurred; final read-back is **UNCONFIGURED**. Before/after Cloud
+Run metadata match exactly (both generations 7, retained traffic/tag/URL entries),
+with C3A candidates at 0% and production Backend `00003-luc` / Frontend `00003-xar`
+at 100%. No dispatch/rerun, secret access, generic user discovery, cleanup, IAM/WIF,
+Terraform, Build, Cloud Run or production mutation was performed. Application source,
+workflow YAML and Terraform `.tf` are unchanged. No secret/credential payload was
+read, displayed or saved. All **63 local Markdown links/anchors** in changed docs
+resolve; the canonical R1–R7 historical block was byte-identical to the implementation
+baseline. The implementation stopped unstaged at **READY FOR FRESH RESULT AUDIT**,
+before commit/push/PR.
+
+### CD-C3C Fresh Audit and Pre-PR
+
+The separate 2026-09-19 [Fresh Result Audit](./cd-c3-e2e-recovery-contract.md#fresh-result-audit-and-pre-pr)
+closed First Pass before any edit/staging: **Must 0 / Should 0 / Pending Evidence 0 /
+Decision Needed 0**. All 27 paths were classified individually; no unrelated change
+was found. Exact baseline source was compared with GitHub; incident logs/jobs,
+activation UNCONFIGURED and candidate/production traffic were freshly read.
+
+The auditor independently reran the same 85 Python, 65 offline E2E, 403 Jest tests,
+actionlint and diff/link checks. The nine source mutants were detected again; three
+additional wrong-column/UUID/broad-query mutants also failed. Python stdlib UUIDv5
+independently matched four candidate inputs and the RFC vector. Concatenated JSON,
+partial JSON and hard-linked IPC were refused. No live Supabase operation or release
+execution occurred. Semantic source/test fixes after First Pass: **none**. The staged
+diff check found one extra EOF blank line in the new release fixture; it was removed
+and the staged check rerun. Audit records and Current-status references were updated.
+
+Local Pre-PR passed final scope, diff, 63-link and credential-safety checks.
+Commit/push/PR and required CI verification are authorized by the separate audit task.
+Merge remains Human action. Old incident residual **UNKNOWN** remains unresolved;
+post-merge CI and a separate residual-policy Human Decision are the next gates.
+No release retry, recovery, approval or promotion is authorized by this audit.
+
 ## CD-C2D-R8 Runtime Evidence and R9 Documentation Closure
 
 **Current: isolated WIF proof CLOSED / PASS; A/B/C PASS; R7 remediation runtime

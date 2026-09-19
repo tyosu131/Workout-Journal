@@ -4,16 +4,19 @@ import { mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { check, SafeError, RUNS, processAlive } from './safety.mjs';
 import { candidateIdentity, SUPABASE_URL, SUPABASE_REF, validateManifest } from './candidate-target.mjs';
+import { newReleaseUser, validateReleaseReceipt, validateReleaseOwner, releaseCandidateClient } from './candidate-client.mjs';
 
 export const P2B_RUNS = path.join(RUNS, 'p2b');
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const RUN = /^p2b-(\d{13})-[a-f0-9]{16}$/;
 export const EXPIRY = 60 * 60_000;
 export function receiptPath(runId) {
-  check(typeof runId === 'string' && RUN.test(runId), 'INVALID_P2B_RUN_ID');
+  check(typeof runId === 'string' && (RUN.test(runId) ||
+    /^p2b-cd-[1-9][0-9]{0,19}-[1-9][0-9]{0,3}$/.test(runId)), 'INVALID_P2B_RUN_ID');
   return path.join(P2B_RUNS, runId + '.json');
 }
 export function newCandidateUser(m, now = Date.now()) {
+  if (m.version === 2) return newReleaseUser(m, now);
   const runId = 'p2b-' + now + '-' + randomBytes(8).toString('hex');
   const metadata = { repository: 'tyosu131/Workout-Journal', purpose: 'portfolio-p2b',
     candidateId: m.candidateId, runId, createdAt: now, expiresAt: now + EXPIRY,
@@ -24,6 +27,7 @@ export function newCandidateUser(m, now = Date.now()) {
       targetIdentity: candidateIdentity(m), supabaseProject: SUPABASE_REF, complete: false } };
 }
 export function validateReceipt(m, r) {
+  if (m.version === 2) return validateReleaseReceipt(m, r);
   receiptPath(r.runId);
   const o = r.metadata;
   check(UUID.test(r.userId) && r.email === r.runId + '@p2b.invalid' &&
@@ -37,6 +41,7 @@ export function validateReceipt(m, r) {
   return r;
 }
 export function validateCandidateOwner(m, r, user) {
+  if (m.version === 2) return validateReleaseOwner(m, r, user);
   validateReceipt(m, r);
   const o = user?.app_metadata?.p2b;
   check(user?.id === r.userId && user.email === r.email && o &&
@@ -59,6 +64,7 @@ export async function saveCandidateReceipt(r) {
   await rename(temp, dest);
 }
 export function candidateClient(m, secret) {
+  if (m.version === 2) return releaseCandidateClient(m, secret, saveCandidateReceipt);
   // No generic URL/SQL/list-users interface: only current-run exact UUID operations.
   validateManifest(m, 'candidate:' + m.candidateId);
   check(m.supabase.url === SUPABASE_URL && typeof secret === 'string' && secret.length > 20,

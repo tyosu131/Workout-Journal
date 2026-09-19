@@ -5,6 +5,7 @@ import { receiptPath, validateReceipt, candidateClient, credentialFromStdin } fr
 try {
   check(process.argv.length === 4 && process.argv[2] === '--run-id', 'EXACT_P2B_RUN_REQUIRED');
   const m = readCandidateManifest();
+  check(m.version === 1, 'CD_RECOVERY_REQUIRES_SEPARATE_HUMAN_GATE');
   const r = readPrivateJson(receiptPath(process.argv[3]));
   check(r.runId === process.argv[3], 'P2B_RECEIPT_MISMATCH');
   validateReceipt(m, r);

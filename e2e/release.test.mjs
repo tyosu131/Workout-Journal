@@ -1,44 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateReleaseManifest, bindWorkflow, candidateExitCode, RELEASE_TTL, CALLER, E2E_SECRET } from './release-contract.mjs';
+import { validateReleaseManifest, bindWorkflow, RELEASE_TTL, CALLER, E2E_SECRET } from './release-contract.mjs';
 import { validateManifest, candidateIdentity, sha256 } from './candidate-target.mjs';
 import { newCandidateUser, validateReceipt } from './candidate-user.mjs';
 
-// Synthetic *changing* state; no historical P2B release constants.
-function manifest(sha = 'a'.repeat(40), run = '123456', attempt = '1') {
-  const project = 'workout-journal-506909', region = 'asia-northeast1', candidateId = 'cd-' + run + '-' + attempt;
-  const m = { version: 2, repository: 'tyosu131/Workout-Journal', project, region,
-    sourceSha: sha, candidateId, capturedAt: new Date().toISOString(), ttlMs: RELEASE_TTL,
-    run: { id: run, attempt, event: 'workflow_dispatch', workflowRef: CALLER,
-      workflowSha: sha, ownerId: '95160728', repositoryId: '790375516', ciRunId: '99' },
-    e2eSecret: { project, name: E2E_SECRET, version: '17' },
-    supabase: { projectRef: 'krpnnkcipyeasddzbpma', url: 'https://krpnnkcipyeasddzbpma.supabase.co' },
-    build: { id: '00000000-0000-4000-8000-000000000001', sourceSha: sha, status: 'SUCCESS',
-      serviceAccount: 'projects/' + project + '/serviceAccounts/workout-journal-build@' + project + '.iam.gserviceaccount.com',
-      digests: { backend: 'sha256:' + 'c'.repeat(64), frontend: 'sha256:' + 'd'.repeat(64) } },
-    production: {}, trafficBefore: {}, trafficCurrent: {} };
-  for (const part of ['backend', 'frontend']) {
-    const service = 'workout-journal-' + part, tag = candidateId;
-    const url = t => 'https://' + t + '---' + service + '-test-an.a.run.app';
-    m[part] = { service, revision: service + '-' + candidateId, tag, url: url(tag),
-      digest: m.build.digests[part], image: region + '-docker.pkg.dev/' + project + '/workout-journal/' + service + '@' + m.build.digests[part],
-      serviceAccount: service + '-run@' + project + '.iam.gserviceaccount.com', maxInstances: 2,
-      traffic: 0, configHash: 'e'.repeat(64), policyHash: 'f'.repeat(64) };
-    m.production[part] = { revision: service + '-arbitrary-serving', traffic: 100,
-      digest: 'sha256:' + '0'.repeat(64), configHash: '1'.repeat(64), url: 'https://' + service + '-test-an.a.run.app' };
-    m.trafficBefore[part] = [
-      { revision: m.production[part].revision, tag: 'retained-good', percent: 100, url: url('retained-good') },
-      { revision: service + '-older-unused', tag: 'retained-unused', percent: 0, url: url('retained-unused') },
-    ];
-    m.trafficCurrent[part] = [...structuredClone(m.trafficBefore[part]), { revision: m[part].revision, tag, percent: 0, url: url(tag) }];
-  }
-  m.frontend.backendInternalUrl = m.backend.url;
-  m.backend.supabaseUrl = m.supabase.url;
-  m.production.frontend.backendInternalUrl = m.trafficBefore.backend[0].url;
-  m.backend.secretRefs = { SUPABASE_SECRET_KEY: { name: 'workout-journal-supabase-secret-key', version: '27' },
-    JWT_SECRET: { name: 'workout-journal-jwt-secret', version: '32' } };
-  return m;
-}
+import { manifest } from './release-fixture.mjs';
 
 test('different release SHAs, attempts and arbitrary production revisions are accepted', () => {
   for (const [sha, run, attempt] of [['a'.repeat(40), '123456', '1'],
@@ -105,20 +71,4 @@ test('historical v1 receipt identity remains byte-for-byte compatible', () => {
   const m = manifest(); m.version = 1;
   assert.equal(candidateIdentity(m), sha256(JSON.stringify([m.project, m.region,
     m.sourceSha, m.candidateId, m.backend, m.frontend, m.production, m.supabase, m.build])));
-});
-
-test('CD distinguishes scenario, cleanup and evidence failures without child diagnostics', () => {
-  const clean = { auth: 0, users: 0, notes: 0, user_tags: 0 };
-  assert.equal(candidateExitCode({ passed: true, cleanupRequired: true, cleanup: clean }), 0);
-  assert.equal(candidateExitCode({ passed: false, cleanupRequired: false }), 20);
-  assert.equal(candidateExitCode({ passed: false, cleanupRequired: true, cleanup: clean }), 20);
-  assert.equal(candidateExitCode({ passed: true, cleanupRequired: true }), 21);
-  for (const table of Object.keys(clean)) {
-    assert.equal(candidateExitCode({ passed: true, cleanupRequired: true,
-      cleanup: { ...clean, [table]: 1 } }), 21);
-  }
-  assert.equal(candidateExitCode({ passed: true, cleanupRequired: true,
-    cleanup: clean, cleanupFailed: true }), 21);
-  assert.equal(candidateExitCode({ passed: true, cleanupRequired: true,
-    cleanup: clean, evidenceFailed: true }), 22);
 });

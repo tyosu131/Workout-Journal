@@ -21,6 +21,10 @@ Deploy positive, same-STS-token Deploy-to-E2E denial and E2E positive paths.
 Full CD runtime proof remains Open. Must 3 stays In progress, Must 4 Open and
 production CD inactive; `CD_C1_ACTIVATION` is UNCONFIGURED. R9 changes no IAM/WIF
 configuration and performs no runtime execution or new cloud metadata check.
+C3A later proved Build and paired 0% candidate creation but failed E2E cleanup proof.
+[C3C](./cd-c3-e2e-recovery-contract.md) returned activation to UNCONFIGURED and adds
+local future recovery safety without changing infrastructure ownership. The
+historical incident's scenario is NOT PROVEN and residual UNKNOWN.
 
 Terraform and CD must not compete for the same mutable production state.
 
@@ -181,7 +185,7 @@ Current status of that sequence:
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured; R8 isolated A/B/C proof CLOSED / PASS. CD-C1 release candidate/E2E/approval source exists; full delivery runtime proof, automatic CI-success triggering and production activation remain future work |
+| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured; R8 isolated A/B/C proof CLOSED / PASS. C3A Build/paired 0% candidates passed, E2E cleanup proof failed; C3C source recovery remediation passed Fresh Result Audit; runtime verification remains pending. Full delivery proof, automatic CI-success triggering and production activation remain future work |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).

@@ -266,7 +266,7 @@ def revision_fields(part, revision, rows, candidate_id, expected_digest):
 def make_manifest(before, after, build, env, ci_run_id):
     sha = env['GITHUB_SHA']
     candidate_id = f"cd-{env['GITHUB_RUN_ID']}-{env['GITHUB_RUN_ATTEMPT']}"
-    m = {'version': 2, 'repository': proof.REPOSITORY, 'project': proof.PROJECT, 'region': proof.REGION,
+    m = {'version': 2, 'e2eIdentityVersion': 2, 'repository': proof.REPOSITORY, 'project': proof.PROJECT, 'region': proof.REGION,
          'sourceSha': sha, 'candidateId': candidate_id, 'capturedAt': datetime.now(timezone.utc).isoformat(),
          'ttlMs': TTL_MS, 'supabase': {'projectRef': SUPABASE_REF, 'url': SUPABASE_URL},
          'run': {'id': env['GITHUB_RUN_ID'], 'attempt': env['GITHUB_RUN_ATTEMPT'],
