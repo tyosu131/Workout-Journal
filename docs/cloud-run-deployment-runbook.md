@@ -13,13 +13,13 @@ remains applicable; no commands here were executed by CD-C1 implementation.
 CD-C2A/B subsequently provisioned the E2E identity, exact-secret IAM and dedicated
 key version 1 / ENABLED (`candidate_e2e` in Supabase Dashboard), with no Cloud Run
 mutation. CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false).
-Latest CD-C2D-R6 `wif-proof` run `35323990499` failed at A with
-`OIDC_ENDPOINT_PATH_FAILED / P1`, proving rejection by the undocumented fixed
-path suffix rule. R7 removes that restriction in source and retains origin/security
-checks; B/C remain NOT PROVEN and WIF proof remains OPEN. This auth-only mode cannot
-run Build, candidates, E2E secret access or promotion;
-[R6 evidence / R7 remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path)
-authorize no rerun or new dispatch. `mode=release` still requires
+[R8 run `35411846680` / R9 closure](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure)
+closes isolated WIF proof **CLOSED / PASS**, with A/B/C **PASS** at source
+`6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
+verified; R6's fixed-path failure remains Historical. All release jobs were skipped:
+no Build, candidates, E2E secret consumption, production approval or promotion ran.
+Full delivery runtime proof and production activation remain future Human Gates;
+R9 performs no runtime action. `mode=release` still requires
 `CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and an exact secret version.
 
 ## Architecture and runtime contract

@@ -13,12 +13,14 @@ giving **35 applied resources / no-op baseline**. E2E secret access is runtime
 verified and exact-resource scoped; existing Deploy/Build grants are unchanged.
 Supabase key display name is `candidate_e2e`; Secret Manager version 1 is ENABLED.
 CD-C2C provider activation is COMPLETE: both providers are ACTIVE / disabled=false.
-Latest CD-C2D-R6 run `35323990499` failed at A with `OIDC_ENDPOINT_PATH_FAILED / P1`;
-the undocumented fixed path suffix rejection is PROVEN. R7 removes that source
-restriction while preserving origin/security checks; IAM/WIF are unchanged.
-B/C are NOT PROVEN. WIF and full CD runtime proofs remain Open; see
-[R6 evidence / R7 remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path).
-Must 3 stays In progress, Must 4 Open and production CD inactive.
+[R8 run `35411846680` / R9 closure](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure)
+owns isolated WIF proof **CLOSED / PASS**, A/B/C **PASS**, source
+`6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
+verified; R6's fixed-path failure remains Historical. R8 proves only the specified
+Deploy positive, same-STS-token Deploy-to-E2E denial and E2E positive paths.
+Full CD runtime proof remains Open. Must 3 stays In progress, Must 4 Open and
+production CD inactive; `CD_C1_ACTIVATION` is UNCONFIGURED. R9 changes no IAM/WIF
+configuration and performs no runtime execution or new cloud metadata check.
 
 Terraform and CD must not compete for the same mutable production state.
 
@@ -38,7 +40,7 @@ Terraform and CD must not compete for the same mutable production state.
 | Build Service Account `workout-journal-build` | Terraform Owns | Keyless identity with exact P1C-B build permissions; P1C-C runtime-verified its repository build, two image pushes, and Cloud Logging path |
 | WIF pool `github-actions` and provider `workout-journal` | Terraform Owns | Actual pool is `ACTIVE` / `FEDERATION_ONLY`; actual provider is `ACTIVE` / `disabled = false`, matching desired state after CD-B2; no pool or trust change |
 | Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
-| E2E SA, exact-secret Accessor, E2E provider and impersonation member | Terraform Owns | CD-C2A provisioned; zero SA keys; `attribute.e2e_boundary/candidate-e2e-v1` isolates impersonation; actual provider ACTIVE / disabled=false after CD-C2C; WIF proof OPEN |
+| E2E SA, exact-secret Accessor, E2E provider and impersonation member | Terraform Owns | CD-C2A provisioned; zero SA keys; `attribute.e2e_boundary/candidate-e2e-v1` separates the mapped grant; actual provider ACTIVE / disabled=false after CD-C2C; isolated A/B/C proof CLOSED / PASS for R8's exact run/source |
 | P1C-B operational IAM members | Terraform Owns | Exactly 13 additive members are in remote state and actual IAM; zero-drift verified |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
 | Cloud Build source bucket body `workout-journal-506909_cloudbuild` | External / Manually Managed | Terraform owns only the three exact P1C-B additive bucket IAM members, not the bucket body or legacy members |
@@ -53,6 +55,13 @@ Terraform and CD must not compete for the same mutable production state.
 | Legacy Cloud Build Service Account | Do Not Manage | Not an adoption target |
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
 | Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
+
+Monitoring and alert resources are the concrete remaining Must 3 resource gap
+under the [Completion Contract](./portfolio-completion-contract.md#must-3-infrastructure-as-code--identity).
+Their approved IaC scope must be implemented and verified with Must 5 design.
+R8 closes the isolated WIF prerequisite only. No new identity/build hardening
+requirement is inferred; automatic default-SA-grant prevention remains the
+Backlog / separate hardening item recorded below.
 
 The current remote state contains exactly 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary. CD-C2B's read-only baseline was no-op. Historical P1C-B added 13 without changing existing resources; CD-B2 applied one Deploy-provider update with a zero-change post-plan. See the [historical activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation). CD-C2C activation is complete; R1 read-only plan is No changes / exit 0 and all IAM remains unchanged.
 
@@ -172,7 +181,7 @@ Current status of that sequence:
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured. CD-C1 adds gated candidate/E2E/approval source as desired state only; activation and full CD runtime proof remain future work |
+| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured; R8 isolated A/B/C proof CLOSED / PASS. CD-C1 release candidate/E2E/approval source exists; full delivery runtime proof, automatic CI-success triggering and production activation remain future work |
 | Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).

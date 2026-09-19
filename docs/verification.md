@@ -140,6 +140,50 @@ Open and production CD inactive. The production Environment was separately
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency);
 runtime deployment-approval integration is still future work, not P2B evidence.
 
+## CD-C2D-R8 Runtime Evidence and R9 Documentation Closure
+
+**Current: isolated WIF proof CLOSED / PASS; A/B/C PASS; R7 remediation runtime
+verification PASS.** The [canonical R8 evidence / R9 closure](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure)
+is owned by run `35411846680`, exact source
+`6c0b91579f2caff02e9e190249c4c4bd73e877d1`, `main`, `workflow_dispatch`, attempt 1,
+conclusion `success`. R9 freshly read the GitHub run, attempt-1 jobs/steps and safe
+logs on 2026-09-19: A `AUTH_SUCCESS / P4 / PASS`, B
+`IAM_PERMISSION_DENIED / P5 / PASS`, C `AUTH_SUCCESS / P4 / PASS`.
+Both proof steps succeeded and all release jobs were skipped. The exact source
+reuses A's federated STS token for B and accepts only HTTP 403 + error code 403 +
+`PERMISSION_DENIED`; it does not reuse a Deploy-SA token or mint an extra STS token
+for B. C executes through `candidate-e2e.yml` after A/B.
+
+R2's broad P1 failure, R4's endpoint-validation failure and R6's fixed-path
+rejection remain Historical. R8 passed the remediated path boundary and completed
+the isolated proof; it did not prove the full release delivery path. Must 3 is
+**In progress** (monitoring/alert resources deferred to Must 5 design), Must 4
+**Open** (full delivery runtime proof, automatic triggering and production
+activation). Production CD is **inactive**; R9 read back `CD_C1_ACTIVATION`
+**UNCONFIGURED**. No R9 cloud state read-back is claimed.
+
+R9 documentation validation **PASS**: `git status --short`, `git diff --name-status`,
+full `git diff` review and `git diff --check`; 64 local links checked with no new
+broken file/anchor targets; the complete canonical R1-R7 record is byte-for-byte
+preserved; added-text credential scan passed. No dedicated docs
+validator is configured in repository scripts/CI. Application build/tests and
+Terraform commands are not required for these Markdown-only edits and are not
+R9 evidence. Application source, workflows and Terraform `.tf` files remain
+unchanged. Runtime mutation is **NONE**; no new proof, credential access or release
+execution. Implementation handoff stopped at **READY FOR FRESH RESULT AUDIT**,
+before commit/push/PR.
+
+The separate **R9 Fresh Result Audit First Pass passed on 2026-09-19** with
+**Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0** before edits or
+staging. It independently re-acquired R8 metadata/jobs/safe logs and main source,
+confirmed A/B/C contracts, reviewed the full diff and existing Must 3/4 ownership,
+and reproduced the 64-link, Historical-integrity, credential and diff checks.
+No remediation was needed; only audit-state documentation changed afterward.
+Pre-PR rechecks that final Markdown-only diff and the PR description before
+commit/push/PR and required CI verification. No application build was needed for
+the local docs audit; the normal PR CI remains required. No new runtime proof,
+cloud operation, activation or settings mutation is authorized by this audit.
+
 ## CD-C1 Offline Validation
 
 The [CD-C1 source contract](./cd-c1-candidate-delivery.md) is not runtime activation.
@@ -162,13 +206,13 @@ rollback, private stdin and cross-provider mapping are checked offline. Expected
 state is **35 applied resources**. CD-C2C provider activation is COMPLETE; both
 providers are **ACTIVE / disabled=false** and the R1 read-only plan was
 **No changes / exit 0**. Secret Manager version 1 is ENABLED and
-`CD_C1_ACTIVATION` is UNCONFIGURED (R6 read-back). Latest CD-C2D-R6 run
-`35323990499` failed at A with `OIDC_ENDPOINT_PATH_FAILED / P1`, before
-request-token validation / HTTP request. The undocumented fixed path suffix
-rejection is PROVEN; B was not run, C skipped, and WIF proof remains OPEN.
-Provider/secret state above is the existing record, not a fresh R7 cloud check.
-R7 performs no Terraform operations or runtime proof; do not run the Terraform
-commands above, apply, rerun or dispatch as part of R7.
+`CD_C1_ACTIVATION` is UNCONFIGURED (R9 read-back). Isolated WIF proof is now
+**CLOSED / PASS** under the R8 record above. Historical R6 run `35323990499`
+failed at A with `OIDC_ENDPOINT_PATH_FAILED / P1`, before request-token validation
+/ HTTP request; B was not run and C skipped in that run. Provider/secret state
+above is the existing record, not a fresh R9 cloud check. R9 performs no Terraform
+operations or runtime proof; do not run the Terraform commands above, apply,
+rerun or dispatch as part of R9.
 
 `test_e2e_wif_proof.py` executes synthetic auth responses and reads actual YAML:
 the default proof mode cannot reach Build/candidates/secret access/production;
@@ -181,7 +225,7 @@ removes only the fixed path suffix requirement and its unreachable current code.
 Missing / parse / scheme / host / port / userinfo / fragment / query-build
 diagnostics remain; the origin/security predicates and their order are unchanged.
 
-R7 passed **79 Python tests**, **24 offline E2E tests** with Node **24.18.0**,
+Historical R7 validation passed **79 Python tests**, **24 offline E2E tests** with Node **24.18.0**,
 actionlint **1.7.12** and `git diff --check`. Three new regression tests failed on
 the R6 source before remediation. Both callers now pass arbitrary synthetic paths
 through to request-token validation; the real HTTP Request with mocked transport
@@ -202,7 +246,7 @@ Terraform and application source are unchanged. R7 runtime mutation is **NONE**;
 no commit/push/PR in the implementation session. Its handoff was
 **READY FOR FRESH RESULT AUDIT**, not runtime closure.
 
-The separate R7 Fresh Result Audit / Pre-PR reproduced all checks above and
+The historical R7 Fresh Result Audit / Pre-PR reproduced all checks above and
 closed First Pass with **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**
 before any code/docs/staging change. GitHub R6 run/jobs/safe logs and tested source
 were re-acquired read-only. The three regression tests failed on R6 and passed
@@ -241,8 +285,9 @@ was required; only audit-state docs changed afterward. Commit/push/PR and requir
 CI verification may proceed. This does not establish a root-cause fix or authorize
 runtime proof. Workflow YAML, Terraform and application source remain unchanged;
 audit runtime mutation is NONE. Details are in the canonical R4/R5 record.
-Positive/negative WIF, credential consumption and candidate/promotion/rollback
-runtime proofs remain separate Human Gates. Must 3 stays In progress, Must 4 Open,
+At that R5 handoff, positive/negative WIF proof was still pending; R8 now closes
+the isolated A/B/C proof above. Credential consumption and candidate/promotion/
+rollback runtime proofs remain separate Human Gates. Must 3 stays In progress, Must 4 Open,
 production CD inactive. The existing required CI job runs both offline test
 commands; its check name is unchanged. These tests never authenticate to Google
 or Supabase.
