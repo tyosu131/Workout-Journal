@@ -6,11 +6,12 @@ import { readCandidateManifest, readPrivateJson, operationalIdentity } from './c
 import { newCandidateUser, saveCandidateReceipt, candidateClient, credentialFromStdin,
   P2B_RUNS, receiptPath, validateResume } from './candidate-user.mjs';
 import { WORK, sourceDigest, assertSafeOutputs } from './local-app.mjs';
-import { candidateExitCode } from './release-contract.mjs';
+import { initialResult, setFailure, cleanupState, resultExitCode, writeResult,
+  RESULT_CONTRACT } from './candidate-result.mjs';
 
 let m, secret, client, user, cleanup, reportDir, runnerDigest;
 let steps = [], browser = 'chromium', passed = false;
-let cleanupFailed = false, evidenceFailed = false;
+let result, scenarioStarted = false;
 const canary = 'P2B_ARTIFACT_MARKER_' + randomBytes(24).toString('hex');
 const abort = new AbortController();
 process.once('SIGTERM', () => abort.abort());
@@ -18,6 +19,7 @@ process.once('SIGINT', () => abort.abort());
 try {
   check(process.argv.length === 2 && process.versions.node.split('.')[0] === '24', 'P2B_INPUT_REFUSED');
   m = readCandidateManifest(); // Before reading the credential pipe.
+  if (m.version === 2) result = initialResult(m, process.env.E2E_MANIFEST_SHA256);
   await quietExec('git', ['diff', '--exit-code', m.sourceSha, '--', 'frontend', 'backend', 'shared', 'cloudbuild.yaml']);
   if (m.version === 2) {
     check((await quietExec('git', ['rev-parse', 'HEAD'])).trim() === m.sourceSha, 'CD_CHECKOUT_MISMATCH');
@@ -61,15 +63,19 @@ try {
     candidateId: m.candidateId, ...(resumeAfterRun ? { resumeAfterRun } : {}) }),
   { mode: 0o600, flag: 'wx' });
   user = proposed;
-  await saveCandidateReceipt(user.receipt); // Preallocate UUID before the create request/crash window.
+  try { await saveCandidateReceipt(user.receipt); }
+  catch { throw new SafeError('LOCAL_RECEIPT_PERSIST_FAILED'); }
+  if (result) result.localReceiptState = 'PERSISTED';
   await client.create(user.receipt, user.password);
   user.receipt.created = true;
-  await saveCandidateReceipt(user.receipt);
+  try { await saveCandidateReceipt(user.receipt); }
+  catch { throw new SafeError('LOCAL_RECEIPT_PERSIST_FAILED'); }
   reportDir = path.join(WORK, 'report-' + user.receipt.runId);
   await mkdir(reportDir, { recursive: true, mode: 0o700 });
   const reportFile = path.join(reportDir, 'browser.json');
   console.log('P2B exact candidate scenario started: ' + user.receipt.runId);
   try {
+    scenarioStarted = true;
     await quietExec(process.execPath, [path.join(ROOT, 'node_modules/playwright/cli.js'),
       'test', '--config', 'e2e/playwright.config.ts'], { timeout: 270_000, signal: abort.signal,
       env: cleanEnv({ ...Object.fromEntries(['GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_REF',
@@ -85,31 +91,65 @@ try {
         PLAYWRIGHT_NO_COPY_PROMPT: '1' }) });
     passed = true;
   } finally {
-    try { const data = JSON.parse(await readFile(reportFile, 'utf8')); steps = data.steps; browser = data.browser; }
+    try { const data = JSON.parse(await readFile(reportFile, 'utf8')); steps = Array.isArray(data.steps) ? data.steps : []; browser = data.browser; }
     catch { passed = false; }
   }
 } catch (error) {
   passed = false;
-  console.error('P2B stopped: ' + (error instanceof SafeError ? error.code : 'CANDIDATE_CONTROLLER_FAILED'));
+  if (result) {
+    const code = error instanceof SafeError && Object.hasOwn(RESULT_CONTRACT.failures, error.code)
+      ? error.code : scenarioStarted ? 'SCENARIO_FAILED' : 'CANDIDATE_SETUP_FAILED';
+    setFailure(result, code);
+    if (code === 'LOCAL_RECEIPT_PERSIST_FAILED') result.localReceiptState = 'FAILED';
+  } else console.error('P2B stopped: ' + (error instanceof SafeError ? error.code : 'CANDIDATE_CONTROLLER_FAILED'));
 } finally {
   if (user && client) {
-    try { cleanup = await client.cleanup(user.receipt); }
+    try {
+      if (result) {
+        const o = user.receipt.createAttempted ? await client.cleanup(user.receipt) : user.receipt.precreate;
+        if (o) {
+          result.cleanup = o.counts; result.cleanupState = o.state;
+          if (result.localReceiptState !== 'FAILED' && o.localReceiptState !== 'NOT_REQUIRED') {
+            result.localReceiptState = o.localReceiptState;
+          }
+          if (o.failureCode) setFailure(result, o.failureCode);
+        }
+      } else cleanup = await client.cleanup(user.receipt);
+    }
     catch {
-      passed = false;
-      cleanupFailed = true;
-      try { cleanup = JSON.parse(await readFile(receiptPath(user.receipt.runId), 'utf8')).cleanup; } catch { /* absent proof fails */ }
-      console.error('P2B exact cleanup not proven; HUMAN_DECISION_REQUIRED. No SQL/list-user fallback.');
+      if (result) setFailure(result, 'CANDIDATE_OWNERSHIP_REFUSED');
+      else {
+        passed = false;
+        try { cleanup = JSON.parse(await readFile(receiptPath(user.receipt.runId), 'utf8')).cleanup; } catch { /* absent proof fails */ }
+        console.error('P2B exact cleanup not proven; HUMAN_DECISION_REQUIRED. No SQL/list-user fallback.');
+      }
     }
   }
 }
-if (user) {
+if (result) {
+  result.steps = STEPS.map(name => ({ name, result:
+    ['PASS', 'FAIL'].includes(steps.find(s => s?.name === name)?.result) ? steps.find(s => s?.name === name).result : 'NOT_RUN' }));
+  result.scenario = scenarioStarted ? passed && result.steps.every(s => s.result === 'PASS') ? 'PASS' : 'FAIL' : 'NOT_RUN';
+  result.httpsCookieVerified = result.steps[0].result === 'PASS';
+  result.cleanupState = cleanupState(result.cleanup);
+  if (result.scenario === 'FAIL' && !result.failureCode) setFailure(result, 'SCENARIO_FAILED');
+  try {
+    if (reportDir) await assertSafeOutputs(reportDir, [secret, user?.password, user?.receipt.email, user?.receipt.userId, canary]);
+    check(runnerDigest && runnerDigest === await sourceDigest(), 'RUNNER_CHANGED_DURING_P2B');
+    result.evidenceState = 'PASS';
+  } catch { result.evidenceState = 'FAIL'; if (!result.failureCode) setFailure(result, 'EVIDENCE_REJECTED'); }
+  try {
+    await writeResult(process.env.E2E_RESULT_FILE, result, m, process.env.E2E_MANIFEST_SHA256);
+    process.exitCode = resultExitCode(result);
+  } catch { process.exitCode = 22; } // Parent publishes fixed missing/invalid-result evidence.
+} else if (user) {
   try {
     const forbidden = [secret, user.password, user.receipt.email, user.receipt.userId, canary];
     if (reportDir) await assertSafeOutputs(reportDir, forbidden);
     check(runnerDigest === await sourceDigest(), 'RUNNER_CHANGED_DURING_P2B');
     const safeSteps = STEPS.map(name => ({ name,
-      result: ['PASS', 'FAIL'].includes(steps.find(s => s.name === name)?.result) ?
-        steps.find(s => s.name === name).result : 'NOT_RUN' }));
+      result: ['PASS', 'FAIL'].includes(steps.find(s => s?.name === name)?.result) ?
+        steps.find(s => s?.name === name).result : 'NOT_RUN' }));
     const counts = Object.fromEntries(['auth', 'users', 'notes', 'user_tags'].map(table => [table,
       Number.isSafeInteger(cleanup?.[table]) ? cleanup[table] : null]));
     passed = passed && safeSteps.every(s => s.result === 'PASS') && Object.values(counts).every(n => n === 0);
@@ -127,8 +167,7 @@ if (user) {
     console.log('P2B cleanup: ' + JSON.stringify(counts));
     console.log('P2B secret-leak check: PASS');
     console.log('P2B scenario: ' + report.result);
-  } catch { passed = false; evidenceFailed = true; console.error('P2B evidence rejected; HUMAN_DECISION_REQUIRED.'); }
+  } catch { passed = false; console.error('P2B evidence rejected; HUMAN_DECISION_REQUIRED.'); }
 }
 secret = undefined; // Process-private only; no temporary credential file exists.
-process.exitCode = m?.version === 2 ? candidateExitCode({ passed, cleanupRequired: Boolean(user),
-  cleanup, cleanupFailed, evidenceFailed }) : passed ? 0 : 1;
+if (!result) process.exitCode = passed ? 0 : 1;

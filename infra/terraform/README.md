@@ -44,6 +44,10 @@ R9 performs no Terraform or cloud operation; the provider/resource/no-op stateme
 above retain their existing evidence owners. Monitoring/alert resources remain
 future scope; no new identity/build hardening requirement is inferred from R8.
 The completed CD-B2 evidence below remains historical evidence for Deploy WIF.
+[C3A/C3C](../../docs/cd-c3-e2e-recovery-contract.md) subsequently recorded successful
+Build and 0% candidates but failed E2E cleanup proof; scenario/residual remain
+unknown. C3C deleted only the release activation variable and changes recovery
+source, not Terraform/IAM/WIF or Cloud Run. It provides no new no-drift plan.
 
 ## Completed CD-B2 provider activation
 

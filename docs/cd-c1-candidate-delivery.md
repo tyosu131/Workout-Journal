@@ -7,6 +7,10 @@ runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
 The [R8 evidence / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure) owns the
 Current isolated authentication/isolation proof. Full CD runtime proof remains **OPEN**.
+C3A built and created the paired 0% candidates but failed at cleanup proof;
+[C3C incident and recovery contract](./cd-c3-e2e-recovery-contract.md) owns the
+current fail-closed state and source remediation. Fresh Result Audit and local
+Pre-PR gates passed; merge remains a Human action after required PR CI.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
@@ -35,6 +39,30 @@ No changes / exit 0**. `CD_C1_ACTIVATION` is **UNCONFIGURED**.
 Neither CD-C2A nor CD-C2B dispatched CD, submitted a Build, created a Run revision,
 changed traffic or published an image. Their runtime completion does not close
 Must 3 or Must 4. Do not repeat their provisioning or secret-version insertion.
+
+## Current CD-C3A incident and CD-C3C remediation
+
+[Run 35414003825](https://github.com/tyosu131/Workout-Journal/actions/runs/35414003825),
+source `ea3d0919eba549538da2346001ba45409e4a9465`, attempt 1, failed at
+`candidate-e2e / e2e`: `cleanup / E2E_CLEANUP_UNPROVEN`. Preflight, Build,
+immutable images and paired 0% candidate creation passed. Scenario result is
+NOT PROVEN, actual residual UNKNOWN, and the historical random UUID/P2B runId
+and exact recovery receipt are unavailable. Verify-candidate and production were
+skipped. This is not evidence that residuals exist or that the cleanup API failed.
+
+C3C deleted `CD_C1_ACTIVATION` exactly once under explicit Human authorization;
+read-back on 2026-09-19 confirmed **UNCONFIGURED**. Both C3A candidates are retained
+at 0%; production Backend `workout-journal-backend-00003-luc` and Frontend
+`workout-journal-frontend-00003-xar` remain at 100%. No current-incident discovery,
+cleanup, new dispatch or promotion was performed. Must 3 stays In progress,
+Must 4 Open, production CD inactive.
+
+The [C3C source contract](./cd-c3-e2e-recovery-contract.md) adds deterministic
+candidate-bound UUIDv5 identity, exact pre-create zero checks, separate read-only
+recovery ownership, and a strict private child result channel. Only validated
+safe results reach logs/summary, including failed-child sub-results. These are
+source changes with Fresh Result Audit PASS and future runtime verification pending;
+they do not recover or prove cleanup for C3A.
 
 ## CD-C2D-R8 runtime proof and R9 closure
 
@@ -105,14 +133,15 @@ R8 adds isolated Deploy/E2E trust-boundary evidence; it does not implement those
 resources. No additional identity/build hardening gap is inferred, and automatic
 default-SA-grant prevention stays Backlog / separate hardening.
 
-Must 4 stays **Open**: the merged release source still needs full candidate
+At the R9 checkpoint, Must 4 stayed **Open**: the merged release source needed full candidate
 delivery runtime proof (Build/digests, exact Backend tagged URL and paired Frontend,
 dedicated-secret E2E and cleanup), production approval integration, Backend then
 Frontend promotion, post-deploy verification and failure/rollback verification.
 Automatic main-merge + CI-success triggering is still unimplemented; `cd.yml`
 has only `workflow_dispatch`. Production CD activation remains a separate Human
 Gate; production CD is **inactive**. Isolated WIF success is no longer a remaining
-prerequisite. Portfolio Done is not established.
+prerequisite. Portfolio Done is not established. The later C3A partial runtime
+evidence and C3C fail-closed state are recorded above.
 
 R9 is documentation closure only: no dispatch, rerun, Terraform operation, IAM/WIF
 change, Secret Manager access/mutation, Build, Cloud Run mutation, GitHub settings
@@ -598,8 +627,9 @@ variable `CD_C1_ACTIVATION == approved`; it remains **UNCONFIGURED**. The variab
 is an activation latch, not a production approval. Release also requires an exact
 numeric `e2e_secret_version`, checked by preflight before Google authentication.
 Provider activation completed in CD-C2C; merged R7 source passed the separately
-approved R8 proof. Full release activation and credential consumption remain
-later gates; key/version creation is already complete. R9 authorizes none of them.
+approved R8 proof. C3A subsequently activated release and consumed the dedicated secret once, but
+failed cleanup proof. C3C returned the latch to UNCONFIGURED. Any future activation,
+credential consumption or retry needs a new Human Gate; provisioning is complete.
 
 Release dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
 The controller independently queries successful main **push** CI and its required
@@ -661,6 +691,7 @@ Offline tests mock all authentication endpoints. Actual A/B/C proof is
 The release path builds a v2 manifest from Build and Cloud Run read-back, binding:
 
 - repository, source/workflow SHA, caller, run ID/attempt and CI run ID;
+- `e2eIdentityVersion: 2` for the new deterministic recovery contract (absent in historical C3A);
 - actual Build ID, SUCCESS, dedicated Build SA and both immutable digests;
 - never-reused `CANDIDATE_ID = CANDIDATE_TAG = cd-<run-id>-<attempt>` (at most 22 characters; longer IDs stop before Build);
 - candidate revision/tag/exact URL, 0% traffic and runtime configuration hashes;
@@ -741,11 +772,15 @@ revision cleanup automation is introduced here.
 | pre-promotion stale state / TTL | Fail closed before traffic mutation |
 | promotion / post-deploy verification | Read actual state; rollback only if every revision/tag/config still belongs to this attempt or captured previous pair |
 
-The v2 E2E controller distinguishes scenario failure (exit 20), cleanup unproven
-(21), and evidence rejection (22). Interrupted or unknown child exits also mean
-cleanup unproven. The Python parent reports only allowlisted phase/status codes
-and emits no approval hash on failure; child streams and raw exceptions remain
-private. Historical P2B v1 retains its 0/1 exit contract.
+The remediated v2 controller distinguishes scenario failure (exit 20), remote
+cleanup unproven/residual (21), and evidence/local receipt failure (22). Validated
+scenario and cleanup sub-results survive any failed exit. Remote all-zero counts
+remain PROVEN_ZERO even if local receipt persistence fails. Missing/corrupt results
+become E2E_RESULT_UNAVAILABLE with unknown counts; interrupted or mismatched exits
+block success without rewriting observed counts. Python flushes the safe recovery
+handle before creation and publishes only the strict envelope to logs/summary.
+No approval hash is emitted on failure; raw streams remain discarded. Historical
+P2B v1 retains its 0/1 exit contract. See the [result contract](./cd-c3-e2e-recovery-contract.md#future-source-contract-safe-durable-result).
 
 Rollback restores **Frontend first, then Backend**, using exact captured revisions
 and unchanged Backend tag mapping. Unknown/out-of-band state requires Human decision.
@@ -777,7 +812,8 @@ privileged E2E credential's strict transport boundary.
 
 ## Validation and runtime boundary
 
-Use [offline validation](./verification.md#cd-c1-offline-validation). Terraform
+Use the [C3C validation record](./verification.md#cd-c3c-recovery-contract-validation)
+and [offline commands](./verification.md#cd-c1-offline-validation). Terraform
 state is 35; after completed CD-C2C activation the expected plan is
 **No changes / exit 0**. All resources/grants must be no-op. No apply/import/state mutation, Cloud
 Build, dispatch, Supabase key creation or Cloud Run mutation is authorized by

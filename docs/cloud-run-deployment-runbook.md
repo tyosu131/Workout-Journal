@@ -3,7 +3,10 @@
 This runbook starts at the Human Gate. It does not authorize resource creation or deployment by itself.
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
-existing-service candidate/E2E/approval/promotion path as **desired state only**.
+existing-service candidate/E2E/approval/promotion path. C3A runtime reached Build
+and paired 0% candidates, then failed E2E cleanup proof; approval/promotion remain
+unproved. The [C3C fail-closed record](./cd-c3-e2e-recovery-contract.md) retains both
+C3A candidates and unchanged production traffic; activation was returned to UNCONFIGURED.
 Production CD remains inactive. Before Build it stops at 20 retained tags or 40
 revisions per service; retiring old pairs is a separate Human operation and must
 preserve every rollback-eligible Frontend's Backend tag. Pre-approval E2E cleanup

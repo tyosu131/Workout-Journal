@@ -7,14 +7,6 @@ export const CALLED = REPOSITORY + '/.github/workflows/candidate-e2e.yml@refs/he
 export const E2E_SECRET = 'workout-journal-e2e-supabase-secret-key';
 export const RELEASE_TTL = 60 * 60_000;
 
-// Fixed process status only; never forward child diagnostics to the CD runner.
-export function candidateExitCode({ passed, cleanupRequired, cleanup, cleanupFailed, evidenceFailed }) {
-  if (cleanupRequired && (cleanupFailed ||
-    !['auth', 'users', 'notes', 'user_tags'].every(table => cleanup?.[table] === 0))) return 21;
-  if (evidenceFailed) return 22;
-  return passed ? 0 : 20;
-}
-
 const SHA = /^[a-f0-9]{40}$/, DIGEST = /^sha256:[a-f0-9]{64}$/;
 const PROJECT = 'workout-journal-506909', REGION = 'asia-northeast1';
 const SUPABASE_REF = 'krpnnkcipyeasddzbpma';
@@ -45,7 +37,7 @@ export function serving(traffic, service) {
 }
 
 export function validateReleaseManifest(m, target, now = Date.now()) {
-  check(m?.version === 2 && m.repository === REPOSITORY && m.project === PROJECT &&
+  check(m?.version === 2 && m.e2eIdentityVersion === 2 && m.repository === REPOSITORY && m.project === PROJECT &&
     m.region === REGION && SHA.test(m.sourceSha), 'RELEASE_IDENTITY_INVALID');
   const r = m.run;
   check(decimal(r?.id) && decimal(r.attempt) && r.attempt.length <= 4 &&

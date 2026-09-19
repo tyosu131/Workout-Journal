@@ -83,7 +83,7 @@ export function candidateIdentity(m) {
   // Capture-time refresh for recovery does not broaden the approved pair/run.
   const fields = [m.project, m.region, m.sourceSha, m.candidateId,
     m.backend, m.frontend, m.production, m.supabase, m.build];
-  if (m.version === 2) fields.push(m.run, m.e2eSecret);
+  if (m.version === 2) fields.push(m.run, m.e2eSecret, m.e2eIdentityVersion);
   return sha256(JSON.stringify(fields));
 }
 export function browserBase(env = process.env) {

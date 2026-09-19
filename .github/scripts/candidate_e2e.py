@@ -15,15 +15,14 @@ import tempfile
 
 import cd_release as release
 import wif_submission as proof
+import candidate_result as result_contract
 
 E2E_SA = f'workout-journal-e2e@{proof.PROJECT}.iam.gserviceaccount.com'
 E2E_PROVIDER = proof.PROVIDER + '-e2e'
-STEPS = ['login', 'tag-create', 'note-create-save-read', 'tag-use',
-         'Calendar', 'Analytics', 'tag-delete', 'logout']
 CHILD_FAILURES = {20: 'E2E_SCENARIO_FAILED', 21: 'E2E_CLEANUP_UNPROVEN',
                   22: 'E2E_EVIDENCE_REJECTED'}
-PUBLIC_FAILURES = {*CHILD_FAILURES.values(), 'E2E_INTERRUPTED_CLEANUP_UNPROVEN',
-                   'E2E_CHILD_CLEANUP_UNPROVEN'}
+PUBLIC_FAILURES = {*CHILD_FAILURES.values(), 'E2E_CHILD_INTERRUPTED',
+                   'E2E_RESULT_UNAVAILABLE', 'E2E_CHILD_RESULT_MISMATCH'}
 
 
 def crc32c(data):
@@ -55,12 +54,13 @@ def access_secret(ref):
         data[:] = b'\0' * len(data)
 
 
-def child_environment(env, m, filename):
+def child_environment(env, m, filename, result_file):
     allowed = ['PATH', 'HOME', 'TMPDIR', 'GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_REF',
                'GITHUB_SHA', 'GITHUB_WORKFLOW_SHA', 'GITHUB_WORKFLOW_REF', 'GITHUB_EVENT_NAME',
                'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']
     return {**{k: env[k] for k in allowed if k in env},
             'E2E_TARGET': 'candidate:' + m['candidateId'], 'E2E_TARGET_MANIFEST': str(filename),
+            'E2E_RESULT_FILE': str(result_file),
             'E2E_MANIFEST_SHA256': env['CD_MANIFEST_HASH'], 'TZ': 'Asia/Tokyo',
             'PLAYWRIGHT_NO_COPY_PROMPT': '1', 'NEXT_TELEMETRY_DISABLED': '1'}
 
@@ -72,10 +72,19 @@ def controller(env, m, secret):
         fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, 'w') as output:
             output.write(env['CD_MANIFEST'])
+        result_file = Path(temp) / 'result.json'
+        fd = os.open(result_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        expected_stat = os.fstat(fd)
+        os.close(fd)
+        # A durable locator exists before the child can create application data.
+        # The UUID is reconstructible; it and private receipt fields are never logged.
+        print('CD-C3 recovery handle: ' + release.canonical({
+            k: result_contract.initial(m, env['CD_MANIFEST_HASH'])[k]
+            for k in ('candidateId', 'sourceSha', 'githubRunId', 'githubRunAttempt', 'manifestHash', 'recoveryHandle')}), flush=True)
         payload = json.dumps({'secretRef': m['e2eSecret'], 'value': secret}).encode()
         child = subprocess.Popen(['node', 'e2e/candidate-run.mjs'], cwd=release.ROOT,
-                                 env=child_environment(env, m, filename),
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 env=child_environment(env, m, filename, result_file),
+                                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         interrupted = False
 
         def stop(signum, frame):
@@ -95,33 +104,29 @@ def controller(env, m, secret):
                 except subprocess.TimeoutExpired:
                     child.kill()
                     child.communicate()
-            proof.require(not interrupted, 'E2E_INTERRUPTED_CLEANUP_UNPROVEN')
-            proof.require(child.returncode == 0,
-                          CHILD_FAILURES.get(child.returncode, 'E2E_CHILD_CLEANUP_UNPROVEN'))
+            # Read and publish validated sub-results BEFORE interpreting a failed exit.
+            try:
+                result = result_contract.read(result_file, expected_stat, m, env['CD_MANIFEST_HASH'])
+            except proof.GateError as error:
+                result = result_contract.initial(m, env['CD_MANIFEST_HASH'])
+                result_contract.set_failure(result, str(error))
+                result_contract.publish(result, m, env['CD_MANIFEST_HASH'], env)
+                raise proof.GateError('E2E_RESULT_UNAVAILABLE') from None
+            diagnostic = None
+            if interrupted:
+                result_contract.set_failure(result, 'CHILD_INTERRUPTED')
+                diagnostic = 'E2E_CHILD_INTERRUPTED'
+            elif child.returncode != result_contract.exit_code(result):
+                result_contract.set_failure(result, 'CHILD_EXIT_MISMATCH')
+                diagnostic = 'E2E_CHILD_RESULT_MISMATCH'
+            result_contract.publish(result, m, env['CD_MANIFEST_HASH'], env)
+            proof.require(diagnostic is None, diagnostic)
+            proof.require(child.returncode == 0, CHILD_FAILURES.get(child.returncode, 'E2E_CHILD_RESULT_MISMATCH'))
+            return result
         finally:
             for s, handler in previous.items():
                 signal.signal(s, handler)
             payload = b''  # Never forward child stdout/stderr, even on success.
-
-
-def check_report(m):
-    found = []
-    for filename in (release.ROOT / 'e2e/evidence').glob('*.json'):
-        r = json.loads(filename.read_text())
-        if r.get('candidateId') == m['candidateId']:
-            found.append(r)
-    proof.require(len(found) == 1, 'E2E_REPORT_AMBIGUOUS')
-    r = found[0]
-    proof.require(r.get('sourceSha') == m['sourceSha'] and r.get('project') == proof.PROJECT and
-                  r.get('region') == proof.REGION and r.get('result') == 'PENDING_TRAFFIC_VERIFICATION' and
-                  r.get('httpsCookieVerified') is True and r.get('secretLeakCheck') == 'PASS' and
-                  proof.matches(r'p2b-[0-9]{13}-[a-f0-9]{16}', r.get('runId')) and
-                  r.get('cleanup') == {'auth': 0, 'users': 0, 'notes': 0, 'user_tags': 0} and
-                  r.get('steps') == [{'name': n, 'result': 'PASS'} for n in STEPS], 'E2E_CLEANUP_PROOF_MISSING')
-    for part in release.PARTS:
-        proof.require(r.get(part) == {k: m[part][k] for k in
-                      ('service', 'revision', 'tag', 'url', 'digest', 'traffic')}, 'E2E_TARGET_MISMATCH')
-    proof.require(r.get('backendInternalUrl') == m['backend']['url'], 'E2E_TARGET_MISMATCH')
 
 
 def main():
@@ -138,14 +143,12 @@ def main():
         phase = 'candidate-e2e'
         controller(env, m, secret)
         secret = None
-        phase = 'cleanup-verification'
-        check_report(m)
         release.emit(env, 'e2e_hash', env['CD_MANIFEST_HASH'])
         print('CD-C1 E2E + exact-user cleanup: PASS; traffic read-back still required')
         return 0
     except Exception as error:
         code = str(error) if isinstance(error, proof.GateError) and str(error) in PUBLIC_FAILURES else 'E2E_CONTROLLER_FAILED'
-        if code in {'E2E_CLEANUP_UNPROVEN', 'E2E_INTERRUPTED_CLEANUP_UNPROVEN', 'E2E_CHILD_CLEANUP_UNPROVEN'}:
+        if code == 'E2E_CLEANUP_UNPROVEN':
             phase = 'cleanup'
         elif code == 'E2E_EVIDENCE_REJECTED':
             phase = 'e2e-evidence'

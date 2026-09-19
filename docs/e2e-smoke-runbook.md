@@ -12,9 +12,19 @@ owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, source
 `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
 verified; R6's fixed-path failure remains Historical. This auth-only run did not
 read the secret or execute this browser scenario. Full CD runtime proof remains
-Open, including dedicated-secret consumption and dynamic candidate E2E integration.
+Open: C3A consumed the dedicated secret and reached the dynamic scenario controller,
+but E2E/cleanup proof failed. Scenario result remains NOT PROVEN and residual UNKNOWN.
 Local P2A is unchanged; production CD remains inactive and `CD_C1_ACTIVATION`
-UNCONFIGURED. R9 performs no new runtime execution.
+UNCONFIGURED after the authorized C3C deletion. R9 itself performed no runtime execution.
+
+The [C3A incident / C3C recovery contract](./cd-c3-e2e-recovery-contract.md) is Current.
+C3C's source changes passed Fresh Result Audit and add `e2eIdentityVersion: 2`, a candidate-bound UUIDv5
+locator, all-zero exact pre-create checks and strict sanitized result transport.
+Remote cleanup counts and local receipt persistence are separate. Future read-only
+recovery requires reviewed original metadata and a separate Human Gate; the
+historical cleanup CLI refuses CD v2. Do not apply deterministic reconstruction to
+C3A's lost random UUID or use generic listing/SQL to recover it. No new browser
+scenario or cleanup was run in C3C; P2B historical evidence below is unchanged.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.
