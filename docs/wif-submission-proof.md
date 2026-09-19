@@ -8,11 +8,12 @@ not a claim that current `cd.yml` still contains only the submission job.
 
 CD-C2A/B completed E2E infrastructure and dedicated credential provisioning.
 CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). The auth-only
-latest CD-C2D-R4 run `35318084987` failed at Deploy control A with
-`OIDC_ENDPOINT_VALIDATION_FAILED / P1`; B was not run and C skipped. The specific
-endpoint condition and root cause are NOT PROVEN. A/B/C proof remains OPEN;
-[R4 evidence / R5 diagnostics](./cd-c1-candidate-delivery.md#cd-c2d-r4-runtime-evidence-and-r5-endpoint-diagnostics)
-refine the next proof's evidence without a new runtime execution.
+latest CD-C2D-R6 run `35323990499` failed at Deploy control A with
+`OIDC_ENDPOINT_PATH_FAILED / P1`; B was not run and C skipped. Rejection by the
+undocumented fixed path suffix is PROVEN. A/B/C proof remains OPEN;
+[R6 evidence / R7 remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path)
+records removal of that source restriction while retaining origin/security checks.
+R7 performs no runtime execution; downstream authentication remains unverified.
 This is separate from PE-P1C-01B, which remains Closed. No full delivery or
 secret payload consumption is authorized by the proof mode. The current runtime
 record is in the [CD-C2A/B closure](./cd-c1-candidate-delivery.md#current-cd-c2ab-runtime-record).
