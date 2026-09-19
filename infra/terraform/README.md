@@ -45,9 +45,14 @@ above retain their existing evidence owners. Monitoring/alert resources remain
 future scope; no new identity/build hardening requirement is inferred from R8.
 The completed CD-B2 evidence below remains historical evidence for Deploy WIF.
 [C3A/C3C](../../docs/cd-c3-e2e-recovery-contract.md) subsequently recorded successful
-Build and 0% candidates but failed E2E cleanup proof; scenario/residual remain
-unknown. C3C deleted only the release activation variable and changes recovery
-source, not Terraform/IAM/WIF or Cloud Run. It provides no new no-drift plan.
+Build and 0% candidates but failed E2E cleanup proof. Historical scenario remains
+NOT PROVEN and cleanup execution UNPROVEN. C3C source remediation merged via
+PR #106 with post-merge CI PASS; runtime proof is still pending.
+[C3D](../../docs/cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure) closed
+current residual uncertainty: PROVEN_ZERO under verified current schema contract.
+C3C deleted only the release activation variable; C3D was read-only and C3E is
+docs-only. These phases supply no new Terraform/IAM/WIF or Cloud Run mutation
+and no new no-drift plan.
 
 ## Completed CD-B2 provider activation
 

@@ -3,11 +3,15 @@
 Current status: **full candidate delivery FAIL / incomplete; Must 4 Open;
 production CD inactive; `CD_C1_ACTIVATION` UNCONFIGURED**. Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
-CD-C3C source remediation passed Fresh Result Audit and local Pre-PR gates on
-2026-09-19. It is not a new runtime proof, merged release, current-incident recovery
-or authorization to retry.
+CD-C3C source remediation is merged via [PR #106](https://github.com/tyosu131/Workout-Journal/pull/106)
+at main `a332289c95b846aed10c6f9d31c9339e7fc279ed`; required post-merge
+[CI run 35418949564](https://github.com/tyosu131/Workout-Journal/actions/runs/35418949564)
+passed. C3D separately closed current historical-run residual uncertainty:
+**HISTORICAL_RESIDUAL_PROVEN_ZERO under verified current schema contract**.
+C3C remains source-reviewed / CI-passed, runtime not yet proven. Neither closure
+nor source remediation authorizes a release retry.
 
-## Historical C3A incident, still pending evidence
+## Historical C3A execution record
 
 [Run 35414003825](https://github.com/tyosu131/Workout-Journal/actions/runs/35414003825)
 used source `ea3d0919eba549538da2346001ba45409e4a9465`, `main`,
@@ -24,7 +28,7 @@ in `candidate-e2e / e2e`: **cleanup / E2E_CLEANUP_UNPROVEN**.
 | Scenario success or failure | NOT PROVEN / UNKNOWN |
 | Cleanup proof | FAILED / UNPROVEN |
 | Cleanup API failure | NOT PROVEN |
-| Actual residual | UNKNOWN; the diagnostic does not prove residuals exist |
+| Actual residual at C3A | UNKNOWN; the diagnostic did not prove residuals existed; current C3D outcome is recorded below |
 | Previous synthetic UUID / random P2B runId | NOT AVAILABLE from permitted durable evidence |
 | Durable exact recovery handle | LOST / `CURRENT_RUN_EXACT_RECOVERY_HANDLE_MISSING` |
 
@@ -33,12 +37,65 @@ or local receipt persistence failure could all yield exit 21. The parent interpr
 that exit before retaining child sub-results and discarded both streams. The random
 UUID/runId, receipt, counts and safe evidence JSON were runner-local; the completed
 run had no artifacts. The loss of result transport and exact recovery evidence is
-a **Must source defect under Must 4**, independently of the unknown remote data state.
+a **Must source defect under Must 4** identified in C3B and remediated in C3C,
+independently of the then-unknown remote data state.
 
-C3C does not infer or search for the historical random identity. No Supabase Admin
-listing, SQL/Auth inspection, public-table scan, Dashboard search, current-run exact
-recovery or destructive cleanup is performed. Any historical recovery needs a
-separate Human Gate; this new deterministic scheme cannot locate an old random UUID.
+C3C did not infer or search for the historical random identity and performed no
+Supabase discovery or cleanup. C3D used a separate, one-time Human authorization
+for read-only discovery; it did not use the new UUIDv5 locator for the old v1
+random identity. The deterministic scheme cannot retroactively locate that UUID.
+
+## C3D current residual closure
+
+On 2026-09-19, the separately authorized C3D read-only investigation covered
+Run `35414003825`, attempt 1, candidate `cd-35414003825-1`, historical source
+`ea3d0919eba549538da2346001ba45409e4a9465`. C3D freshly confirmed the main/PR/CI
+authority above and activation **UNCONFIGURED**. This C3E documentation closure
+uses that investigation and the supplied closure evidence; it performs no new
+Supabase, Secret Manager, Cloud Run or Cloud Build access.
+
+| Evidence / outcome | C3D result |
+| --- | --- |
+| Dedicated E2E secret version 1 | SUCCESS / exactly one bounded runtime access |
+| Auth discovery | Complete read-only pagination through the terminal empty page; exact historical ownership matches **0** |
+| Synthetic public profile corroboration | Historical synthetic namespace and incident execution window; candidates **0** |
+| Auth residual | **0**, directly established by complete discovery |
+| users / notes / user_tags residual | **0 / 0 / 0 under verified current schema contract**; no recovered UUID, so no exact-UUID application counts were performed |
+| Classification | **HISTORICAL_RESIDUAL_PROVEN_ZERO** |
+| Residual Pending Evidence | **CLOSED** for the current residual/data-hygiene concern |
+
+The Auth predicate required repository `tyosu131/Workout-Journal`, purpose
+`portfolio-p2b`, exact candidate/source above, identity version 1, old runId format,
+and consistent runId epoch / metadata createdAt / synthetic email. The bounded
+window was `2026-09-19T02:00:59.793Z` inclusive to `2026-09-19T02:01:36Z` exclusive,
+based on the command-start log and failed-step end; no extra clock tolerance was
+used. Public corroboration required the old synthetic email shape and an embedded
+epoch in that same window. Only aggregate evidence is retained here.
+
+The [current migration](../supabase/migrations/20260724000000_create_workout_journal_schema.sql),
+[Supabase documentation](../supabase/README.md) and
+[production release evidence](./releases/workout-journal-v1.md) consistently establish:
+
+- `public.users.uuid REFERENCES auth.users(id) ON DELETE CASCADE`
+- `notes.userid REFERENCES public.users(uuid) ON DELETE CASCADE`
+- `user_tags.user_id REFERENCES public.users(uuid) ON DELETE CASCADE`
+
+C3D freshly confirmed the production Backend Supabase destination was consistent
+with the investigation target. Live DDL was **not freshly re-read**; no contradictory
+drift evidence was observed. The conclusion is therefore **PROVEN_ZERO under
+verified current schema contract**, not a claim about all historical DB states.
+
+Historical scenario remains **NOT PROVEN** and historical cleanup execution proof
+remains **UNPROVEN**. C3D reconstructed neither browser step results nor execution-time
+cleanup success; do not report cleanup PASS. The scenario limitation remains a
+historical execution record, not a current residual blocker.
+
+Secret payload was not emitted or stored; no recovered UUID/email was emitted and
+no raw Auth/profile list was saved. Secret handling remained process-private;
+destructive operations were **0**. Candidate traffic stayed 0% and production
+traffic stayed 100% as listed below. C3E performs documentation edits only: dispatch,
+rerun, Supabase access/mutation, Cloud Run, Cloud Build, GitHub settings, Terraform
+and IAM/WIF operations are all **0**.
 
 ## Fail-closed state and retained candidates
 
@@ -152,18 +209,20 @@ generic discovery or destructive fallback is added.
 
 ## Completion boundary
 
-C3C improves future retry/recovery safety only. The historical incident stays
-Pending Evidence. Must 3 remains In progress (monitoring/alert resources deferred
+C3C improves future retry/recovery safety; C3D closes the historical incident
+for current residual/data-hygiene concerns only. Scenario NOT PROVEN and cleanup
+execution UNPROVEN remain historical limitations. Must 3 remains In progress (monitoring/alert resources deferred
 to Must 5 design); Must 4 remains Open. Remaining CD work includes successful
 dynamic candidate E2E/cleanup and candidate re-verification, approval/promotion,
 post-deploy/failure/rollback verification, automatic main-merge + CI-success
 triggering, and separately authorized production activation. Build and candidate
 creation have C3A runtime evidence; the whole chain is not proved.
 
-The implementation stopped at **READY FOR FRESH RESULT AUDIT**. The separate
-audit below permits commit/push/PR and required CI verification only. Merge is a
-Human action; post-merge CI and an old-incident residual-policy Human Decision must
-precede any consideration of another release. No release retry is authorized.
+C3C subsequently merged and passed required post-merge CI; C3D closed residual
+Pending Evidence. C3E stops before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.
+After closure review/merge, the next state is **FRESH_RELEASE_PROOF_READY** for
+separately authorized runtime proof under the remediated source. No release retry,
+activation, production approval or promotion is authorized by this closure.
 
 
 ## Fresh Result Audit and Pre-PR
@@ -189,7 +248,8 @@ were zero, and verify/production were skipped. Both service generations remain 7
 C3A candidates remain 0% and the production pair remains 100%. Audit runtime
 mutation is **NONE**. The prior authorized deletion remains one implementation
 operation; this audit did not repeat it. The old scenario/residual/identity
-uncertainty is a separate incident issue, not a reopened source-remediation finding.
+uncertainty was a separate incident issue at this audit, not a reopened
+source-remediation finding. C3D subsequently closed only current residual uncertainty.
 
 The review verified all release-manifest bindings before API use; exact columns
 against repository migrations (`users.uuid`, `notes.userid`, `user_tags.user_id`);

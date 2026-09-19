@@ -147,8 +147,9 @@ against main `ea3d0919eba549538da2346001ba45409e4a9465`. This is local source
 verification; the separate Fresh Result Audit below passed. It is not a new release or cleanup proof.
 Fresh GitHub read-back reconfirmed incident `35414003825`, exact SHA, attempt 1,
 failure: preflight/candidate success, candidate-e2e failure, verify/production skipped,
-and zero artifacts. Scenario remains NOT PROVEN, residual UNKNOWN, old random
-identity/recovery handle LOST. Historical R2/R4/R6 records remain unchanged.
+and zero artifacts. At C3C, scenario was NOT PROVEN, residual UNKNOWN, old random
+identity/recovery handle LOST. C3D later closed current residual uncertainty only
+(see below). Historical R2/R4/R6 records remain unchanged.
 
 Passed with Node **24.18.0**:
 
@@ -214,10 +215,38 @@ diff check found one extra EOF blank line in the new release fixture; it was rem
 and the staged check rerun. Audit records and Current-status references were updated.
 
 Local Pre-PR passed final scope, diff, 63-link and credential-safety checks.
-Commit/push/PR and required CI verification are authorized by the separate audit task.
-Merge remains Human action. Old incident residual **UNKNOWN** remains unresolved;
-post-merge CI and a separate residual-policy Human Decision are the next gates.
-No release retry, recovery, approval or promotion is authorized by this audit.
+At that audit, commit/push/PR and required CI verification were authorized; merge
+remained Human action. Old incident residual was **UNKNOWN**, with post-merge CI
+and a separate residual-policy Human Decision still pending. No release retry,
+recovery, approval or promotion was authorized by that audit.
+
+### CD-C3D Residual Investigation and C3E Closure
+
+C3D confirmed PR #106 merged at main `a332289c95b846aed10c6f9d31c9339e7fc279ed`
+and required post-merge CI run `35418949564` SUCCESS. C3C source remediation is
+source-reviewed / CI-passed; runtime is not yet proven.
+
+The [C3D aggregate evidence and claim boundary](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure)
+record one successful dedicated E2E secret version 1 access, complete Auth pagination,
+0 exact historical ownership matches and 0 synthetic public candidates. Current
+Auth/users/notes/user_tags residual outcome is **0/0/0/0 under verified current
+schema contract**; application counts are schema-based conclusions, not fresh
+exact-UUID counts. Production Supabase destination and repository schema/release
+evidence were consistent. Live DDL was not freshly re-read; no contradictory drift
+evidence was observed. No secret payload, UUID/email or raw user list was emitted
+or saved; no destructive operation occurred.
+
+Current residual Pending Evidence is **CLOSED**. Historical scenario **NOT PROVEN**
+and cleanup execution **UNPROVEN** remain unchanged. C3D used no retroactive UUIDv5
+recovery and did not verify C3C runtime. Activation stayed UNCONFIGURED, candidates
+0%, production 100%; Must 3 stays In progress and Must 4 Open.
+
+C3E reflects this evidence through documentation only. Validation is limited to
+diff/whitespace checks, local links, Current/Historical/Future consistency and
+sensitive-data inspection. No application/runtime validation, Supabase access,
+cloud operation, dispatch/rerun, settings or Terraform/IAM/WIF mutation is performed.
+The handoff is **READY FOR FRESH RESULT AUDIT**, before commit/push/PR; after closure
+review/merge, **FRESH_RELEASE_PROOF_READY** still requires separate authorization.
 
 ## CD-C2D-R8 Runtime Evidence and R9 Documentation Closure
 
