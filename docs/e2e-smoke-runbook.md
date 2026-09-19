@@ -13,18 +13,25 @@ owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, source
 verified; R6's fixed-path failure remains Historical. This auth-only run did not
 read the secret or execute this browser scenario. Full CD runtime proof remains
 Open: C3A consumed the dedicated secret and reached the dynamic scenario controller,
-but E2E/cleanup proof failed. Scenario result remains NOT PROVEN and residual UNKNOWN.
+but E2E/cleanup proof failed. Historical scenario remains NOT PROVEN and cleanup
+execution UNPROVEN. [C3D](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure)
+closed current residual uncertainty: PROVEN_ZERO under verified current schema
+contract, based on complete Auth discovery (0 matches) and public corroboration
+(0 candidates). This does not establish execution-time cleanup success.
 Local P2A is unchanged; production CD remains inactive and `CD_C1_ACTIVATION`
 UNCONFIGURED after the authorized C3C deletion. R9 itself performed no runtime execution.
 
 The [C3A incident / C3C recovery contract](./cd-c3-e2e-recovery-contract.md) is Current.
-C3C's source changes passed Fresh Result Audit and add `e2eIdentityVersion: 2`, a candidate-bound UUIDv5
+C3C's source changes merged in PR #106 with required post-merge CI PASS and add
+`e2eIdentityVersion: 2`, a candidate-bound UUIDv5
 locator, all-zero exact pre-create checks and strict sanitized result transport.
 Remote cleanup counts and local receipt persistence are separate. Future read-only
 recovery requires reviewed original metadata and a separate Human Gate; the
 historical cleanup CLI refuses CD v2. Do not apply deterministic reconstruction to
-C3A's lost random UUID or use generic listing/SQL to recover it. No new browser
-scenario or cleanup was run in C3C; P2B historical evidence below is unchanged.
+C3A's lost random UUID. C3D's one-time authorized read-only Auth listing and synthetic
+profile corroboration are separate from the runtime contract and authorize no
+generic discovery fallback. No new browser scenario or cleanup ran in C3C/C3D;
+C3C runtime proof remains pending. P2B historical evidence below is unchanged.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.

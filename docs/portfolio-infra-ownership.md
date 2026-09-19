@@ -23,8 +23,11 @@ production CD inactive; `CD_C1_ACTIVATION` is UNCONFIGURED. R9 changes no IAM/WI
 configuration and performs no runtime execution or new cloud metadata check.
 C3A later proved Build and paired 0% candidate creation but failed E2E cleanup proof.
 [C3C](./cd-c3-e2e-recovery-contract.md) returned activation to UNCONFIGURED and adds
-local future recovery safety without changing infrastructure ownership. The
-historical incident's scenario is NOT PROVEN and residual UNKNOWN.
+merged future recovery safety (PR #106, post-merge CI PASS) without changing
+infrastructure ownership; runtime proof remains pending. Historical scenario is
+NOT PROVEN and cleanup execution UNPROVEN. [C3D](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure)
+closed current residual uncertainty: PROVEN_ZERO under verified current schema
+contract. C3E changes documentation only; monitoring/alert scope is unchanged.
 
 Terraform and CD must not compete for the same mutable production state.
 

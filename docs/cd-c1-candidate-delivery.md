@@ -9,8 +9,9 @@ The [R8 evidence / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure) owns the
 Current isolated authentication/isolation proof. Full CD runtime proof remains **OPEN**.
 C3A built and created the paired 0% candidates but failed at cleanup proof;
 [C3C incident and recovery contract](./cd-c3-e2e-recovery-contract.md) owns the
-current fail-closed state and source remediation. Fresh Result Audit and local
-Pre-PR gates passed; merge remains a Human action after required PR CI.
+current fail-closed state, merged source remediation and C3D residual closure.
+PR #106 merged at `a332289c95b846aed10c6f9d31c9339e7fc279ed`; required
+post-merge CI run `35418949564` passed.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
@@ -46,23 +47,28 @@ Must 3 or Must 4. Do not repeat their provisioning or secret-version insertion.
 source `ea3d0919eba549538da2346001ba45409e4a9465`, attempt 1, failed at
 `candidate-e2e / e2e`: `cleanup / E2E_CLEANUP_UNPROVEN`. Preflight, Build,
 immutable images and paired 0% candidate creation passed. Scenario result is
-NOT PROVEN, actual residual UNKNOWN, and the historical random UUID/P2B runId
+NOT PROVEN, cleanup execution UNPROVEN, residual initially UNKNOWN, and the historical random UUID/P2B runId
 and exact recovery receipt are unavailable. Verify-candidate and production were
-skipped. This is not evidence that residuals exist or that the cleanup API failed.
+skipped. C3D separately established **HISTORICAL_RESIDUAL_PROVEN_ZERO under
+verified current schema contract**: complete Auth discovery matched 0 and public
+synthetic candidates were 0. Residual Pending Evidence is CLOSED; this does not
+prove historical cleanup execution or scenario success. See the
+[C3D evidence boundary](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure).
 
 C3C deleted `CD_C1_ACTIVATION` exactly once under explicit Human authorization;
 read-back on 2026-09-19 confirmed **UNCONFIGURED**. Both C3A candidates are retained
 at 0%; production Backend `workout-journal-backend-00003-luc` and Frontend
-`workout-journal-frontend-00003-xar` remain at 100%. No current-incident discovery,
-cleanup, new dispatch or promotion was performed. Must 3 stays In progress,
+`workout-journal-frontend-00003-xar` remain at 100%, reconfirmed in C3D. C3C
+performed no incident discovery; C3D performed read-only discovery only, with no
+cleanup, new dispatch or promotion. Must 3 stays In progress,
 Must 4 Open, production CD inactive.
 
 The [C3C source contract](./cd-c3-e2e-recovery-contract.md) adds deterministic
 candidate-bound UUIDv5 identity, exact pre-create zero checks, separate read-only
 recovery ownership, and a strict private child result channel. Only validated
 safe results reach logs/summary, including failed-child sub-results. These are
-source changes with Fresh Result Audit PASS and future runtime verification pending;
-they do not recover or prove cleanup for C3A.
+merged source changes with required post-merge CI PASS and future runtime verification
+pending; they do not retroactively recover the old v1 identity or prove C3A cleanup execution.
 
 ## CD-C2D-R8 runtime proof and R9 closure
 
