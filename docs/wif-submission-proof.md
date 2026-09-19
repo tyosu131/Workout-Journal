@@ -2,21 +2,19 @@
 
 This is the durable **CD-B2 executed-proof record** at the SHA below. CD-C1 merged
 [gated delivery and dedicated E2E](./cd-c1-candidate-delivery.md) source in
-`cd.yml`; that source is not activated and does not supersede this runtime evidence.
+`cd.yml`; its release mode remains inactive and does not supersede this runtime evidence.
 The CD-A workflow/command descriptions below refer to the recorded proof path,
 not a claim that current `cd.yml` still contains only the submission job.
 
 CD-C2A/B completed E2E infrastructure and dedicated credential provisioning.
-CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). The auth-only
-latest CD-C2D-R6 run `35323990499` failed at Deploy control A with
-`OIDC_ENDPOINT_PATH_FAILED / P1`; B was not run and C skipped. Rejection by the
-undocumented fixed path suffix is PROVEN. A/B/C proof remains OPEN;
-[R6 evidence / R7 remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path)
-records removal of that source restriction while retaining origin/security checks.
-R7 performs no runtime execution; downstream authentication remains unverified.
+CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). The isolated
+auth-only proof is now **CLOSED / PASS**, A/B/C **PASS**, owned by
+[R8 run `35411846680` / R9 closure](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure)
+at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7's fixed-path
+remediation is runtime verified; R6's path failure remains Historical evidence.
 This is separate from PE-P1C-01B, which remains Closed. No full delivery or
-secret payload consumption is authorized by the proof mode. The current runtime
-record is in the [CD-C2A/B closure](./cd-c1-candidate-delivery.md#current-cd-c2ab-runtime-record).
+secret payload consumption ran in R8. Production CD remains inactive and
+`CD_C1_ACTIVATION` UNCONFIGURED; R9 adds no runtime execution or authorization.
 
 Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
 Must 3 In progress; WIF `ACTIVE` / `disabled = false`; production CD inactive.**
@@ -95,8 +93,11 @@ and production application state were not changed. Publishing this documentation
 is a separate Git commit/push/PR operation; it does not repeat provider activation,
 repository-variable updates, workflow dispatch, Build submission or Cloud Run operations.
 
-PE-P1C-01B is Closed. Must 3 stays In progress for remaining identity/build
-hardening. Must 4 stays Open: automatic main-merge + CI-success delivery,
+PE-P1C-01B is Closed. Must 3 stays In progress: monitoring and alert resources
+remain unimplemented, deferred to Must 5 design in the
+[ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix).
+R8 adds isolated WIF evidence without closing that remaining scope.
+Must 4 stays Open: automatic main-merge + CI-success delivery,
 candidate deployment and exact pairing, E2E integration, runtime Environment
 approval, promotion, post-deploy verification and rollback/failure behavior were
 still unimplemented at CD-B2 closure. CD-C1 now adds their gated source contract,

@@ -6,13 +6,15 @@ fixed SHA/pair below is historical proof, not active CD authority. GitHub Action
 requires v2 metadata from the exact current release. CD-C2A/B are complete:
 E2E identity/container/IAM are provisioned and runtime verified; Supabase actual
 key display name is `candidate_e2e`, Secret Manager version 1 is ENABLED (one version).
-CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false). Latest CD-C2D-R6
-run `35323990499` failed at A with `OIDC_ENDPOINT_PATH_FAILED / P1`.
-The undocumented fixed path suffix rejection is PROVEN; R7 removes that source
-restriction while preserving origin/security checks. B/C remain NOT PROVEN. The isolated auth-only mode
-never reads the secret or runs this scenario. WIF and full CD runtime proof remain
-Open; see [R6 evidence / R7 remediation](./cd-c1-candidate-delivery.md#cd-c2d-r6-runtime-evidence-and-r7-opaque-endpoint-path).
-Local P2A is unchanged; production CD remains inactive.
+CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false).
+[R8 run `35411846680` / R9 closure](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure)
+owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, source
+`6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
+verified; R6's fixed-path failure remains Historical. This auth-only run did not
+read the secret or execute this browser scenario. Full CD runtime proof remains
+Open, including dedicated-secret consumption and dynamic candidate E2E integration.
+Local P2A is unchanged; production CD remains inactive and `CD_C1_ACTIVATION`
+UNCONFIGURED. R9 performs no new runtime execution.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.

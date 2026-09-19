@@ -1,11 +1,12 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
 Status: **CD-C1 merged; CD-C2A/B complete; CD-C2C provider activation COMPLETE;
-CD-C2D-R6 failed at A / P1 path guard; R7 removes the undocumented fixed path suffix in source, runtime verification pending, WIF proof OPEN.** Must 3 is **In progress**,
+CD-C2D-R8 isolated WIF proof CLOSED / PASS (A/B/C PASS); R7 remediation runtime verification PASS.** Must 3 is **In progress**,
 Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
 runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
-E2E positive/negative WIF and full CD runtime proofs remain **OPEN**.
+The [R8 evidence / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure) owns the
+Current isolated authentication/isolation proof. Full CD runtime proof remains **OPEN**.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
@@ -34,6 +35,106 @@ No changes / exit 0**. `CD_C1_ACTIVATION` is **UNCONFIGURED**.
 Neither CD-C2A nor CD-C2B dispatched CD, submitted a Build, created a Run revision,
 changed traffic or published an image. Their runtime completion does not close
 Must 3 or Must 4. Do not repeat their provisioning or secret-version insertion.
+
+## CD-C2D-R8 runtime proof and R9 closure
+
+**Current: isolated WIF proof CLOSED / PASS; A PASS, B PASS, C PASS.** Evidence
+owner is [R8 run 35411846680](https://github.com/tyosu131/Workout-Journal/actions/runs/35411846680),
+source **`6c0b91579f2caff02e9e190249c4c4bd73e877d1`**. R9 freshly re-acquired
+GitHub run metadata, attempt-1 jobs/steps and allowlisted proof log records on
+2026-09-19; closure does not rely on the prior completion report alone.
+
+| Run identity | Verified value |
+| --- | --- |
+| Workflow / mode | `.github/workflows/cd.yml` / `wif-proof` |
+| Event / branch | `workflow_dispatch` / `main` |
+| Head SHA | `6c0b91579f2caff02e9e190249c4c4bd73e877d1` |
+| Attempt / conclusion | `1` / `success` |
+| Created / completed run update | `2026-09-19T01:11:11Z` / `2026-09-19T01:11:32Z` |
+| R8 execution count | One dispatch; zero reruns or second dispatches |
+
+The exact source includes [merged PR #104](https://github.com/tyosu131/Workout-Journal/pull/104);
+post-merge [CI 35411423165](https://github.com/tyosu131/Workout-Journal/actions/runs/35411423165)
+passed `Lint, build, and test baseline` before R8. Both proof jobs checked out the
+exact source. The safe runtime records are:
+
+| Check | providerRole | targetSA | expected | phase | result |
+| --- | --- | --- | --- | --- | --- |
+| A | `deploy` | `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com` | `AUTH_SUCCESS` | `P4` | **PASS** |
+| B | `deploy` | `workout-journal-e2e@workout-journal-506909.iam.gserviceaccount.com` | `IAM_PERMISSION_DENIED` | `P5` | **PASS** |
+| C | `e2e` | `workout-journal-e2e@workout-journal-506909.iam.gserviceaccount.com` | `AUTH_SUCCESS` | `P4` | **PASS** |
+
+Both emitted envelopes were `wifProof: PASS`; no failure code was emitted.
+[Job 105812872442](https://github.com/tyosu131/Workout-Journal/actions/runs/35411846680/job/105812872442)
+(`wif-control-negative`) and its `Deploy control then expected E2E impersonation denial`
+step succeeded. [Job 105812893686](https://github.com/tyosu131/Workout-Journal/actions/runs/35411846680/job/105812893686)
+(`wif-positive / wif-proof`) and its `Dedicated E2E provider authentication only`
+step succeeded after A/B, through `.github/workflows/candidate-e2e.yml`.
+
+The [exact proof source](https://github.com/tyosu131/Workout-Journal/blob/6c0b91579f2caff02e9e190249c4c4bd73e877d1/.github/scripts/e2e_wif_proof.py)
+calls `federate` once for A/B, then passes that same STS token to Deploy-SA
+impersonation and to E2E-SA negative impersonation. B neither obtains another STS
+token nor uses A's impersonated Deploy-SA token. B can pass only with **HTTP 403,
+`error.code = 403`, `error.status = PERMISSION_DENIED`**. This establishes the
+expected denial through that exact executed contract; no raw response or token
+comparison is retained. A proves Deploy-provider federation and Deploy-SA
+impersonation; C proves E2E-provider federation and E2E-SA impersonation through
+the reusable workflow. These claims apply to this run/source, not every identity,
+IAM path, future GitHub run or full production delivery path.
+
+**R7 remediation runtime verification: PASS.** The fixed `/idtoken` suffix
+requirement is absent; the runner-provided path remains opaque. Endpoint presence,
+parse, HTTPS, GitHub Actions hostname restriction, port, userinfo prohibition and
+fragment prohibition remain. R8 advanced beyond the historical R6 path boundary
+and completed A/B/C. R6's `OIDC_ENDPOINT_PATH_FAILED` remains Historical evidence;
+R2's broad P1 and R4's endpoint-validation failures are not reclassified.
+
+All release jobs were **SKIPPED**: `preflight`, `candidate`, `candidate-e2e`,
+`verify-candidate`, `production`, and the reusable workflow's `wif-positive / e2e`.
+R8 did not execute `mode=release`, Cloud Build, Cloud Run candidate deployment,
+Secret Manager E2E credential consumption, production Environment approval or
+traffic promotion. Proof authentication API calls were R8's intended action.
+`CD_C1_ACTIVATION` was freshly read back **UNCONFIGURED** in R9. Existing provider,
+IAM, Terraform and secret metadata records are not new R9 cloud read-backs.
+
+**Future / remaining scope:** Must 3 stays **In progress**. Its concrete remaining
+gap is monitoring and alert resources, explicitly unimplemented and deferred to
+Must 5 design in the [ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix)
+and required where applicable by the [Completion Contract](./portfolio-completion-contract.md#must-3-infrastructure-as-code--identity).
+R8 adds isolated Deploy/E2E trust-boundary evidence; it does not implement those
+resources. No additional identity/build hardening gap is inferred, and automatic
+default-SA-grant prevention stays Backlog / separate hardening.
+
+Must 4 stays **Open**: the merged release source still needs full candidate
+delivery runtime proof (Build/digests, exact Backend tagged URL and paired Frontend,
+dedicated-secret E2E and cleanup), production approval integration, Backend then
+Frontend promotion, post-deploy verification and failure/rollback verification.
+Automatic main-merge + CI-success triggering is still unimplemented; `cd.yml`
+has only `workflow_dispatch`. Production CD activation remains a separate Human
+Gate; production CD is **inactive**. Isolated WIF success is no longer a remaining
+prerequisite. Portfolio Done is not established.
+
+R9 is documentation closure only: no dispatch, rerun, Terraform operation, IAM/WIF
+change, Secret Manager access/mutation, Build, Cloud Run mutation, GitHub settings
+change or production release. No endpoint value, token, credential, authorization
+header or raw sensitive response is included. Implementation handoff was **READY
+FOR FRESH RESULT AUDIT**, before commit/push/PR. The R1-R7 sections below retain their Historical
+results and phase-local gates; they do not override the Current R8 closure.
+
+The separate **R9 Fresh Result Audit First Pass passed on 2026-09-19**, before
+any audit edit or staging: **Must 0 / Should 0 / Pending Evidence 0 / Decision
+Needed 0**. It freshly re-acquired R8 run/jobs/safe logs, main source identity,
+PR #104 and required post-merge CI, and `CD_C1_ACTIVATION` UNCONFIGURED. Actual
+A/B/C source semantics and the complete eight-file diff agreed with the runtime
+records. The canonical R1-R7 block was byte-for-byte identical to main; all 64
+local links resolved, and credential checks passed. Must 3's remaining resource
+scope comes from the existing monitoring/alert ownership decision deferred to
+Must 5 design; Must 4 retains full release verification and automatic triggering.
+No remediation was needed. Only this audit record and its verification summary
+were updated after First Pass; Pre-PR rechecks those additions before staging.
+Commit/push/PR and required CI verification may proceed under the Pre-PR gate;
+merge, new WIF proof, full release execution and production activation are not
+part of this audit. Audit runtime mutation remains **NONE**.
 
 ## CD-C2D failed proof and CD-C2D-R1 diagnosis
 
@@ -480,7 +581,8 @@ trusted-main code could never request credentials through another provider.
 The existing Deploy provider's caller trust is unchanged; all code that can run
 inside `cd.yml`, including the reusable workflow, remains security-sensitive.
 Provider mapping/grant changes require renewed cross-provider review. Runtime
-positive/negative federation tests remain OPEN.
+positive/negative federation proof is **CLOSED / PASS** for the exact
+[R8 run/source](#cd-c2d-r8-runtime-proof-and-r9-closure), within the A/B/C scope above.
 
 Primary contracts: [GitHub reusable-workflow OIDC](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-with-reusable-workflows),
 [Google mappings and conditions](https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.locations.workloadIdentityPools.providers),
@@ -495,9 +597,9 @@ choice: **`wif-proof` (default)** or `release`. Only release requires repository
 variable `CD_C1_ACTIVATION == approved`; it remains **UNCONFIGURED**. The variable
 is an activation latch, not a production approval. Release also requires an exact
 numeric `e2e_secret_version`, checked by preflight before Google authentication.
-A later Human Gate must review/merge source, freshly plan and approve provider
-activation, then separately approve proof dispatch. Full release activation and
-credential consumption remain later gates; key/version creation is already complete.
+Provider activation completed in CD-C2C; merged R7 source passed the separately
+approved R8 proof. Full release activation and credential consumption remain
+later gates; key/version creation is already complete. R9 authorizes none of them.
 
 Release dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
 The controller independently queries successful main **push** CI and its required
@@ -512,7 +614,7 @@ pinned, and checkout does not persist credentials. CI explicitly has only
 `id-token: write` is limited to Google-authenticated jobs; only CI inspection jobs
 receive `actions: read`. E2E is a same-repository, same-commit reusable call.
 
-## Isolated WIF proof (CD-C2D failed at A; runtime OPEN)
+## Isolated WIF proof contract (R8 CLOSED / PASS)
 
 `mode=wif-proof` does not need a manifest, secret version or activation variable.
 It has exactly this dependency chain, with no production Environment:
@@ -551,7 +653,8 @@ release/approval wait; this deliberately trades convenience for a single queue.
 API contracts: [GitHub OIDC claims](https://docs.github.com/en/actions/reference/security/oidc),
 [STS token exchange](https://docs.cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token)
 and [IAM access-token generation](https://docs.cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateAccessToken).
-Offline tests mock all authentication endpoints; actual A/B/C proof is **OPEN**.
+Offline tests mock all authentication endpoints. Actual A/B/C proof is
+**CLOSED / PASS** under [R8 evidence](#cd-c2d-r8-runtime-proof-and-r9-closure).
 
 ## Dynamic candidate provenance
 

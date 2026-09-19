@@ -12,11 +12,11 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1C-D2 Compute default SA Editor cleanup (Current / Complete):** P1C-D found zero current active dependencies and returned `SAFE_CANDIDATE`; after a separate Human Gate, P1C-D2 removed only the legacy project-level `roles/editor` binding outside Terraform. The Compute default Service Account still exists, remains enabled, and is not Terraform-managed.
 - **CD-B1 / CD-B2 WIF activation (Current / Complete):** CD-B1 prepared the provider desired state. On 2026-09-06, CD-B2 applied exactly one in-place update to `disabled = false` and the reviewed neutral description; actual provider is `ACTIVE` / `disabled = false`, and the normally locked post-apply plan reported `0 add / 0 change / 0 destroy`.
 
-PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress for remaining identity/build hardening; Must 4 is Open and production CD remains inactive.
+PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress: monitoring and alert resources are unimplemented and deferred to Must 5 design in the [ownership matrix](../../docs/portfolio-infra-ownership.md#approved-ownership-matrix). Must 4 is Open and production CD remains inactive.
 
 This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired **Deploy** provider state agree on `disabled = false`. The separate E2E provider's current/desired distinction is below. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
-## CD-C2A/B complete; CD-C2C activation complete; WIF proof open
+## CD-C2A/B complete; CD-C2C activation complete; R8 isolated WIF proof closed
 
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`. CD-C2A separately
 applied its five resources in [`candidate_e2e.tf`](./candidate_e2e.tf): E2E SA,
@@ -28,14 +28,21 @@ E2E SA has zero user-managed keys; exact-secret IAM was runtime read-back verifi
 
 CD-C2C activation is **COMPLETE**. Both providers are **ACTIVE / disabled=false**;
 R1 read-back confirmed **35 resources / No changes / exit 0**. Mapping, condition,
-issuer, pool and IAM remain unchanged. CD-C2D run `35229757740` failed at A;
-B was not run and C skipped. A/B/C proof remains OPEN. No source-validation plan is
+issuer, pool and IAM remain unchanged. Historical CD-C2D run `35229757740` failed
+at A; B was not run and C skipped. The subsequent R2/R4/R6 failures remain
+Historical. Current isolated A/B/C proof is **CLOSED / PASS** under
+[R8 run `35411846680` / R9 closure](../../docs/cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure),
+source `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1; all three checks
+passed and R7 remediation is runtime verified. No source-validation plan is
 approved for apply. Optional null-to-empty normalization with a no-op action must
 be distinguished from planned changes. Existing Deploy WIF remains enabled/proven.
 
 See the [current runtime record and isolated proof contract](../../docs/cd-c1-candidate-delivery.md).
-Positive/negative E2E WIF and full CD proof remain **OPEN**; `CD_C1_ACTIVATION` is
+Full CD proof remains **OPEN**; `CD_C1_ACTIVATION` is
 **UNCONFIGURED**, Must 3 In progress, Must 4 Open and production CD inactive.
+R9 performs no Terraform or cloud operation; the provider/resource/no-op statements
+above retain their existing evidence owners. Monitoring/alert resources remain
+future scope; no new identity/build hardening requirement is inferred from R8.
 The completed CD-B2 evidence below remains historical evidence for Deploy WIF.
 
 ## Completed CD-B2 provider activation
@@ -123,7 +130,7 @@ Official references: [Terraform installation and current release](https://develo
 | `google_service_account.e2e` | Provisioned keyless `workout-journal-e2e` |
 | `google_secret_manager_secret.e2e_supabase_secret_key` | Dedicated E2E container metadata only |
 | `google_secret_manager_secret_iam_member.e2e_supabase_secret_accessor` | E2E SA Accessor on that exact secret |
-| `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual ACTIVE / disabled=false; activation COMPLETE, WIF proof OPEN |
+| `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual ACTIVE / disabled=false; activation COMPLETE, isolated A/B/C WIF proof CLOSED / PASS for R8's exact run/source |
 | `google_service_account_iam_member.e2e_workload_identity_user` | Exact `attribute.e2e_boundary/candidate-e2e-v1` impersonation member |
 
 Remote state contains exactly these 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary.
