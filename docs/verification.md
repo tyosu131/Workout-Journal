@@ -325,6 +325,10 @@ claim completion of that separate audit or successful production promotion.
 
 ## CD-C3P HTTP Status Diagnostic Validation
 
+Historical source-validation record. Subsequent C3P runtime and C3R2 diagnosis
+are recorded in [C3P / C3R2 evidence](./cd-c1-candidate-delivery.md#c3p-runtime-c3r2-authorization-proof-and-c3s-desired-state);
+the NOT YET/PENDING classifications below describe that earlier phase.
+
 Baseline: `5586ca9fafa7b9b42170cf261e49a9d24bdd8023`; required
 [CI `35488494492`](https://github.com/tyosu131/Workout-Journal/actions/runs/35488494492)
 SUCCESS was read back. Implementation branch: `fix/cd-c3p-http-status`, created
@@ -406,6 +410,95 @@ Runtime mutation **NONE**; no dispatch, rerun, approval, Cloud Run/IAM mutation,
 Terraform apply, Secret access, Supabase mutation or activation creation.
 No commit, push or PR. This implementation stops at **READY FOR FRESH RESULT AUDIT**;
 it does not claim that the separate audit or production runtime verification passed.
+
+## CD-C3S Least-Privilege IAM Validation
+
+Authority: main / HEAD / `origin/main`
+`e922feab245546fb308621782dc7d067eb469833`, required CI `35495319133` SUCCESS.
+Implementation branch: `fix/cd-c3s-operation-iam`, started clean from that SHA.
+The [C3P / C3R2 evidence](./cd-c1-candidate-delivery.md#c3p-runtime-c3r2-authorization-proof-and-c3s-desired-state)
+owns **403 / OPERATION_GET runtime PROVEN**, **current missing effective allow
+PROVEN**, and **historical root cause STRONGLY_SUPPORTED_NOT_PROVEN**.
+
+C3S adds only a project custom role containing `run.operations.get` and an
+additive Deploy SA project IAM member. [Design comparison and eligibility](../infra/terraform/README.md#cd-c3s-operation-iam-desired-state-not-applied)
+record why broader project Developer/Viewer roles were rejected. Existing
+service-level Developer grants and all CD controller/workflow behavior remain
+unchanged. `ci.yml` only adds Terraform `1.16.0` and backend-disabled initialization
+of the locked Google `7.45.0` provider so the existing Python discovery runs the
+new tests without cloud credentials or a backend connection.
+
+Validation on 2026-09-20:
+
+```bash
+terraform -chdir=infra/terraform fmt -check
+terraform -chdir=infra/terraform validate
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -q
+actionlint .github/workflows/ci.yml .github/workflows/cd.yml .github/workflows/candidate-e2e.yml
+git diff --check
+```
+
+Results: **123 Python tests PASS**, Terraform fmt/validate PASS, actionlint
+**1.7.12 PASS**. The existing Node `24.18.0` was selected through per-command PATH;
+no dependency or host configuration was changed.
+
+[`test_cd_operation_iam.py`](../.github/scripts/test_cd_operation_iam.py) evaluates
+the actual Terraform HCL using a Google mock provider and plan-only test runs in
+disposable roots without backend/import blocks. It inspects evaluated permission
+sets, principals, resource scopes and all project IAM grants; it does not merely
+check that new source strings exist. Both service grants must remain present.
+
+The initial implementation's **16/16 mutants were detected: 15 by semantic
+assertions and 1 at schema level**: permission removal;
+operation list/delete or unrelated Run permission addition; substitution with
+project Developer/Admin; wrong principal; wrong custom-role/member project;
+authoritative project binding/policy; removal of either service grant; and extra
+project Developer/Admin/Viewer grants. The empty permission set is rejected by
+the locked provider's minimum-item schema validation; the other 15 produce
+plans rejected by contract assertions. Syntax/plugin failures receive no credit.
+
+The Fresh Result Audit identified a missing CI assertion: replacing the custom
+role reference with its correct literal name preserved evaluated IAM values but
+removed Terraform's creation dependency. The tests now also inspect Terraform's
+dependency graph and include that regression case: **17 mutants, comprising 16
+semantic assertion cases and 1 schema-level case**. Graph/startup failures are
+errors, not mutation-detection credit. The actual IAM source retains the `.name`
+reference and required implicit ordering.
+
+Backend preflight confirmed the dedicated GCS bucket/project/location, uniform
+bucket-level access, public-access prevention and versioning, workspace `default`,
+and remote state **35 resources / serial 8**. No secret-version resource exists.
+The saved plan at **2026-09-20T08:59:48Z** used normal locking, `-lock-timeout=60s`,
+default refresh, `-input=false`, `-detailed-exitcode` and `-out`; exit **2**.
+Plan JSON machine verification through `assert_saved_plan` passed:
+
+- exactly two `create` actions, only
+  `google_project_iam_custom_role.deploy_run_operation_reader` and
+  `google_project_iam_member.deploy_run_operation_reader`;
+- all 35 existing resources and outputs no-op; zero update/delete/replace/import;
+- permissions exactly `["run.operations.get"]`, exact Deploy SA and project;
+- member role expression references the new custom role's `.name`. That value is
+  computed until apply; project/role ID, dependency and the mock-evaluated role
+  name agree on `projects/workout-journal-506909/roles/workoutJournalRunOperationReader`.
+
+`resource_drift` has **one** refresh-only entry:
+`google_artifact_registry_repository.workout_journal.update_time`, from
+`2026-09-06T02:50:20.126882Z` to `2026-09-20T07:17:50.427208Z`. The locked provider
+schema confirms `computed=true / optional=false / required=false`; no other
+attribute changed and the planned action is no-op. This follows the existing
+computed-only drift rule; **semantic unrelated drift: NONE**. It is not described
+as zero refresh drift, and `-refresh=false` was not used.
+
+**Current remote state: 35; planned: +2. Apply: NOT YET. C3S runtime: NOT YET.**
+Saved plans remain local, ignored source-validation evidence. **No C3S saved
+plan may be applied after commit, PR or merge.** A future apply must use merged
+exact source, fresh current remote state and a new saved plan approved through
+a separate Human Gate.
+Policy Troubleshooter remains enabled outside Terraform; C3S API mutation is 0
+and cleanup/codification is deferred. Runtime mutation **NONE**: no apply, IAM,
+Cloud Run, release/approval/rerun, activation, Secret payload or Supabase operation.
+No commit, push or PR. Stop at **READY FOR FRESH RESULT AUDIT**, then require a
+separate Human-gated apply and control/Operation authorization proof before release.
 
 ## CD-C3C Recovery Contract Validation
 

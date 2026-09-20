@@ -22,15 +22,18 @@ candidate delivery PASS and C3I promotion/rollback diagnostic durability runtime
 proven, but successful production promotion remains unproven. C3K technical root
 cause is **NOT PROVEN**. Later [C3N / C3O / C3P](#c3n-runtime-evidence-c3o-diagnosis-and-c3p-http-status)
 runtime-proved C3M's observed `HTTP_STATUS / OPERATION_GET` classification;
-the HTTP integer was not captured and root cause remains **PENDING_EVIDENCE**.
-C3P adds numeric HTTP status in source; **C3P runtime: NOT YET**.
+C3N did not capture the HTTP integer, so C3O retained **PENDING_EVIDENCE**.
+[C3P runtime / C3R2 diagnosis / C3S desired state](#c3p-runtime-c3r2-authorization-proof-and-c3s-desired-state)
+subsequently established **403 / OPERATION_GET** and **current missing effective
+allow PROVEN**. Historical root cause is **STRONGLY_SUPPORTED_NOT_PROVEN**.
+C3S prepares least-privilege Terraform remediation; **apply and C3S runtime: NOT YET**.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
 
 CD-C2A is **COMPLETE**: the separately approved five-resource apply provisioned
 the E2E SA, secret container, exact-secret Accessor, disabled provider and mapped
-WorkloadIdentityUser member. Terraform contains **35 resources**; the subsequent
+WorkloadIdentityUser member. Remote state then contained **35 resources**; the subsequent
 CD-C2B read-only plan was **0 add / 0 change / 0 destroy**. Optional empty-collection
 normalization with a no-op action is not a resource update.
 
@@ -845,9 +848,65 @@ C3P adds only `runApiHttpStatus` to the canonical diagnostic and step summary:
 The safe log has eleven fixed fields. All existing failure codes/stages retain
 their meanings. Request URLs, PATCH/GET, headers/authentication, CAS, traffic,
 promotion/rollback ordering, retry, sleep, polling/deadline, IAM/WIF and workflow
-behavior are unchanged. **C3P runtime: NOT YET**; this source change establishes
-neither a historical HTTP status nor a root-cause fix. See
+behavior are unchanged. At C3P source-validation time, **runtime was NOT YET**;
+that source change alone established neither a historical HTTP status nor a
+root-cause fix. Subsequent runtime evidence is below. See
 [C3P offline validation](./verification.md#cd-c3p-http-status-diagnostic-validation).
+
+### C3P runtime, C3R2 authorization proof and C3S desired state
+
+[C3P run `35496219461`](https://github.com/tyosu131/Workout-Journal/actions/runs/35496219461),
+attempt 1, used main `e922feab245546fb308621782dc7d067eb469833` after required
+[CI `35495319133`](https://github.com/tyosu131/Workout-Journal/actions/runs/35495319133)
+SUCCESS. Its runtime diagnostic established `RELEASE_NOT_VERIFIED`,
+`RUN_API_FAILED / backend-traffic-update`, and **`HTTP_STATUS / OPERATION_GET / 403`**.
+The first-failure fields do not independently establish rollback's historical
+HTTP status. C3R2 instead evaluated each recovered exact Operation independently.
+
+Principal: `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com`.
+All three resource names use
+`//run.googleapis.com/projects/workout-journal-506909/locations/asia-northeast1/`.
+
+| Resource suffix | Permission | C3R2 overall / allow / deny |
+| --- | --- | --- |
+| `services/workout-journal-backend` | `run.services.update` | `CAN_ACCESS / GRANTED / NOT_DENIED` |
+| `operations/d07f3193-fad6-4fd7-99f9-282af19fe15c` (promotion) | `run.operations.get` | `CANNOT_ACCESS / NOT_GRANTED / NOT_DENIED` |
+| `operations/109471a4-8672-491f-906d-13f60ce4e1a5` (rollback) | `run.operations.get` | `CANNOT_ACCESS / NOT_GRANTED / NOT_DENIED` |
+
+Stable `gcloud policy-intelligence troubleshoot-policy iam` (SDK `582.0.0`)
+evaluated the control at 08:05:15–08:05:17Z, promotion at 08:05:41–08:05:43Z,
+and rollback at 08:05:58–08:06:00.005482Z on 2026-09-20. The service control
+matched `roles/run.developer`, principal and permission. Both Operation allow
+evaluations contained only the project policy: the Deploy SA matched
+`roles/cloudbuild.builds.editor` and `roles/serviceusage.serviceUsageConsumer`,
+neither containing the permission; `roles/owner` contained it but did not match
+the principal. The service-level Developer binding was absent from the effective
+Operation policy. This is an observed implementation/runtime contract mismatch,
+not an inference from role contents alone.
+
+Project Admin Activity from **2026-09-20T07:22:00Z through 08:06:01Z** contained
+eight entries with no relevant IAM policy, policy binding, role or project-move
+mutation. The query was not truncated. **Historical-policy continuity:
+SUPPORTED**; log absence is not an absolute proof of the historical snapshot.
+Thus **current missing effective allow: PROVEN** and **historical incident root
+cause: STRONGLY_SUPPORTED_NOT_PROVEN** remain separate conclusions.
+
+Stable evaluation covers [allow and deny](https://docs.cloud.google.com/sdk/gcloud/reference/policy-intelligence/troubleshoot-policy/iam).
+PAB was **not evaluated**; it restricts access and cannot supply the missing allow.
+Policy Troubleshooter does [not diagnose VPC-SC](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access).
+C3R2 enabled only `policytroubleshooter.googleapis.com`, exactly once; it made no
+IAM, Cloud Run or release changes. The API remains enabled outside Terraform.
+
+C3S prepares a project custom role with only `run.operations.get` and an additive
+Deploy SA project member, preserving both service-level Developer grants. See
+the [design and eligibility evidence](../infra/terraform/README.md#cd-c3s-operation-iam-desired-state-not-applied).
+**Current remote state: 35; planned: +2; apply: NOT YET; C3S runtime: NOT YET.**
+No claim of repaired IAM, successful production CD or release is made. A separate
+Human-gated apply and authorization proof must precede a fresh release.
+
+C3R2 read-back and C3S authority retain Backend `workout-journal-backend-00003-luc`
+and Frontend `workout-journal-frontend-00003-xar` at 100%, both C3P candidates at
+0%, and `CD_C1_ACTIVATION` UNCONFIGURED. C3S does not mutate this state.
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
@@ -949,8 +1008,9 @@ privileged E2E credential's strict transport boundary.
 
 Use the [C3C validation record](./verification.md#cd-c3c-recovery-contract-validation)
 and [offline commands](./verification.md#cd-c1-offline-validation). Terraform
-state is 35; after completed CD-C2C activation the expected plan is
-**No changes / exit 0**. All resources/grants must be no-op. No apply/import/state mutation, Cloud
+remote state is **35**. C3S desired state plans **+2 / 0 change / 0 destroy**;
+all 35 existing resources/grants must remain no-op. The earlier post-CD-C2C
+baseline was **No changes / exit 0**. No apply/import/state mutation, Cloud
 Build, dispatch, Supabase key creation or Cloud Run mutation is authorized by
 source validation. Fresh independent Result Audit precedes any Human runtime gate.
 

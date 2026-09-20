@@ -54,6 +54,54 @@ C3C deleted only the release activation variable; C3D was read-only and C3E is
 docs-only. These phases supply no new Terraform/IAM/WIF or Cloud Run mutation
 and no new no-drift plan.
 
+## CD-C3S Operation IAM desired state (not applied)
+
+C3S prepares two additive resources in [`iam.tf`](./iam.tf), based on
+`e922feab245546fb308621782dc7d067eb469833` / required CI `35495319133` SUCCESS:
+
+| Planned address | Desired authorization |
+| --- | --- |
+| `google_project_iam_custom_role.deploy_run_operation_reader` | Project custom role `workoutJournalRunOperationReader`, exactly `run.operations.get` |
+| `google_project_iam_member.deploy_run_operation_reader` | That role, only `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com`, project `workout-journal-506909` |
+
+The existing Backend and Frontend `deploy_*_run_developer` service IAM members
+remain unchanged. The controller reads the exact returned Operation; it does not
+need operation listing or deletion. C3R2 proved that the service-level grants do
+not provide effective allow on those Operation resources. See the
+[C3P / C3R2 evidence](../../docs/cd-c1-candidate-delivery.md#c3p-runtime-c3r2-authorization-proof-and-c3s-desired-state).
+
+| Option | Decision |
+| --- | --- |
+| A: project custom role, only `run.operations.get` | Selected: closes the proven permission gap while preserving service-scoped writes |
+| B: project `roles/run.developer` | Rejected: expands Cloud Run writes across the project |
+| C: project `roles/run.viewer` or equivalent | Rejected: adds unrelated Cloud Run reads |
+
+On 2026-09-20, the read-only query below returned `name: run.operations.get`,
+`stage: GA`, with `customRolesSupportLevel` absent. Google's
+[custom-role documentation](https://docs.cloud.google.com/iam/docs/creating-custom-roles)
+defines an absent support-level field as fully supported: **SUPPORTED** for this
+project custom role. The installed, locked Google `7.45.0` schema also confirms
+the project custom-role resource and its permission set/name reference.
+
+```bash
+gcloud iam list-testable-permissions \
+  '//cloudresourcemanager.googleapis.com/projects/workout-journal-506909' \
+  --filter='name=run.operations.get' --format=json
+```
+
+**Current remote state: 35. Planned: +2. Terraform apply: NOT YET. C3S runtime:
+NOT YET.** The normally locked, refresh-enabled C3S plan is `2 add / 0 change /
+0 destroy`; all 35 existing resources are no-op. Its one computed-only refresh
+difference is separately classified in the [C3S validation record](../../docs/verification.md#cd-c3s-least-privilege-iam-validation).
+This is prepared desired state, not a claim that IAM or production CD is fixed.
+
+`policytroubleshooter.googleapis.com` was enabled once in C3R2 and remains
+temporary diagnostic infrastructure, **not Terraform-owned**. C3S neither adds
+it to `services.tf` nor imports/disables it; keep-and-codify versus disable is
+deferred. A separate Human Gate must approve a fresh plan/apply and then prove
+Backend `run.services.update` and exact/current-equivalent `run.operations.get`
+both GRANTED before a fresh release. No C3S saved plan is authorized for apply.
+
 ## Completed CD-B2 provider activation
 
 CD-B1's 2026-09-05 speculative plan prepared the activation without applying it;

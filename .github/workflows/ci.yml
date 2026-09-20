@@ -52,6 +52,15 @@ jobs:
       - name: Test E2E and dynamic candidate contracts offline
         run: npm run e2e:test
 
+      - name: Set up locked Terraform toolchain
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.16.0
+          terraform_wrapper: false
+
+      - name: Initialize provider for offline IAM contract tests
+        run: terraform -chdir=infra/terraform init -backend=false -input=false -lockfile=readonly
+
       - name: Test WIF and CD controllers offline
         env:
           PYTHONDONTWRITEBYTECODE: '1'
