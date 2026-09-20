@@ -19,8 +19,11 @@ retain technical root cause **NOT PROVEN**; C3I changes diagnostics only.
 [C3K / C3M](#c3k-incident-and-c3m-api-failure-diagnostics) records the later
 production failure at source `ba9ddf34b401355fa9ab98d87dec054ca4c8165f`:
 candidate delivery PASS and C3I promotion/rollback diagnostic durability runtime
-proven, but successful production promotion remains unproven. C3M adds API
-failure provenance in source only; C3K technical root cause is **NOT PROVEN**.
+proven, but successful production promotion remains unproven. C3K technical root
+cause is **NOT PROVEN**. Later [C3N / C3O / C3P](#c3n-runtime-evidence-c3o-diagnosis-and-c3p-http-status)
+runtime-proved C3M's observed `HTTP_STATUS / OPERATION_GET` classification;
+the HTTP integer was not captured and root cause remains **PENDING_EVIDENCE**.
+C3P adds numeric HTTP status in source; **C3P runtime: NOT YET**.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
@@ -784,7 +787,7 @@ before rollback and before replacement by the generic promotion failure. If the
 first API failure occurs only during rollback, that failure owns the pair;
 later failures cannot overwrite it. Existing promotion and rollback code/stage
 fields retain their independent meanings. Both new fields are null when promotion
-observes no API failure. The safe log now has ten fixed fields; pair metadata
+observes no API failure. At C3M the safe log had ten fixed fields; pair metadata
 remains exclusively in the existing summary.
 
 Only allowlisted enum values are copied to diagnostics. No raw exception, response
@@ -798,6 +801,53 @@ C3M changes no traffic, CAS, promotion/rollback ordering, retry, sleep, polling
 deadline, PATCH semantics, IAM/WIF or production workflow. This is an **offline API
 failure diagnostic improvement**, not a production root-cause or convergence fix.
 Validation is recorded in [C3M verification](./verification.md#cd-c3m-cloud-run-api-failure-diagnostic-validation).
+
+### C3N runtime evidence, C3O diagnosis and C3P HTTP status
+
+Historical [C3N run `35490314562`](https://github.com/tyosu131/Workout-Journal/actions/runs/35490314562),
+attempt 1, used main `5586ca9fafa7b9b42170cf261e49a9d24bdd8023` after required
+[CI `35488494492`](https://github.com/tyosu131/Workout-Journal/actions/runs/35488494492)
+SUCCESS. Preflight, candidate, candidate-e2e and verify-candidate passed. E2E was
+8/8 PASS with HTTPS cookie verification, PROVEN_ZERO cleanup (auth/users/notes/user_tags
+0/0/0/0) and a PERSISTED local receipt. Production failed with:
+
+```json
+{"failureCode":"RELEASE_NOT_VERIFIED","promotionFailureCode":"RUN_API_FAILED","promotionFailureStage":"backend-traffic-update","rollback":"HUMAN_DECISION_REQUIRED","rollbackFailureCode":"RUN_API_FAILED","rollbackFailureStage":"backend-rollback-update","runApiFailureKind":"HTTP_STATUS","runApiFailureStage":"OPERATION_GET"}
+```
+
+This runtime-proves the observed C3M HTTP failure kind/stage. The **HTTP integer
+was not captured**. The shared API fields describe the first failure; they do not
+independently establish rollback's HTTP kind, stage or status.
+
+Human-confirmed production state after terminal failure: Backend
+`workout-journal-backend-00003-luc` and Frontend
+`workout-journal-frontend-00003-xar` each 100%; their
+`workout-journal-{backend,frontend}-cd-35490314562-1` candidates each 0%.
+`CD_C1_ACTIVATION` was UNCONFIGURED. C3P does not repeat or mutate that runtime state.
+
+C3O read-only diagnosis retained **root cause PENDING_EVIDENCE**: the historical
+HTTP integer and exact Operation's effective `run.operations.get` remain UNKNOWN.
+UpdateService observations and service-scoped role bindings do not distinguish
+403, 404, 409, 429, 5xx or other HTTP causes. Candidate deployment succeeded under
+the same Deploy SA; C3O found its gcloud v1 deployment/polling paths differ from
+the controller's v2 Operation GET, but did not prove an authorization failure.
+
+C3P adds only `runApiHttpStatus` to the canonical diagnostic and step summary:
+
+| Contract | C3P source behavior |
+| --- | --- |
+| Type/range | Integer 400–599 inclusive, or null; `type(value) is int` rejects bool, string and float |
+| Source | Only `HTTPError.code`; no inference from stage, message or a non-HTTP exception |
+| Ownership | Kind, stage and status belong to the same first API failure; rollback never overwrites them |
+| Non-HTTP / no API failure | Status is null |
+| Security | Close HTTPError without reading body; no reason, exception text, URL, headers, token or payload serialization |
+
+The safe log has eleven fixed fields. All existing failure codes/stages retain
+their meanings. Request URLs, PATCH/GET, headers/authentication, CAS, traffic,
+promotion/rollback ordering, retry, sleep, polling/deadline, IAM/WIF and workflow
+behavior are unchanged. **C3P runtime: NOT YET**; this source change establishes
+neither a historical HTTP status nor a root-cause fix. See
+[C3P offline validation](./verification.md#cd-c3p-http-status-diagnostic-validation).
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
