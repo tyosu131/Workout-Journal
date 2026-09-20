@@ -323,6 +323,90 @@ IAM/WIF operation was performed. Runtime mutation: **NONE**. No commit, push or 
 Implementation stops at **READY FOR FRESH RESULT AUDIT**; this record does not
 claim completion of that separate audit or successful production promotion.
 
+## CD-C3P HTTP Status Diagnostic Validation
+
+Baseline: `5586ca9fafa7b9b42170cf261e49a9d24bdd8023`; required
+[CI `35488494492`](https://github.com/tyosu131/Workout-Journal/actions/runs/35488494492)
+SUCCESS was read back. Implementation branch: `fix/cd-c3p-http-status`, created
+from that exact SHA with a clean working tree. Changes remain uncommitted for a
+separate Fresh Result Audit.
+
+[Historical C3N / C3O evidence and C3P contract](./cd-c1-candidate-delivery.md#c3n-runtime-evidence-c3o-diagnosis-and-c3p-http-status)
+separate these conclusions: C3N runtime-proved `HTTP_STATUS / OPERATION_GET` for
+run `35490314562`, but did not capture its HTTP integer; C3O root cause remains
+**PENDING_EVIDENCE**, with exact historical effective permission UNKNOWN; C3P
+adds numeric HTTP status in source only, **runtime NOT YET**. The prior C3M
+validation section above remains a historical implementation record.
+
+`runApiHttpStatus` retains only exact Python integers 400–599 from `HTTPError.code`.
+All other values, including bool and all non-HTTP failure kinds, become null.
+Constructor and capture both sanitize. Kind/stage/status belong to the same
+first API failure; later rollback failures retain their separate existing
+code/stage without replacing that first API diagnostic.
+
+Offline validation on 2026-09-20:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -q
+actionlint .github/workflows/ci.yml .github/workflows/cd.yml .github/workflows/candidate-e2e.yml
+git diff --check
+```
+
+Results: **121 Python tests PASS**, including C3P **10/10**, existing C3M **8/8**
+and C3I **6/6** semantic mutation detections; actionlint **1.7.12 PASS**.
+The default PATH Node initially failed to start due to its missing shared
+library. The successful run used the existing Node **24.18.0** through a per-command
+PATH and the existing actionlint binary; no dependency or host configuration changed.
+
+[`test_cd_run_api_diagnostics.py`](../.github/scripts/test_cd_run_api_diagnostics.py)
+independently tests 403, 404, 409, 429, 500 and 503 through the real controller
+with mock transport, plus accepted endpoints 400/599. PATCH 409 and successful
+PATCH followed by Operation GET 403 preserve exact stage/status. Promotion
+Operation GET 403 followed by rollback Operation GET 500 retains 403 and the
+existing rollback failure code/stage; a distinct rollback PATCH stage is also
+covered. A first timeout retains null even after a later HTTP failure.
+
+Invalid inputs `True`, `False`, `"403"`, `403.0`, `399`, `600` and `None` yield
+null at the wrapper, constructor and capture boundaries. Timeout, connection,
+JSON parse and unknown failure paths retain null. Success retains null diagnostics.
+Leakage assertions cover stdout, stderr, GITHUB_STEP_SUMMARY and canonical
+diagnostic JSON with synthetic secret/token/credential/URL/reason/header/body
+markers. HTTPError bodies remain unread and are closed; close failures and
+finalization cannot publish raw exceptions.
+
+[`test_cd_run_api_detection.py`](../.github/scripts/test_cd_run_api_detection.py)
+adds ten disposable-source mutants covering all eight required categories:
+
+| Mutation category | Variants / semantic detection |
+| --- | --- |
+| Status field removed | Fixed public JSON field assertion |
+| Constant 403 | Other independent HTTP integers must remain exact |
+| Stage/status provenance mixed | PATCH 409 and Operation GET 403 must retain their own status |
+| Rollback overwrites only status | First 403 survives later 500 with kind/stage unchanged |
+| Non-HTTP status retained | Separate constructor and altered-attribute capture mutants |
+| Bool accepted | Explicit null assertions for both boolean values |
+| Out-of-range integer accepted | Null assertions for 399/600 |
+| Raw exception/body leaked | Separate exception-print and body-read/print mutants |
+
+Every mutant compiles and fails semantic assertions; syntax/import/runtime errors
+receive no detection credit. Final test output contains no private fixture markers
+or ResourceWarning. Changed-content credential-pattern inspection, relative docs
+links/anchors and diff checks pass.
+
+AST comparison with the exact baseline found **32 existing definitions unchanged**.
+The four changed definitions (`RunApiFailure`, `capture_run_api_failure`, `http`,
+`promote`) match after removing only status handling. `cas_traffic`, `recheck`,
+`expected_traffic`, `cloud_run` and `main` are unchanged. Promotion including its
+rollback path differs only in diagnostic initialization. Request construction,
+headers/body/authentication, PATCH count, retry, sleep, polling/deadline, CAS,
+traffic destinations and Backend→Frontend / Frontend→Backend ordering are unchanged.
+Workflow YAML, IAM/WIF and Terraform are unchanged.
+
+Runtime mutation **NONE**; no dispatch, rerun, approval, Cloud Run/IAM mutation,
+Terraform apply, Secret access, Supabase mutation or activation creation.
+No commit, push or PR. This implementation stops at **READY FOR FRESH RESULT AUDIT**;
+it does not claim that the separate audit or production runtime verification passed.
+
 ## CD-C3C Recovery Contract Validation
 
 On 2026-09-19, C3C implemented the [future recovery/result contract](./cd-c3-e2e-recovery-contract.md)

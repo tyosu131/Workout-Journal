@@ -60,7 +60,7 @@ WIF_CREDENTIAL_MISMATCH WIF_INPUT_MISMATCH WORKFLOW_MISMATCH
 '''.split())
 DIAGNOSTIC_FIELDS = ('result', 'phase', 'failureCode', 'promotionFailureCode',
                      'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage',
-                     'runApiFailureKind', 'runApiFailureStage')
+                     'runApiFailureKind', 'runApiFailureStage', 'runApiHttpStatus')
 RUN_API_FAILURE_KINDS = frozenset({'HTTP_STATUS', 'TIMEOUT', 'CONNECTION', 'JSON_PARSE', 'UNKNOWN'})
 RUN_API_FAILURE_STAGES = frozenset({'PATCH', 'OPERATION_GET', 'OTHER'})
 
@@ -69,11 +69,16 @@ def safe_enum(value, allowed, fallback):
     return value if type(value) is str and value in allowed else fallback
 
 
+def safe_http_status(value):
+    return value if type(value) is int and 400 <= value <= 599 else None
+
+
 class RunApiFailure(proof.GateError):
-    def __init__(self, kind, stage):
+    def __init__(self, kind, stage, http_status=None):
         super().__init__('RUN_API_FAILED')
         self.kind = safe_enum(kind, RUN_API_FAILURE_KINDS, 'UNKNOWN')
         self.stage = safe_enum(stage, RUN_API_FAILURE_STAGES, 'OTHER')
+        self.http_status = safe_http_status(http_status) if self.kind == 'HTTP_STATUS' else None
 
 
 def run_api_failure_kind(error):
@@ -96,6 +101,8 @@ def capture_run_api_failure(record, error):
     if isinstance(error, RunApiFailure) and record.get('runApiFailureKind') is None:
         record['runApiFailureKind'] = safe_enum(error.kind, RUN_API_FAILURE_KINDS, 'UNKNOWN')
         record['runApiFailureStage'] = safe_enum(error.stage, RUN_API_FAILURE_STAGES, 'OTHER')
+        record['runApiHttpStatus'] = (safe_http_status(error.http_status)
+                                      if record['runApiFailureKind'] == 'HTTP_STATUS' else None)
 
 
 def safe_failure_code(error):
@@ -135,6 +142,7 @@ def http(url, *, token=None, body=None, method='GET', code='API_FAILED', stage='
             return json.loads(data)
     except Exception as error:
         if code == 'RUN_API_FAILED':
+            http_status = error.code if isinstance(error, HTTPError) else None
             if isinstance(error, HTTPError):
                 # Python may include HTTPError.__repr__ in a ResourceWarning
                 # for an unclosed response. Close it without reading its body.
@@ -142,7 +150,7 @@ def http(url, *, token=None, body=None, method='GET', code='API_FAILED', stage='
                     error.close()
                 except Exception:
                     pass  # Closing must not replace the original API failure.
-            raise RunApiFailure(run_api_failure_kind(error), stage) from None
+            raise RunApiFailure(run_api_failure_kind(error), stage, http_status) from None
         raise proof.GateError(code) from None
 
 
@@ -506,7 +514,7 @@ def smoke(m):
 def promote(env, record):
     record.update(promotionFailureCode=None, promotionFailureStage=None,
                   rollback=None, rollbackFailureCode=None, rollbackFailureStage=None,
-                  runApiFailureKind=None, runApiFailureStage=None)
+                  runApiFailureKind=None, runApiFailureStage=None, runApiHttpStatus=None)
     m = input_manifest(env)
     require(env.get('CD_E2E_HASH') == env['CD_MANIFEST_HASH'], 'E2E_CLEANUP_PROOF_MISSING')
     require(preflight(env) == m['run']['ciRunId'], 'CI_AUTHORITY_CHANGED')
