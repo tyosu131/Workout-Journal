@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import time
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 import wif_submission as proof
@@ -58,7 +59,43 @@ TRAFFIC_CONCURRENT_CHANGE TRAFFIC_OPERATION_FAILED TRAFFIC_OPERATION_INCOMPLETE
 WIF_CREDENTIAL_MISMATCH WIF_INPUT_MISMATCH WORKFLOW_MISMATCH
 '''.split())
 DIAGNOSTIC_FIELDS = ('result', 'phase', 'failureCode', 'promotionFailureCode',
-                     'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage')
+                     'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage',
+                     'runApiFailureKind', 'runApiFailureStage')
+RUN_API_FAILURE_KINDS = frozenset({'HTTP_STATUS', 'TIMEOUT', 'CONNECTION', 'JSON_PARSE', 'UNKNOWN'})
+RUN_API_FAILURE_STAGES = frozenset({'PATCH', 'OPERATION_GET', 'OTHER'})
+
+
+def safe_enum(value, allowed, fallback):
+    return value if type(value) is str and value in allowed else fallback
+
+
+class RunApiFailure(proof.GateError):
+    def __init__(self, kind, stage):
+        super().__init__('RUN_API_FAILED')
+        self.kind = safe_enum(kind, RUN_API_FAILURE_KINDS, 'UNKNOWN')
+        self.stage = safe_enum(stage, RUN_API_FAILURE_STAGES, 'OTHER')
+
+
+def run_api_failure_kind(error):
+    # urllib wraps transport errors in URLError.reason. Inspect types only;
+    # HTTPError is also a URLError and must be classified first.
+    if isinstance(error, HTTPError):
+        return 'HTTP_STATUS'
+    if isinstance(error, TimeoutError) or (isinstance(error, URLError) and isinstance(error.reason, TimeoutError)):
+        return 'TIMEOUT'
+    if isinstance(error, (ConnectionError, URLError)):
+        return 'CONNECTION'
+    if isinstance(error, (json.JSONDecodeError, UnicodeDecodeError)):
+        return 'JSON_PARSE'
+    return 'UNKNOWN'
+
+
+def capture_run_api_failure(record, error):
+    # Keep the first API failure even if rollback also fails. Existing rollback
+    # code/stage still describe rollback separately. Never serialize the error.
+    if isinstance(error, RunApiFailure) and record.get('runApiFailureKind') is None:
+        record['runApiFailureKind'] = safe_enum(error.kind, RUN_API_FAILURE_KINDS, 'UNKNOWN')
+        record['runApiFailureStage'] = safe_enum(error.stage, RUN_API_FAILURE_STAGES, 'OTHER')
 
 
 def safe_failure_code(error):
@@ -82,7 +119,7 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def http(url, *, token=None, body=None, method='GET', code='API_FAILED'):
+def http(url, *, token=None, body=None, method='GET', code='API_FAILED', stage='OTHER'):
     # No auth-bearing redirects or raw response/exception serialization.
     headers = {'Accept': 'application/json'}
     if token:
@@ -96,7 +133,16 @@ def http(url, *, token=None, body=None, method='GET', code='API_FAILED'):
             data = response.read(4 * 1024 * 1024 + 1)
             require(len(data) <= 4 * 1024 * 1024, code)
             return json.loads(data)
-    except Exception:
+    except Exception as error:
+        if code == 'RUN_API_FAILED':
+            if isinstance(error, HTTPError):
+                # Python may include HTTPError.__repr__ in a ResourceWarning
+                # for an unclosed response. Close it without reading its body.
+                try:
+                    error.close()
+                except Exception:
+                    pass  # Closing must not replace the original API failure.
+            raise RunApiFailure(run_api_failure_kind(error), stage) from None
         raise proof.GateError(code) from None
 
 
@@ -180,11 +226,11 @@ def emit(env, name, value):
         output.write(f'{name}={value}\n')
 
 
-def cloud_run(path, *, body=None, method='GET'):
+def cloud_run(path, *, body=None, method='GET', stage='OTHER'):
     require(path.startswith(f'projects/{proof.PROJECT}/locations/{proof.REGION}/'), 'RUN_API_PATH_INVALID')
     token = proof.command(['gcloud', 'auth', 'print-access-token', '--quiet'], 'TOKEN_UNAVAILABLE').decode().strip()
     return http('https://run.googleapis.com/v2/' + path, token=token,
-                body=body, method=method, code='RUN_API_FAILED')
+                body=body, method=method, code='RUN_API_FAILED', stage=stage)
 
 
 def service_path(part):
@@ -427,7 +473,7 @@ def cas_traffic(part, state, destination):
     require(rows == state['traffic'], 'TRAFFIC_CONCURRENT_CHANGE')
     targets = [{'type': 'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION', 'revision': t['revision'],
                 'percent': t['percent'], **({'tag': t['tag']} if t['tag'] else {})} for t in destination]
-    op = cloud_run(name + '?updateMask=traffic', method='PATCH',
+    op = cloud_run(name + '?updateMask=traffic', method='PATCH', stage='PATCH',
                    body={'name': name, 'etag': current['etag'], 'traffic': targets})
     deadline = time.monotonic() + 180
     while not op.get('done'):
@@ -435,7 +481,7 @@ def cas_traffic(part, state, destination):
             re.escape(f'projects/{proof.PROJECT}/locations/{proof.REGION}/operations/') + r'[a-zA-Z0-9-]+',
             op.get('name')), 'TRAFFIC_OPERATION_INCOMPLETE')
         time.sleep(2)
-        op = cloud_run(op['name'])
+        op = cloud_run(op['name'], stage='OPERATION_GET')
     require('error' not in op, 'TRAFFIC_OPERATION_FAILED')
 
 
@@ -459,7 +505,8 @@ def smoke(m):
 
 def promote(env, record):
     record.update(promotionFailureCode=None, promotionFailureStage=None,
-                  rollback=None, rollbackFailureCode=None, rollbackFailureStage=None)
+                  rollback=None, rollbackFailureCode=None, rollbackFailureStage=None,
+                  runApiFailureKind=None, runApiFailureStage=None)
     m = input_manifest(env)
     require(env.get('CD_E2E_HASH') == env['CD_MANIFEST_HASH'], 'E2E_CLEANUP_PROOF_MISSING')
     require(preflight(env) == m['run']['ciRunId'], 'CI_AUTHORITY_CHANGED')
@@ -472,6 +519,7 @@ def promote(env, record):
     try:
         recheck(m, serving_pair)
     except Exception as error:
+        capture_run_api_failure(record, error)
         record['promotionFailureCode'] = safe_failure_code(error)
         record['promotionFailureStage'] = stage
         raise  # Preserve the original pre-write failure and no-rollback boundary.
@@ -496,6 +544,7 @@ def promote(env, record):
     except Exception as error:
         # C3G technical root cause is NOT PROVEN. Preserve diagnostics without
         # changing traffic/CAS, convergence, retry or rollback behavior.
+        capture_run_api_failure(record, error)
         record['promotionFailureCode'] = safe_failure_code(error)
         record['promotionFailureStage'] = stage
         if attempted:
@@ -523,6 +572,7 @@ def promote(env, record):
                 recheck(m, prior)
                 record['rollback'] = 'EXACT_PREVIOUS_PAIR_VERIFIED'
             except Exception as rollback_error:
+                capture_run_api_failure(record, rollback_error)
                 record['rollback'] = 'HUMAN_DECISION_REQUIRED'
                 record['rollbackFailureCode'] = safe_failure_code(rollback_error)
                 record['rollbackFailureStage'] = rollback_stage
@@ -558,6 +608,7 @@ def main():
             raise proof.GateError('COMMAND_INVALID')
         record['result'] = 'PASS'
     except Exception as error:
+        capture_run_api_failure(record, error)
         record['failureCode'] = safe_failure_code(error)
     # No arbitrary exception, service body, variable value or credential enters evidence.
     print('CD-C1: ' + record['result'] + ' / ' + record['phase'])

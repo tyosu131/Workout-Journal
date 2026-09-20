@@ -1,6 +1,6 @@
 # CD-C3: candidate incident and E2E recovery contract
 
-Current status: **C3F candidate delivery PASS; C3G production promotion FAIL; Must 4 Open;
+Current status: **C3K candidate delivery PASS; C3K production promotion FAIL; Must 4 Open;
 production CD inactive; `CD_C1_ACTIVATION` UNCONFIGURED**. Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
 CD-C3C source remediation is merged via [PR #106](https://github.com/tyosu131/Workout-Journal/pull/106)
@@ -10,8 +10,12 @@ passed. C3D separately closed current historical-run residual uncertainty:
 **HISTORICAL_RESIDUAL_PROVEN_ZERO under verified current schema contract**.
 C3F subsequently proved the C3C successful candidate/E2E/cleanup path at runtime.
 C3G restored the previous production pair after promotion failed; the technical
-root cause remains **NOT PROVEN**. C3I addresses diagnostic durability in source
-only. No release retry is authorized by this source remediation.
+root cause remains **NOT PROVEN**. Later
+[C3K evidence and C3M API provenance](./cd-c1-candidate-delivery.md#c3k-incident-and-c3m-api-failure-diagnostics)
+runtime-prove C3I's observed promotion/rollback failure diagnostics; C3M adds fixed
+API kind/stage classification in source only. C3K root cause remains **NOT PROVEN**.
+Activation is UNCONFIGURED in the historical C3K closure read-back; C3M performs
+no runtime operation. No release retry is authorized by this source remediation.
 
 ## C3F / C3G incident and C3H diagnosis
 
@@ -64,7 +68,8 @@ Stages are assigned immediately before their operation:
 The existing `GITHUB_STEP_SUMMARY` record retains the pair metadata. A single
 canonical `CD-C1 diagnostic: {...}` stdout line for the promote command contains
 only result, phase, failureCode, promotionFailureCode, promotionFailureStage,
-rollback, rollbackFailureCode and rollbackFailureStage. It contains no pair,
+rollback, rollbackFailureCode and rollbackFailureStage, plus the C3M fixed-enum
+runApiFailureKind and runApiFailureStage fields. It contains no pair,
 manifest, URL, revision payload or raw exception. Successful rollback records
 `EXACT_PREVIOUS_PAIR_VERIFIED` with null rollback diagnostics; failed rollback
 records `HUMAN_DECISION_REQUIRED` with its own fixed code/stage, preserving the
@@ -75,8 +80,9 @@ the [C3I verification record](./verification.md#cd-c3i-promotion-diagnostic-dura
 It adds no sleep, convergence polling, retry, PATCH resend or timeout change;
 CAS, recheck, traffic comparison and Backend→Frontend promotion / Frontend→Backend
 rollback ordering remain unchanged. **C3G technical root cause: NOT PROVEN.**
-The new diagnostic path has not been release-runtime verified, and does not
-retroactively recover the lost C3G error.
+C3K runtime-proved the observed C3I promotion/rollback diagnostics. This does not
+retroactively recover the lost C3G error. C3M's additional API classification
+remains offline-validated only.
 
 ## Historical C3A execution record
 
@@ -284,14 +290,14 @@ to Must 5 design); Must 4 remains Open. C3F closes the successful candidate
 E2E/cleanup/re-verification portion; C3G proves approval integration and actual
 previous-pair restoration after failed promotion. Successful production promotion
 and post-deploy verification, remaining failure/rollback contract evidence,
-runtime durability of the new diagnostics, automatic main-merge + CI-success
+runtime durability of C3M API diagnostics, automatic main-merge + CI-success
 triggering and final documentation closure remain open. C3F successful result
 transport is not runtime failure-injection or cross-run recovery evidence.
 
 C3I implementation stopped before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.
 The subsequent [Fresh Result Audit](./verification.md#cd-c3i-fresh-result-audit-and-pre-pr)
-passed the source acceptance; runtime verification remains unperformed. Runtime
-mutation is **NONE**. No release retry, activation, production approval or promotion
+passed source acceptance; C3K later proved the observed C3I failure diagnostics.
+C3I/C3M source implementation runtime mutation is **NONE**. No release retry, activation, production approval or promotion
 is authorized by this remediation or audit.
 
 

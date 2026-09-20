@@ -16,6 +16,11 @@ C3F at main `8ac592abcfeee607229fada3f5685e8c1630ddef` subsequently passed the
 complete candidate/E2E/cleanup/verify portion. C3G production promotion failed
 and restored the previous pair. [C3F/G/H evidence and C3I source diagnostics](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
 retain technical root cause **NOT PROVEN**; C3I changes diagnostics only.
+[C3K / C3M](#c3k-incident-and-c3m-api-failure-diagnostics) records the later
+production failure at source `ba9ddf34b401355fa9ab98d87dec054ca4c8165f`:
+candidate delivery PASS and C3I promotion/rollback diagnostic durability runtime
+proven, but successful production promotion remains unproven. C3M adds API
+failure provenance in source only; C3K technical root cause is **NOT PROVEN**.
 Source implementation, offline tests and a Terraform plan are not runtime proof.
 
 ## Current CD-C2A/B runtime record
@@ -645,6 +650,9 @@ credential consumption or retry needs a new Human Gate; provisioning is complete
 C3F/G used separate authorization for one release and one production approval;
 C3G deleted the latch again after the failed run was terminal. C3I freshly
 confirmed UNCONFIGURED without changing it.
+C3K later used separate authorization for a fresh release and production approval;
+its historical closure record confirms activation deletion after terminal failure
+and UNCONFIGURED read-back. C3M performs no runtime read or mutation.
 
 Release dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
 The controller independently queries successful main **push** CI and its required
@@ -732,10 +740,64 @@ arbitrary manifest extension is included.
 C3I adds [durable promotion/rollback diagnostics](./cd-c3-e2e-recovery-contract.md#c3i-source-contract-durable-promotion-diagnostics):
 fixed original failure codes and operation stages, separate from the existing
 top-level `RELEASE_NOT_VERIFIED`. The pair summary is unchanged. A single canonical
-job-log line exposes only the eight fixed diagnostic fields, allowing incident
+job-log line originally exposed eight fixed diagnostic fields, allowing incident
 read-back when Checks summary/text are null. Unknown exceptions normalize to
 `CD_CONTROLLER_FAILED`. This source-only change does not alter traffic behavior
 or establish the unknown C3G technical root cause.
+
+### C3K incident and C3M API failure diagnostics
+
+Historical [C3K run `35442981748`](https://github.com/tyosu131/Workout-Journal/actions/runs/35442981748),
+attempt 1, source `ba9ddf34b401355fa9ab98d87dec054ca4c8165f`, passed candidate,
+E2E, PROVEN_ZERO cleanup and verify-candidate, then failed production promotion.
+Its durable diagnostic was:
+
+```json
+{"failureCode":"RELEASE_NOT_VERIFIED","promotionFailureCode":"RUN_API_FAILED","promotionFailureStage":"backend-traffic-update","rollback":"HUMAN_DECISION_REQUIRED","rollbackFailureCode":"RUN_API_FAILED","rollbackFailureStage":"backend-rollback-update"}
+```
+
+Cloud Audit evidence observed Backend UpdateService and rollback UpdateService;
+a Backend Ready transition was observed. Independent historical read-back found
+the previous production pair restored and smoke PASS; the workflow did not reach
+post-rollback verification. These observations do not identify the underlying
+HTTP/transport failure. **C3K technical root cause: NOT PROVEN. C3I diagnostic
+durability: runtime proven for the observed promotion and rollback failures.**
+The two new C3M fields cannot be inferred retrospectively for C3K.
+
+C3M extends the canonical safe log and step summary with two fixed-enum fields:
+
+| Field | Allowed values / ownership |
+| --- | --- |
+| `runApiFailureKind` | `HTTP_STATUS`, `TIMEOUT`, `CONNECTION`, `JSON_PARSE`, `UNKNOWN` |
+| `runApiFailureStage` | Caller-supplied `PATCH`, `OPERATION_GET`, or default `OTHER` for other Cloud Run calls |
+
+`HTTPError` maps to `HTTP_STATUS`; direct or urllib-wrapped `TimeoutError` maps
+to `TIMEOUT`; other `URLError` and `ConnectionError` map to `CONNECTION`;
+JSON decode/encoding failure maps to `JSON_PARSE`; other wrapper exceptions map
+to `UNKNOWN`. The wrapper still raises `RUN_API_FAILED`, and the promotion
+controller still uses top-level `RELEASE_NOT_VERIFIED` at the existing boundary.
+A successful API response containing a failed operation retains the existing
+`TRAFFIC_OPERATION_FAILED` contract.
+
+The **first Cloud Run API failure** owns the new kind/stage pair. Capture occurs
+before rollback and before replacement by the generic promotion failure. If the
+first API failure occurs only during rollback, that failure owns the pair;
+later failures cannot overwrite it. Existing promotion and rollback code/stage
+fields retain their independent meanings. Both new fields are null when promotion
+observes no API failure. The safe log now has ten fixed fields; pair metadata
+remains exclusively in the existing summary.
+
+Only allowlisted enum values are copied to diagnostics. No raw exception, response
+body, Authorization header, token, URL, request payload or credential is copied.
+Cloud Run HTTP error responses are closed without reading their bodies, preventing
+resource-finalization warnings from printing the original exception. A close
+failure cannot replace the original classification. Other HTTP callers retain
+their existing error contract.
+
+C3M changes no traffic, CAS, promotion/rollback ordering, retry, sleep, polling
+deadline, PATCH semantics, IAM/WIF or production workflow. This is an **offline API
+failure diagnostic improvement**, not a production root-cause or convergence fix.
+Validation is recorded in [C3M verification](./verification.md#cd-c3m-cloud-run-api-failure-diagnostic-validation).
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
