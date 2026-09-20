@@ -75,7 +75,8 @@ class PromotionDiagnosticTests(unittest.TestCase):
         self.assertTrue(lines[1].startswith('CD-C1 diagnostic: '))
         diagnostic = json.loads(lines[1].removeprefix('CD-C1 diagnostic: '))
         self.assertEqual(set(diagnostic), {'result', 'phase', 'failureCode', 'promotionFailureCode',
-                                         'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage'})
+                                         'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage',
+                                         'runApiFailureKind', 'runApiFailureStage'})
         self.assertEqual(diagnostic, {key: record.get(key) for key in diagnostic})
         self.assertEqual(lines[1], 'CD-C1 diagnostic: ' + cd.canonical(diagnostic))
         self.assertEqual(stderr.getvalue(), '')
@@ -156,7 +157,8 @@ class PromotionDiagnosticTests(unittest.TestCase):
         record, events, updates, state, m, _ = self.exercise()
         self.assertEqual(record['promotion'], 'VERIFIED')
         self.assertEqual(record['result'], 'PASS')
-        for key in ('promotionFailureCode', 'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage'):
+        for key in ('promotionFailureCode', 'promotionFailureStage', 'rollback', 'rollbackFailureCode', 'rollbackFailureStage',
+                    'runApiFailureKind', 'runApiFailureStage'):
             self.assertIsNone(record[key])
         self.assertNotIn('failureCode', record)
         self.assertEqual(events, [('recheck', None), ('recheck', None), ('update', 'backend'), ('recheck', None),

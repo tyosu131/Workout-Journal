@@ -245,6 +245,84 @@ post-merge required CI precede any separate runtime Human Gate. Technical root
 cause remains **NOT PROVEN**, new diagnostic runtime proof **NOT YET**, Must 3
 **In progress**, Must 4 **Open**, and production CD **inactive/fail-closed**.
 
+## CD-C3M Cloud Run API Failure Diagnostic Validation
+
+Baseline: clean local `main`, HEAD and origin/main
+`ba9ddf34b401355fa9ab98d87dec054ca4c8165f`. C3M reads repository source and saved
+historical evidence only; it performs no fresh GitHub/cloud runtime read or mutation.
+The earlier C3I sections above retain their historical implementation/audit status.
+
+Historical [C3K run `35442981748`](https://github.com/tyosu131/Workout-Journal/actions/runs/35442981748)
+passed candidate/E2E/cleanup/verify but failed production. C3I's durable fields
+survived: top-level `RELEASE_NOT_VERIFIED`, promotion `RUN_API_FAILED` at
+`backend-traffic-update`, rollback `HUMAN_DECISION_REQUIRED` with `RUN_API_FAILED`
+at `backend-rollback-update`. Thus **C3I promotion/rollback diagnostic durability
+is runtime proven for the observed failures**. C3K's underlying technical root
+cause remains **NOT PROVEN**; C3M does not infer a historical HTTP status or cause.
+
+The [C3M source contract](./cd-c1-candidate-delivery.md#c3k-incident-and-c3m-api-failure-diagnostics)
+adds only allowlisted `runApiFailureKind` / `runApiFailureStage` to the safe log and
+summary. The first Cloud Run API failure survives rollback and the generic final
+exception. Existing failure code/stage meanings remain unchanged. Cloud Run HTTP
+error responses are closed without reading bodies so resource warnings cannot
+print their exception text; close failure cannot replace the original diagnosis.
+
+Validation on 2026-09-19 used Node 24.18.0 through a per-command PATH and the
+existing actionlint 1.7.12 binary; no dependency or host configuration was changed:
+
+```bash
+python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+actionlint
+git diff --check
+```
+
+Results: **108 Python tests PASS**, actionlint **PASS**, diff check **PASS**.
+[`test_cd_run_api_diagnostics.py`](../.github/scripts/test_cd_run_api_diagnostics.py)
+runs real HTTP wrapper, Cloud Run wrapper, CAS update and promotion controller
+code against mock transport. It covers HTTP 403, direct/wrapped timeout and
+connection errors, invalid JSON/encoding, unknown exception, oversized response,
+service GET (`OTHER`), PATCH and operation GET, first-failure retention during
+rollback, pre-write/main capture, enum rejection, and unchanged non-Run errors.
+Existing success/null-diagnostic and promotion/rollback ordering tests still pass.
+
+Sensitive-marker assertions inspect **stdout, stderr and GITHUB_STEP_SUMMARY**;
+HTTP exception messages, response/request markers, Authorization, token,
+credential, URL and synthetic email fixtures are absent from public evidence.
+Finalization and close-error paths are covered. Changed-content credential-pattern
+inspection and relative documentation link/anchor validation also pass.
+
+[`test_cd_run_api_detection.py`](../.github/scripts/test_cd_run_api_detection.py)
+detects **8/8** independently mutated implementations in disposable offline copies.
+Each fails a semantic assertion; syntax/import/runtime errors receive no credit:
+
+| Mutation | Detecting assertion |
+| --- | --- |
+| Wrapper drops caller stage | Exact PATCH / OPERATION_GET stage in final evidence |
+| Failure kind removed | Exact kind retained in safe log and summary |
+| Raw exception printed | Captured output structure and forbidden-marker exclusion |
+| Operation GET mislabeled PATCH | Distinct stage after successful PATCH |
+| Timeout labeled CONNECTION | Direct and wrapped timeout both yield TIMEOUT |
+| Rollback overwrites first API failure | Original kind/stage survives distinct rollback failure |
+| Capture removed before generic promotion exception | API provenance survives RELEASE_NOT_VERIFIED |
+| HTTP error response left open | Response closed without reading; no finalization warning |
+
+The existing C3I **6/6** diagnostic mutations also remain detected. AST comparison
+against the baseline confirms **27 existing functions/classes unchanged**. The
+five modified functions (`http`, `cloud_run`, `cas_traffic`, `promote`, `main`) have
+identical control flow after removing the new diagnostic handling/parameters;
+request construction, body, headers and timeout are unchanged. Existing constants
+are unchanged except the diagnostic field list. Behavioral tests additionally
+verify Backend→Frontend promotion, Frontend→Backend rollback, zero retry, unchanged
+PATCH count/ETag/traffic/tag targets, and the existing two-second poll interval.
+No polling deadline, CAS, traffic logic, IAM/WIF or workflow changes were made.
+
+Review scope is API failure provenance only. C3K root cause remains **NOT PROVEN**;
+C3M API diagnostic runtime proof remains **NOT YET**. No browser E2E, cloud API,
+Secret/Supabase access, dispatch, rerun, approval, traffic change, Terraform or
+IAM/WIF operation was performed. Runtime mutation: **NONE**. No commit, push or PR.
+Implementation stops at **READY FOR FRESH RESULT AUDIT**; this record does not
+claim completion of that separate audit or successful production promotion.
+
 ## CD-C3C Recovery Contract Validation
 
 On 2026-09-19, C3C implemented the [future recovery/result contract](./cd-c3-e2e-recovery-contract.md)
