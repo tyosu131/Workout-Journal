@@ -10,6 +10,23 @@ resource "google_project_iam_member" "deploy_service_usage_consumer" {
   member  = "serviceAccount:${google_service_account.deploy.email}"
 }
 
+# Returned Cloud Run operations use project scope, outside the service grants below.
+resource "google_project_iam_custom_role" "deploy_run_operation_reader" {
+  project     = var.project_id
+  role_id     = "workoutJournalRunOperationReader"
+  title       = "Workout Journal Run Operation Reader"
+  description = "Allows the dedicated deploy service account to read Cloud Run long-running operation status."
+  permissions = [
+    "run.operations.get",
+  ]
+}
+
+resource "google_project_iam_member" "deploy_run_operation_reader" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.deploy_run_operation_reader.name
+  member  = "serviceAccount:${google_service_account.deploy.email}"
+}
+
 resource "google_artifact_registry_repository_iam_member" "deploy_artifact_registry_reader" {
   project    = var.project_id
   location   = var.region
