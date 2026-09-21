@@ -8,9 +8,11 @@ SUCCESS**. The current production pair is `cd-35545739898-1`, each service at
 
 Must 3 remains **In progress** and Must 4 **Open**. The manually dispatched path
 through production approval, paired promotion and post-deploy verification is
-proven. C4B implements automatic main-merge + required-CI-success triggering in
-source, with offline verification; automatic CD/OIDC/WIF runtime proof is **NOT YET**.
-See [activation and source authority](#activation-and-source-authority).
+proven. Automatic run `35557989507` now proves main-CI triggering, exact-source
+preflight, Deploy WIF/Build, 0% candidates, reusable pre-auth validation and E2E WIF.
+The scenario failed before its first step; cleanup was PROVEN_ZERO. Full automatic
+E2E/release success remains **NOT YET**. See the [C4C diagnosis](#c4c-nested-playwright-authority-remediation)
+and [activation and source authority](#activation-and-source-authority).
 Manual activation remains UNCONFIGURED; it is not required by the automatic path.
 This implementation phase performs no runtime action and does not close Must 4.
 
@@ -159,7 +161,7 @@ At R9, automatic main-merge + CI-success triggering was unimplemented and
 `cd.yml` had only `workflow_dispatch`. Production CD was **inactive** at R9. Isolated WIF
 success is no longer a remaining prerequisite. Portfolio Done is not established.
 The later [C3U/C3V closure](#c3u-and-c3v-runtime-closure) proves the manually
-dispatched production path; automatic triggering remains Open and future runtime
+dispatched production path; full automatic E2E/release proof remains Open and future runtime
 actions retain their Human Gates.
 
 R9 is documentation closure only: no dispatch, rerun, Terraform operation, IAM/WIF
@@ -641,8 +643,9 @@ Task's preferred same-pool design explicitly separates subjects and grant attrib
 ## Activation and source authority
 
 C4B source implements `workflow_run` for `CI`, `completed`, branch `main`, while
-preserving both manual dispatch inputs. **Source implemented / offline verified;
-automatic runtime NOT YET.** Merge and runtime verification are separate gates.
+preserving both manual dispatch inputs. **Automatic runtime is partially PROVEN
+through E2E WIF** in run `35557989507`; full E2E/verify/production success remains
+unproven. C4C repairs only the nested Playwright metadata boundary in source.
 
 | Entry | Normalized mode | Release-start authority / E2E version |
 | --- | --- | --- |
@@ -654,7 +657,7 @@ automatic runtime NOT YET.** Merge and runtime verification are separate gates.
 manual release only; it is not a global automatic-release kill switch or production
 approval. No variable, provider, IAM or Terraform change is part of C4B. Existing
 WIF conditions constrain repository/main/workflow identities without an event-name
-condition; actual automatic OIDC/WIF compatibility still requires runtime proof.
+condition; run `35557989507` proves actual automatic Deploy and E2E OIDC/WIF compatibility.
 
 The runner's `GITHUB_EVENT_PATH` is parsed with strict object/type/duplicate-key
 checks. Automatic qualification requires exact repository `tyosu131/Workout-Journal`,
@@ -1115,7 +1118,8 @@ then OIDC/WIF → Build → immutable digests → paired candidates/exact Backen
 E2E/cleanup → production approval → Backend promotion → Frontend promotion →
 post-deploy verification. At C3W closure, automatic **main merge + required-CI-success
 triggering** was the remaining gap and `cd.yml` had only `workflow_dispatch`.
-C4B source/offline implementation is recorded above; automatic runtime is NOT YET.
+At C4B source-validation time automatic runtime was NOT YET. The later C4C record
+below proves the automatic path through E2E WIF, retaining the C3 historical boundary.
 C3W documentation synchronization was complete pending its
 separate Fresh Result Audit; it does not close the Portfolio final documentation
 audit or unrelated Must conditions.
@@ -1236,3 +1240,46 @@ neither `optional` nor `required`; all other before/after fields were identical.
 This is recorded separately, not described as zero `resource_drift`. No saved plan
 from source validation is authorized for apply; runtime work needs a fresh plan
 and its own Human Gate.
+
+## C4C nested Playwright authority remediation
+
+On 2026-09-21, merged source `719b22f246ed63f5512e9efff6773e6309dc0ad1` passed
+[main CI 35557808342](https://github.com/tyosu131/Workout-Journal/actions/runs/35557808342),
+attempt 1, and automatically triggered [CD 35557989507](https://github.com/tyosu131/Workout-Journal/actions/runs/35557989507),
+`workflow_run`, attempt 1, on that exact source. Fresh GitHub job/step read-back
+confirmed preflight and candidate SUCCESS, reusable credential-free preflight SUCCESS
+and E2E WIF authentication SUCCESS. Automatic trigger, source/CI authority, Deploy
+WIF/Build and paired candidate creation are runtime PROVEN for this run.
+
+The safe E2E result independently reacquired from that run records
+`SCENARIO_FAILED`, scenario FAIL, all eight steps NOT_RUN, HTTPS cookie false,
+receipt PERSISTED, cleanup PROVEN_ZERO (auth/users/notes/user_tags all 0) and evidence
+PASS. Verify and production were SKIPPED. Read-only Cloud Run traffic confirmed
+the C3V pair `cd-35545739898-1` remains 100% on both services and the failed
+`cd-35557989507-1` pair remains 0%; no recovery mutation is required.
+
+**Root cause PROVEN:** C4B added required public authority checks, but the nested
+`candidate-run.mjs` → Playwright `cleanEnv` omitted `CD_MODE`, `CD_SOURCE_SHA`,
+`CD_CI_RUN_ID`, `CD_CI_RUN_ATTEMPT` and `E2E_SECRET_VERSION`. The Python parent already
+forwarded them. Playwright config calls `browserBase` → `readCandidateManifest` →
+`bindWorkflow` before test execution; the missing identity deterministically raises
+`EXECUTION_IDENTITY_MISMATCH`. The controller suppresses child diagnostics and maps
+the unsuccessful launch to SCENARIO_FAILED; no step report exists, producing eight
+NOT_RUN entries. This is a nested process propagation defect, not an automatic
+trigger, WIF, candidate-readiness, Secret Manager, cleanup or production defect.
+
+C4C adds only those five names to the existing explicit public-metadata allowlist.
+Values are copied from the validated parent, never recomputed. GitHub/Google/Admin
+credentials remain excluded; existing synthetic-user login inputs and cleanup are
+unchanged. The outer credential-free pre-auth gate is separately preserved.
+An offline test executes the actual Python selector and Node launcher, intercepts
+only external I/O, and loads real Playwright config with `--list`. The pre-fix
+source fails the semantic propagation assertion; six omission mutants reproduce
+the rejected child identity and NOT_RUN signature. No hosted browser test runs.
+
+**Must 4 OPEN. Automatic runtime PARTIAL: trigger through E2E WIF PROVEN; full
+E2E/release NOT YET.** This source fix has no new runtime proof. Do not rerun
+`35557989507` or reuse its candidate ID. A separately approved fixed merge must
+produce fresh main CI, automatic CD and a new candidate ID; production promotion
+still requires its own Environment Human approval. No commit/push/PR, dispatch,
+rerun or runtime mutation was performed in C4C implementation.

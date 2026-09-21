@@ -5,9 +5,9 @@ authorization defect CLOSED; Must 4 Open; `CD_C1_ACTIVATION` UNCONFIGURED**.
 The current production pair is `cd-35545739898-1`, each at 100%. The
 [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure) records
 the exact source, successful jobs, E2E/cleanup, immutable digests and fresh traffic
-read-back. Must 4 remains Open for automatic main-merge + required-CI-success runtime
-proof: [C4B source](./cd-c1-candidate-delivery.md#activation-and-source-authority) is
-implemented / offline verified, automatic runtime NOT YET. Recovery/cleanup semantics
+read-back. Must 4 remains Open for full automatic delivery proof: [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+records automatic trigger through E2E WIF PROVEN, then a nested Playwright metadata
+failure before step 1 with PROVEN_ZERO cleanup. No recovery mutation is required. Recovery/cleanup semantics
 and these historical classifications are unchanged.
 Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
@@ -314,8 +314,8 @@ diagnostics, C3P proves numeric 403, C3U closes the IAM defect, and C3V proves
 successful production promotion/post-deploy verification. C3W synchronizes
 documentation; **C3 runtime chain is CLOSED**. The combined rollback evidence and
 its historical limits are assessed in the [closure record](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure),
-without a new C3V rollback. **Must 4 remains Open for automatic main-merge +
-required-CI-success triggering**. C3F successful result
+without a new C3V rollback. **Must 4 remains Open for fresh proof of the fixed automatic
+E2E/verify path, Human production approval, promotion and post-deploy verification**. C3F successful result
 transport is not runtime failure-injection or cross-run recovery evidence.
 
 C3I implementation stopped before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.

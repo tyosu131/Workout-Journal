@@ -23,8 +23,9 @@ proves the manually dispatched production path: C3V E2E 8/8 PASS, HTTPS cookie
 verified, cleanup PROVEN_ZERO (auth/users/notes/user_tags all 0), receipt PERSISTED,
 evidence PASS and matching manifest/E2E hashes, then production SUCCESS.
 C3 runtime chain is CLOSED; Must 4 remains Open for automatic main-merge +
-required-CI-success runtime proof. [C4B source](./cd-c1-candidate-delivery.md#activation-and-source-authority)
-is implemented / offline verified; automatic runtime NOT YET. Release E2E now consumes
+required-CI-success full delivery proof. [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+records automatic trigger through E2E WIF PROVEN; nested Playwright authority metadata
+was lost before step 1. Cleanup was PROVEN_ZERO; full automatic E2E/release is NOT YET. Release E2E now consumes
 qualified source/CI ID/attempt and explicit manual-release or automatic-release authority.
 Manual activation is UNCONFIGURED after C3V; automatic release uses reviewed secret
 version metadata `1` without that latch. Actual secret access/cleanup is unchanged.
@@ -49,7 +50,7 @@ P2B has now verified the actual production-like 0% candidate path described belo
 Together they close Must 2, including fresh review of the implementation, runtime
 proof and cleanup evidence on 2026-09-05. Subsequent [CD-B2 evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof)
 closed PE-P1C-01B and confirmed WIF `ACTIVE` / `disabled = false`; Must 4 remains
-Open for automatic triggering. The production Environment is
+Open for fresh runtime proof of the fixed automatic E2E/release path. The production Environment is
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency)
 under a subsequent gate; C3V subsequently completed its runtime approval and
 production delivery integration.

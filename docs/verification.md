@@ -3,9 +3,10 @@
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
 Current release closure: [C3W runtime/documentation verification](#cd-c3w-runtime-closure-documentation-validation).
-C3 runtime chain is CLOSED and Must 4 remains OPEN. C4B automatic trigger source is
-implemented / offline verified; automatic runtime proof is NOT YET. See
-[C4B offline validation](#cd-c4b-automatic-trigger-offline-validation).
+C3 runtime chain is CLOSED and Must 4 remains OPEN. Automatic run `35557989507`
+proves triggering through E2E WIF, then fails before the first scenario step with
+PROVEN_ZERO cleanup. See [C4C remediation](#cd-c4c-nested-e2e-authority-propagation)
+and the historical [C4B offline validation](#cd-c4b-automatic-trigger-offline-validation).
 Dated source-validation sections retain their
 phase-local NOT-YET results and do not override the latest runtime record.
 
@@ -967,3 +968,72 @@ After the fix, the full validation above passed: 148 Python tests, 66 Node tests
 **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**. Fresh Result Audit:
 **PASS — MERGE_READY** for source review only; automatic runtime remains NOT YET.
 Commit, push, PR, merge and runtime verification remain separate gates.
+
+## CD-C4C Nested E2E Authority Propagation
+
+On 2026-09-21, Source Map / Core Harness / Workflow Router were applied to this
+source-only remediation. Remote main was freshly confirmed at
+`719b22f246ed63f5512e9efff6773e6309dc0ad1`; CI `35557808342` was SUCCESS, push/main,
+attempt 1, exact SHA. The clean prior implementation tree was identical to this
+merge tree; fetch and branch creation established
+`fix/cd-c4c-nested-e2e-authority` on the actual merged commit without reset/rebase.
+
+[CD run 35557989507](https://github.com/tyosu131/Workout-Journal/actions/runs/35557989507)
+was independently read as workflow_run, attempt 1, exact source, FAILURE. Its
+preflight/candidate and reusable E2E pre-auth/authentication steps succeeded.
+The safe E2E JSON was reacquired without publishing raw logs: SCENARIO_FAILED,
+FAIL, eight NOT_RUN steps, HTTPS cookie false, receipt PERSISTED, cleanup
+PROVEN_ZERO with all four counts 0, evidence PASS. Verify/production were skipped.
+Read-only Cloud Run traffic confirmed C3V pair `cd-35545739898-1` at 100% each and
+failed pair `cd-35557989507-1` at 0%. No recovery action was needed or executed.
+
+The [C4C diagnosis](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+is PROVEN by source and semantic reproduction. The Python selector forwards five
+normalized fields that the nested Node launcher dropped. Real `browserBase`/
+`bindWorkflow` rejects the missing identity during Playwright config loading.
+Before changing production source, the new two-hop test failed in both manual and
+automatic modes with `Playwright hop: CD_MODE` (undefined). After adding only the
+five field names to the existing allowlist, both modes pass real Playwright
+`--list` discovery (one test, one file), without running a browser or hosted scenario.
+
+`candidate-authority.test.mjs` executes the actual Python `child_environment` and
+actual Node controller with external I/O adapters. It inspects the environment
+passed to Playwright, validates the real private manifest/hash, and checks exact
+equality of all 13 identity values across both hops. Every new field's omission
+and mutation is rejected; wrong source, CI attempt and event/mode remain rejected.
+Private canaries are independently injected before each boundary. GH_TOKEN,
+Google credential paths, impersonation, Authorization and privileged Supabase/E2E
+values are absent from the captured browser environment. Existing synthetic-user
+login inputs are unchanged.
+
+Detection force: **6 required / 6 detected / 6 semantic / 0 schema-only**. One mutant
+removes all five propagated fields (the production defect); five remove one field
+each. Every mutated controller reaches the intercepted launcher without import or
+syntax failure, fails an exact-value semantic assertion, rejects real child
+authority and reproduces SCENARIO_FAILED / eight NOT_RUN / cleanup PROVEN_ZERO.
+Schema rejection alone is not counted. Existing C4B detection remains **19/19
+semantic**, including the separate outer pre-auth M1 boundary.
+
+| Check | C4C result |
+| --- | --- |
+| Full Python unittest discovery | **148 PASS**, including workflow semantics and C4B detection |
+| `npm run e2e:test` | TypeScript check + **69 PASS**, including two-hop discovery and six mutants |
+| actionlint on CI/CD/reusable E2E | **PASS** |
+| `git diff --check` | **PASS** |
+| Existing relative-link/anchor checks | **144 links PASS** (135 outgoing + 9 inbound), **92 anchors PASS** |
+| Added-content sensitive-pattern inspection | **PASS**, including the new test; no credential payloads |
+
+Only `candidate-run.mjs` changes execution behavior: direct copying of public
+metadata, no credential inheritance and no new helper/authority inference.
+Removing that allowlist addition reproduces the baseline launcher bytes. Python
+controllers, workflows (including M1), manifest validators/schema, Build/readiness,
+user ownership/cleanup, TTL/CAS/polling, promotion/rollback and diagnostics remain
+byte-identical to merged C4B. No application or Terraform desired-state changes.
+The three canonical docs record this result; six additional Current summaries
+had stale automatic-WIF/trigger NOT-YET claims and receive only status corrections.
+Historical C3/P2B/R8 and dated C4B source-only evidence retain their phase scope.
+
+**Must 4 OPEN; automatic runtime PARTIAL — trigger through E2E WIF PROVEN; full
+E2E/release NOT YET.** The fix is offline verified only. A later approved merge
+must create fresh main CI, automatic CD and a new candidate ID. C4C performed no
+commit/push/PR, dispatch, rerun, approval, secret payload access or runtime mutation.
