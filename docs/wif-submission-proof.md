@@ -18,12 +18,14 @@ This is separate from PE-P1C-01B, which remains Closed. No full delivery or
 secret payload consumption ran in R8. C3V later completed production delivery;
 current `CD_C1_ACTIVATION` is UNCONFIGURED. R9 added no runtime execution or authorization.
 
-Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
-Must 3 In progress; WIF `ACTIVE` / `disabled = false`.** C3 runtime chain is now
-CLOSED; Must 4 remains Open for full automatic delivery proof. [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
-records actual workflow_run Deploy and E2E OIDC/WIF **PROVEN** in run `35557989507`.
-The later scenario failed at the nested Playwright metadata boundary; full automatic
-release remains unproven. This does not rewrite CD-B2 or R8 proof scope.
+Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Closed;
+Must 3 In progress; WIF `ACTIVE` / `disabled = false`.** C3 runtime chain remains
+CLOSED. [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+records automatic `workflow_run` `35573153822`: Deploy/E2E WIF, E2E 8/8, cleanup
+PROVEN_ZERO, Human production approval and complete delivery **PROVEN**.
+[C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+preserves failed run `35557989507` and its remediated nested authority defect.
+This does not rewrite CD-B2 or R8 proof scope.
 The manual WIF proof route remains isolated (normalized `manual-wif-proof`); shared
 Build preparation accepts explicitly qualified release authority without weakening
 its source, provider, service-account or reviewed build-configuration checks.
@@ -107,12 +109,12 @@ PE-P1C-01B is Closed. Must 3 stays In progress: monitoring and alert resources
 remain unimplemented, deferred to Must 5 design in the
 [ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix).
 R8 adds isolated WIF evidence without closing that remaining scope.
-Must 4 stays Open: automatic main-merge + CI-success delivery,
+At CD-B2 closure, Must 4 stayed Open: automatic main-merge + CI-success delivery,
 candidate deployment and exact pairing, E2E integration, runtime Environment
 approval, promotion, post-deploy verification and rollback/failure behavior were
 still unimplemented at CD-B2 closure. CD-C1 subsequently added their gated source
 contract, and C3V now supplies successful production delivery evidence. Automatic
-trigger through E2E WIF is now runtime-proven; full automatic E2E/release remains future work.
+delivery is now fully runtime-proven by C4D, closing Must 4.
 Manual release activation remains UNCONFIGURED; automatic qualification does not
 use that latch. The following inputs describe the historical CD-A/CD-B2 proof.
 

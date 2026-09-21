@@ -39,7 +39,7 @@ Portfolio Finish does not apply one priority chain to every kind of evidence. Us
 | Historical design / past decisions | ADR / PR / commit history / explicitly historical design documents |
 | External technology behavior | Official primary documentation |
 
-The current production pair and latest successful release are recorded in the [C3U/C3V runtime closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure). The [v1 production release record](./releases/workout-journal-v1.md) remains the original known-good v1 evidence. The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
+The current production pair and latest successful release are recorded in the [C4D automatic runtime closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure). The [v1 production release record](./releases/workout-journal-v1.md) remains the original known-good v1 evidence. The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
 
 Claims must distinguish:
 
@@ -213,9 +213,9 @@ owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, exact source
 `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation runtime
 verification is **PASS**; R2/R4/R6 failures remain Historical. This closes only
 the specified Deploy positive, Deploy-provider-to-E2E negative and E2E positive
-authentication/isolation contracts. Full automatic CD proof remains Open.
-Must 3 is In progress and Must 4 Open; existing CD-B2
-Deploy WIF / PE-P1C-01B remains Current and Closed.
+authentication/isolation contracts. At that R8/R9 checkpoint, full automatic CD
+proof and Must 4 remained Open. C4D below closes that delivery gap; Must 3 stays
+In progress and existing CD-B2 Deploy WIF / PE-P1C-01B remains Closed.
 
 [C3F/G/H incident evidence](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
 subsequently proves candidate delivery, E2E/cleanup and verify-candidate PASS for
@@ -249,8 +249,8 @@ runtime PROVEN, authorization defect CLOSED, then fresh production release
 `35507087914` SUCCESS / attempt 1). C3U added 2 resources with 0 changes/destroys;
 current Terraform state is **37** and the post-apply plan was **0/0/0**. C3V proves
 the manually dispatched path through production approval, Backend then Frontend
-promotion and post-deploy verification. Current pair `cd-35545739898-1` is 100% on
-both services; activation is again UNCONFIGURED. The diagnosed missing effective
+promotion and post-deploy verification. At C3W closure, pair `cd-35545739898-1` was
+100% on both services and activation was again UNCONFIGURED. The diagnosed missing effective
 allow is **PROVEN and CLOSED**; historical C3N/C3P incident root cause remains
 **STRONGLY_SUPPORTED_NOT_PROVEN**. C3N's HTTP integer is absent; C3P's 403 and
 later exact Operation evaluations strongly support IAM causation, but neither
@@ -268,19 +268,29 @@ coverage are not newly proven. The runbook still requires its checks whenever a
 rollback occurs; this contract does not require an induced production failure
 after every remediation. Historical unknowns are not silently reclassified.
 
-**Must 4 remains OPEN:** merged C4B source `719b22f246ed63f5512e9efff6773e6309dc0ad1`
-and main CI `35557808342` (SUCCESS, attempt 1) automatically produced CD run
-`35557989507` (`workflow_run`, attempt 1). Exact-source preflight, Deploy WIF/Build,
-paired 0% candidates, reusable pre-auth validation and E2E WIF are runtime PROVEN.
-The scenario failed before its first step because the nested Playwright environment
-lost five required public authority fields; cleanup was PROVEN_ZERO and production
-was skipped. The [C4C source fix](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
-is offline-only. Closure still requires a fresh fixed merge and automatic CI/CD
-chain proving E2E/verify success, Human production approval, paired promotion,
-post-deploy verification and durable documentation closure. The C3 manually
-dispatched success remains separate. Existing bounded rollback evidence above remains
-sufficient; no artificial production failure is added as a Must. The implementation
-phase does not claim the later Fresh Result Audit or Portfolio final audit.
+**Must 4 Closed — C4D automatic runtime closure.** [PR #114](https://github.com/tyosu131/Workout-Journal/pull/114)
+merged as `03f45f3b7ba2d48040cffcb2130318717a1e9d09`; main CI `35572912520`
+SUCCESS / attempt 1 automatically triggered `workflow_run` CD `35573153822`,
+SUCCESS / attempt 1, with exact CI ID/attempt/source binding. Build
+`b53e2ad8-8e66-4f98-a3f6-f4a380f383c8` produced immutable paired candidate
+`cd-35573153822-1`. E2E was 8/8 PASS, HTTPS cookie verified, cleanup PROVEN_ZERO,
+receipt PERSISTED and evidence PASS. Manifest/E2E hashes matched; verify succeeded.
+GitHub's review-history API confirmed Human approval by `tyosu131` for the
+`production` Environment. Backend then Frontend promotion and post-deploy verification
+passed. Fresh Current production is `cd-35573153822-1`, both services at 100%,
+with exact manifest digests and Backend tagged URL. Activation is UNCONFIGURED;
+the automatic path succeeded without the manual latch. The [one-to-one requirement mapping](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+records PASS for every Must 4 requirement. **Remaining gap: None.**
+
+Historical C4B run `35557989507`, source `719b22f246ed63f5512e9efff6773e6309dc0ad1`,
+followed successful main CI `35557808342`, attempt 1. Trigger through E2E WIF passed,
+but the nested Playwright metadata omission caused failure before step 1; cleanup
+was PROVEN_ZERO and production skipped. C4C's source fix is now runtime PROVEN by
+the fresh successful automatic run; the failure record is preserved. The C3 manually
+dispatched proof remains separate. Existing bounded rollback evidence above remains
+sufficient; C4D did not execute rollback or induce a failure. Other Must statuses
+are unchanged, and the separate C4D Fresh Result Audit/Portfolio final audit is not
+claimed by this documentation closure.
 
 Must 3's concrete remaining resource gap is monitoring and alert resources:
 they are included in section 3 and explicitly unimplemented/deferred to Must 5
@@ -296,7 +306,7 @@ prevention remains the existing Backlog / separate hardening item.
 | 1. Documentation consistency | In progress | Current code, release record, deployment runbook, and P0 documentation sync | Complete P0 sync, keep later docs current, and pass final stale-claim audit | P0 + Final Portfolio Audit |
 | 2. Automated production-like E2E smoke | Closed | P2A local isolated foundation plus P2B actual HTTPS 0% candidate proof: run `p2b-1788593776629-9943a84c9ea7c644` passed login, note create/autosave/read, tag create/use/delete, Calendar, Analytics and logout on exact paired candidate `p2b-081adb25`; production traffic stayed 100%, Auth/profile/notes/user_tags residuals were zero and sanitized evidence passed leak inspection. Implementation and proof were freshly reviewed on 2026-09-05; the [durable E2E evidence record](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) does not depend on local JSON availability | None for Must 2; CD integration and production promotion remain separately gated under Must 4 | P2A + P2B |
 | 3. Infrastructure as Code / Identity | In progress | P1B imported the eight-resource existing GCP foundation without cloud resource mutation; P1C-A added the disabled keyless WIF foundation; P1C-B added and verified the exact 13-member operational least-privilege IAM layer; P1C-C verified dedicated Build execution from exact commit `709c55a934783917184d09831facc085e7bc19c9`, including both immutable image digests and Cloud Logging, without Cloud Run mutation; P1C-D found zero current active Compute default SA dependencies; after a separate Human Gate, P1C-D2 removed only its legacy project-level `roles/editor` binding outside Terraform; post-removal lightweight production verification passed. CD-B2 applied the exact provider update, confirmed actual `ACTIVE` / `disabled = false`, and closed [PE-P1C-01B with runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof) on 2026-09-06. At CD-B2 closure Terraform had 30 resources with a no-op post-plan. CD-C2A provisioned five E2E resources, giving 35; CD-C2B verified the no-op baseline and dedicated key/version 1. CD-C2C provider activation is COMPLETE; R8 run `35411846680` at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1` closes isolated A/B/C WIF proof with all checks PASS and runtime-verifies R7 remediation. C3U added the two C3S Operation IAM resources: current state 37, post-plan 0/0/0, remediation runtime PROVEN | Implement and verify the monitoring/alert resource scope deferred to Must 5 design in the ownership matrix; isolated WIF success does not close this remaining Must 3 scope | P1 + IaC phase |
-| 4. Continuous Delivery | Open | [C3U/C3V runtime closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure): exact-main required CI followed by one manual release dispatch, keyless OIDC/WIF, dedicated Cloud Build, immutable digests, paired candidates with exact Backend URL, E2E 8/8 PASS and PROVEN_ZERO cleanup, production Environment approval, Backend then Frontend promotion, post-deploy verification PASS. Run `35545739898`, attempt 1, exact SHA `cc608aa5f2edbd81952024d497bdc5838b796599`, SUCCESS. C3G actual rollback restoration/smoke, C3K observed failure diagnostics and C3U exact Operation authorization retain the bounded rollback evidence described above. C3 runtime chain CLOSED; current pair `cd-35545739898-1`, activation UNCONFIGURED | C4B merged; automatic run `35557989507` proves exact main CI linkage, preflight, Deploy WIF/Build, candidates, reusable pre-auth and E2E WIF. Scenario failed before step 1; cleanup PROVEN_ZERO, production skipped. C4C nested authority propagation fix is offline verified; a fresh automatic run must still prove E2E/verify, Human production approval, promotion/post-deploy and docs closure. Manual release retains activation; automatic qualification replaces that latch only for release start. Existing pairing, cleanup and rollback contracts remain. The existing [publishable-key runner-metadata hygiene](./wif-submission-proof.md#follow-up-should-publishable-key-log-hygiene) remains Should, not an added Must | CD phase |
+| 4. Continuous Delivery | Closed | [C4D automatic runtime closure and requirement mapping](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure): PR #114 / main `03f45f3b7ba2d48040cffcb2130318717a1e9d09` → CI `35572912520` SUCCESS / attempt 1 → automatic workflow_run CD `35573153822` SUCCESS / attempt 1. Exact CI/source binding, OIDC/WIF, Build `b53e2ad8-8e66-4f98-a3f6-f4a380f383c8`, immutable paired 0% candidates, 8/8 E2E, PROVEN_ZERO cleanup, matching hashes, Human production Environment approval, Backend then Frontend promotion and post-deploy PASS. Current pair `cd-35573153822-1` at 100% each; activation UNCONFIGURED. C3 bounded rollback evidence retained; no C4 rollback claimed | None | CD phase / C4D closure |
 | 5. Observability | Open | Sanitized failure summaries and manual inspection guidance exist | Add health/probe, structured logging, availability monitoring, actionable alerting, and recovery evidence | Observability phase |
 | 6. Security / Repository Governance | Open | Existing CI and secret-safety boundaries exist; `main` is protected by a strict, GitHub-Actions-pinned required check; temporary PR #91 proved merge blocking with no CI result and availability after the required CI succeeded | Add static security scanning and dependency/security automation | Security / Governance phase |
 | 7. Portfolio presentation | Open | Current READMEs and technical documents provide partial product and architecture coverage | Complete the P6 README and repository-surface rewrite, including a verified live URL and bilingual consistency | P6 |

@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: current state 37, post-plan 0/0/0, authorization defect CLOSED. C3V production release succeeded; Must 3 remains In progress and Must 4 Open for full automatic delivery proof
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: current state 37, post-plan 0/0/0, authorization defect CLOSED. C3V manual release and C4D automatic release succeeded; Must 3 remains In progress, while Must 4 is Closed
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -20,10 +20,12 @@ verified; R6's fixed-path failure remains Historical. R8 proves only the specifi
 Deploy positive, same-STS-token Deploy-to-E2E denial and E2E positive paths.
 The [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
 now proves the manually dispatched production path; C3 runtime chain is CLOSED.
-Must 3 stays In progress and Must 4 Open for full automatic delivery proof.
-[C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation) records
-automatic trigger, Deploy WIF/Build/candidates and E2E WIF PROVEN. Scenario failed
-at the nested Playwright metadata boundary with PROVEN_ZERO cleanup. No infrastructure ownership,
+Must 3 stays In progress; Must 4 is Closed by [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
+Automatic run `35573153822` proves the fixed E2E path (8/8 PASS, PROVEN_ZERO cleanup),
+verify, Human production approval and promotion/post-deploy SUCCESS. Current pair
+`cd-35573153822-1` is 100% on both services; C3V and failed C4B pairs are 0%.
+[C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation) retains
+the earlier failure and now runtime-proven fix. No infrastructure ownership,
 provider condition or IAM change is needed. `CD_C1_ACTIVATION` is UNCONFIGURED and
 now gates manual release only; qualified automatic release still requires production
 Environment Human approval. R9 changed no IAM/WIF
@@ -199,15 +201,15 @@ Current status of that sequence:
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Implemented and configuration-verified; C3V runtime approval integration and production job SUCCESS |
-| Keyless WIF/CD integration | CD-B2 and R8 proofs retained; C3U least-privilege IAM remediation PROVEN; C3V manually dispatched full production delivery SUCCESS. Automatic trigger through E2E WIF is PROVEN; full automatic E2E/release remains Open |
-| Production CD activation | C3V was separately activated and approved; current `CD_C1_ACTIVATION` UNCONFIGURED. Manual activation/release needs its Human Gate. C4B automatic start instead requires exact successful main CI; production Environment approval remains Human-gated; automatic trigger through E2E WIF PROVEN, full delivery NOT YET |
+| Keyless WIF/CD integration | CD-B2 and R8 proofs retained; C3U least-privilege IAM remediation PROVEN; C3V manually dispatched full production delivery SUCCESS. C4D full automatic E2E/release is runtime PROVEN; Must 4 Closed |
+| Production CD activation | C3V was separately activated and approved; current `CD_C1_ACTIVATION` UNCONFIGURED. Manual activation/release needs its Human Gate. C4B automatic start instead requires exact successful main CI; production Environment approval remains Human-gated; C4D full automatic delivery SUCCESS without the manual latch |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
-The production Environment configuration prerequisite is also satisfied. The remaining
-automatic-delivery gap is fresh proof of the C4C-fixed path through E2E, verify,
-Human production approval, paired promotion and post-deploy verification;
-C3V verified Environment approval and production delivery. CD-B2 closed `PE-P1C-01B`
-Deploy-SA/WIF submission evidence; Must 4 remains Open. Historically, P2B did not
+The production Environment prerequisite and full automatic-delivery path are satisfied:
+C4D passed the fixed E2E/verify path, Human production approval, paired promotion
+and post-deploy verification. Must 4 is Closed with no remaining delivery gap;
+Must 3 monitoring/alert resources and Must 5 Observability remain open work.
+CD-B2 closed the separate `PE-P1C-01B` Deploy-SA/WIF submission evidence. Historically, P2B did not
 activate the provider, create an Environment, implement CD, promote traffic or
 close Must 4; this subsequent Environment setup does not activate WIF/CD or
 authorize production promotion.
@@ -219,7 +221,8 @@ revisions `workout-journal-backend-p2b-081adb25` and
 `candidate-p2b-081adb25`. The Frontend points to the exact Backend tagged URL,
 not the production service URL. At P2B, production remained `00003-luc` / `00003-xar`
 at 100%, with the known-good `candidate-0829-923536` pair intact. C3V subsequently
-promoted `cd-35545739898-1`; the older production pair is now at 0%. These revisions,
+promoted `cd-35545739898-1`; C4D now serves `cd-35573153822-1` at 100%, with both
+older production pairs at 0%. These revisions,
 tags, images and configuration remain outside Terraform ownership; keeping this
 proof pair does not authorize tag reassignment or deletion.
 
@@ -254,8 +257,8 @@ Environment settings and Cloud Run were unchanged; full mutation accounting is
 in the linked evidence record. At CD-B2, production CD was inactive and full CD
 credential delivery remained future work. C3V subsequently verified delivery
 with the separate E2E identity/credential boundary; the Deploy SA still has no
-Secret Manager payload access. Must 3 remains In progress and Must 4 Open for
-fresh runtime proof of the fixed automatic E2E/release path; current release activation is UNCONFIGURED.
+Secret Manager payload access. Must 3 remains In progress and Must 4 is Closed by
+C4D automatic runtime proof; current manual-release activation is UNCONFIGURED.
 
 Compute default Service Account Editor removal was **not** part of initial creation. The approved boundary required all three gates:
 
@@ -327,5 +330,5 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | CD-B2 provider activation and Deploy-SA/WIF submission | High | Complete: exact saved-plan apply, post-apply zero-change, one successful workflow/Build, Human-confirmed Summary and independent read-back; PE-P1C-01B Closed |
 | Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
 | Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
-| Production CD activation | High | C3V verified the manually dispatched candidate/E2E/approval/promotion/post-deploy path; existing rollback evidence and its limits are recorded in the C3U/C3V closure. Must 4 remains Open for full automatic delivery proof. Manual activation UNCONFIGURED; manual release retains its Human Gate. C4B automatic start uses exact successful main CI authority without the latch; production Environment approval remains mandatory; automatic trigger through E2E WIF PROVEN, full delivery NOT YET |
+| Production CD activation | High | C3V verified the manually dispatched candidate/E2E/approval/promotion/post-deploy path; existing rollback evidence and its limits are recorded in the C3U/C3V closure. C4D automatic delivery closes Must 4. Manual activation UNCONFIGURED; manual release retains its Human Gate. C4B automatic start uses exact successful main CI authority without the latch; production Environment approval remains mandatory; automatic E2E/verify/promotion/post-deploy runtime PROVEN in `35573153822` |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |

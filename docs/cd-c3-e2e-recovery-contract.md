@@ -1,14 +1,14 @@
 # CD-C3: candidate incident and E2E recovery contract
 
-Current status (C3W): **C3 runtime chain CLOSED; C3V production release SUCCESS;
-authorization defect CLOSED; Must 4 Open; `CD_C1_ACTIVATION` UNCONFIGURED**.
-The current production pair is `cd-35545739898-1`, each at 100%. The
-[C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure) records
-the exact source, successful jobs, E2E/cleanup, immutable digests and fresh traffic
-read-back. Must 4 remains Open for full automatic delivery proof: [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
-records automatic trigger through E2E WIF PROVEN, then a nested Playwright metadata
-failure before step 1 with PROVEN_ZERO cleanup. No recovery mutation is required. Recovery/cleanup semantics
-and these historical classifications are unchanged.
+Current status (C4D): **C3 runtime chain CLOSED; authorization defect CLOSED;
+Must 4 Closed; `CD_C1_ACTIVATION` UNCONFIGURED**. The current production pair is
+`cd-35573153822-1`, each at 100%. The [C4D closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+records automatic CI/CD, E2E 8/8 PASS, PROVEN_ZERO cleanup, Human production approval
+and post-deploy PASS. The previous C3V and failed C4B pairs remain 0%.
+[C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+preserves the earlier nested metadata failure and its now runtime-proven fix.
+No recovery mutation is required. Recovery/cleanup semantics and historical
+classifications below are unchanged.
 Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
 CD-C3C source remediation is merged via [PR #106](https://github.com/tyosu131/Workout-Journal/pull/106)
@@ -307,15 +307,16 @@ generic discovery or destructive fallback is added.
 C3C improves recovery safety; C3D closes the historical incident
 for current residual/data-hygiene concerns only. Scenario NOT PROVEN and cleanup
 execution UNPROVEN remain historical limitations. Must 3 remains In progress (monitoring/alert resources deferred
-to Must 5 design); Must 4 remains Open. C3F closes the successful candidate
+to Must 5 design); Must 4 is now Closed by C4D. C3F closes the successful candidate
 E2E/cleanup/re-verification portion; C3G proves approval integration and actual
 previous-pair restoration after failed promotion. C3K supplies observed failure
 diagnostics, C3P proves numeric 403, C3U closes the IAM defect, and C3V proves
 successful production promotion/post-deploy verification. C3W synchronizes
 documentation; **C3 runtime chain is CLOSED**. The combined rollback evidence and
 its historical limits are assessed in the [closure record](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure),
-without a new C3V rollback. **Must 4 remains Open for fresh proof of the fixed automatic
-E2E/verify path, Human production approval, promotion and post-deploy verification**. C3F successful result
+without a new C3V rollback. **C4D closes Must 4 with the fixed automatic E2E/verify
+path, Human production approval, promotion and post-deploy verification**; no new
+rollback event is claimed. C3F successful result
 transport is not runtime failure-injection or cross-run recovery evidence.
 
 C3I implementation stopped before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.
