@@ -7,7 +7,7 @@ export function manifest(sha = 'a'.repeat(40), run = '123456', attempt = '1') {
   const m = { version: 2, e2eIdentityVersion: 2, repository: 'tyosu131/Workout-Journal', project, region,
     sourceSha: sha, candidateId, capturedAt: new Date().toISOString(), ttlMs: RELEASE_TTL,
     run: { id: run, attempt, event: 'workflow_dispatch', workflowRef: CALLER,
-      workflowSha: sha, ownerId: '95160728', repositoryId: '790375516', ciRunId: '99' },
+      workflowSha: sha, ownerId: '95160728', repositoryId: '790375516', ciRunId: '99', ciRunAttempt: '1' },
     e2eSecret: { project, name: E2E_SECRET, version: '17' },
     supabase: { projectRef: 'krpnnkcipyeasddzbpma', url: 'https://krpnnkcipyeasddzbpma.supabase.co' },
     build: { id: '00000000-0000-4000-8000-000000000001', sourceSha: sha, status: 'SUCCESS',

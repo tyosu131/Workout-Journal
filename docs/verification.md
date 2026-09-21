@@ -3,8 +3,10 @@
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
 Current release closure: [C3W runtime/documentation verification](#cd-c3w-runtime-closure-documentation-validation).
-C3 runtime chain is CLOSED and Must 4 remains OPEN for automatic main-merge +
-required-CI-success triggering. Dated source-validation sections retain their
+C3 runtime chain is CLOSED and Must 4 remains OPEN. C4B automatic trigger source is
+implemented / offline verified; automatic runtime proof is NOT YET. See
+[C4B offline validation](#cd-c4b-automatic-trigger-offline-validation).
+Dated source-validation sections retain their
 phase-local NOT-YET results and do not override the latest runtime record.
 
 ## Local Commands
@@ -829,3 +831,139 @@ or Supabase.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
 - Add backend unit tests or integration tests; the current backend build checks syntax only.
+
+## CD-C4B Automatic Trigger Offline Validation
+
+On 2026-09-21, Source Map / Core Harness / Workflow Router were applied to the
+High-risk implementation. The clean starting branch was `docs/cd-c3w-runtime-closure`,
+HEAD `db6169d287c01561a6350a1f5ffa4398e30e141e`. Fetch, switch to main and fast-forward
+normalization established exact baseline `e9fed298821cc3e729ef7a481ef24305b8ff8510`;
+remote main and [required CI 35550903984](https://github.com/tyosu131/Workout-Journal/actions/runs/35550903984)
+were freshly read as exact SHA / push / SUCCESS / attempt 1. Implementation branch:
+`feat/cd-c4b-automatic-trigger`. No commit, push, PR or runtime operation was executed.
+
+The [authority contract](./cd-c1-candidate-delivery.md#activation-and-source-authority)
+now supports qualified `workflow_run` plus both manual routes. Actual event JSON,
+REST CI workflow identity and fixed attempt-specific required job are independently
+validated; normalized outputs bind every release checkout and E2E invocation.
+Manifest v2 retains e2eIdentityVersion 2 and now requires `run.ciRunAttempt`.
+Automatic version metadata is exactly `1`; manual activation/input remain required.
+Production Environment approval and stale-source rejection remain mandatory.
+
+Offline commands/results (Node 24; no hosted browser scenario; results below include
+the Fresh Result Audit fix):
+
+| Check | Result |
+| --- | --- |
+| `PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -q` | **148 tests PASS** |
+| `npm run e2e:test` | TypeScript contract compilation + **66 Node tests PASS** |
+| `actionlint .github/workflows/ci.yml .github/workflows/cd.yml .github/workflows/candidate-e2e.yml` | **PASS**, existing actionlint 1.7.12 |
+| Parsed workflow graph | Trigger, qualification, exact checkouts/outputs, reusable modes, least privilege, Environment dependencies and pre-approval command boundaries PASS |
+| C4B independent detection mutants | **19 required / 19 detected; 19 semantic assertion detections / 0 schema-only** |
+| `git diff --check` | **PASS** |
+| Existing local Markdown link/anchor inspection | **139 links PASS** (130 outgoing + 9 inbound), **87 anchors PASS** |
+| Added-content sensitive-pattern inspection | **PASS**, including the two new test files; no credential payloads |
+
+The initial default Node binary could not load a local library; validation used
+repository-required Node 24. The existing Terraform IAM tests use isolated temporary
+roots, mock provider and plan-only execution. Their provider process was sandbox-blocked;
+the successful full suite ran outside that restriction without credentials, remote
+state, cloud API or apply. No Terraform source/provider upgrade was performed.
+
+C4B mutation coverage uses disposable source copies. Every row below is a semantic
+mutation, detected by the stated assertion: **semantic YES / detected YES /
+syntax-import-runtime-error-only NO** for each of the 19. The harness requires
+`AssertionError` and `FAILED (failures=...)` without test errors; Python mutants also
+compile before execution. No schema-only rejection is counted.
+
+| Independent mutant | Specific detection assertion |
+| --- | --- |
+| Remove successful conclusion | Failed event must raise before API/cloud |
+| Allow upstream PR | PR event must raise before API/cloud |
+| Remove main branch requirement | Feature event must raise before API/cloud |
+| Remove current-main equality | Stale preflight/candidate/promotion must raise before API/cloud/traffic |
+| Checkout main instead of S | Parsed candidate/verify/production refs must equal preflight source |
+| Remove CI workflow-ID verification | Wrong REST workflow ID must raise |
+| Reselect CI in later phases | No workflow-run discovery endpoint may be called |
+| Ignore CI attempt mismatch | Changed REST attempt must raise |
+| Accept automatic latest | Non-numeric automatic constant must raise |
+| Bypass manual activation | Missing/unapproved activation must raise |
+| Remove production Environment | Parsed production Environment must equal `production` |
+| Promote in candidate job | Candidate commands must remain prepare/candidate only |
+| Drop CI attempt from producer | Produced `ciRunAttempt` must equal `1`, with schema validator stubbed |
+| Allow workflow SHA different from source | Mismatched environment SHA must raise |
+| Remove YAML success guard | Parsed job guard must reject failed/cancelled/skipped completion |
+| Give invalid event the shared pending slot | Parsed concurrency result must equal isolated CD run ID |
+| Remove reusable exact caller guard | Parsed E2E guard must reject another caller in both release modes |
+| Remove reusable pre-auth step | Exactly one mandatory preflight must precede auth |
+| Skip reusable preflight validation | CLI preflight must fail for unbound caller/metadata/hash |
+
+Positive/negative contracts additionally cover cancelled/skipped/failed CI, wrong
+repository/head repository/owner, workflow name/path, malformed/missing event JSON
+fields, invalid SHA/IDs/attempts, payload/API mismatch, required job missing/failed/
+wrong source, exact automatic secret version, preserved isolated WIF proof and both
+manual release activation outcomes. Node validation independently rejects missing
+CI attempt and cross-event/source metadata; the detection count above is not inflated
+by these schema tests.
+
+Behavior comparison against the exact baseline used Python ASTs. All 27 unchanged
+CD helper functions match, including traffic parsing, service/configuration reads,
+CAS and operation polling, smoke, hashing and diagnostics. Candidate code matches
+after only authority-handoff normalization. The complete promotion/rollback body
+after the authority guard is unchanged: Backend then Frontend promotion, Frontend
+then Backend rollback, no changed retry behavior. Shared Build prepare/prove bodies
+after context selection are identical; their existing source cleanliness, public
+configuration and build-config hash guards remain. E2E controller, exact secret read,
+private result transport and cleanup logic are unchanged. Child authority metadata
+is added; the audit fix also runs the existing manifest/source checks before E2E
+authentication and repeats them before secret access. The controller body after
+credential validation and its failure handling match baseline ASTs exactly.
+WIF proof changes only its internal normalized mode constant.
+TTL remains 3,600,000 ms. No application or frontend/backend dependency changed,
+so unrelated application builds/tests were not repeated.
+
+The four canonical CD/completion/verification/runbook docs were updated, with minimal
+Current cross-reference corrections in E2E, WIF, recovery and infrastructure docs.
+Historical C3 evidence, P2B/R8 proof scope and 30/35-resource snapshots remain historical.
+Current production remains the C3V pair from prior runtime evidence, Terraform 37,
+C3 runtime chain CLOSED, current authorization defect CLOSED; historical C3N/C3P
+root cause remains STRONGLY_SUPPORTED_NOT_PROVEN and C3G/C3K NOT PROVEN.
+
+**Must 4 OPEN; source IMPLEMENTED / offline verified; automatic runtime NOT YET.**
+Later acceptance needs reviewed merge, successful main required CI, causally linked
+automatic CD run with fixed CI attempt/source, actual OIDC/WIF and Build/candidate/
+E2E/verify success, production waiting, separate Human approval, promotion/post-deploy
+verification and docs closure. No forced failed main CI or production failure is
+required; negative contracts are offline and PR non-trigger behavior can be observed
+without dispatch.
+
+### C4B Fresh Result Audit
+
+The read-only First Pass independently reproduced 144 Python tests, 66 Node tests,
+16 semantic detections, actionlint, 139 links and 87 anchors. Remote main and baseline
+CI matched the implementation authority. The attempt-specific GitHub jobs response
+also confirmed actual `head_sha`, `run_id` and `run_attempt` fields; mocks were not
+the sole evidence. Main protection and the production Environment reviewer were
+read back without changes. The reviewed scope was 25 unstaged files, with no CI
+workflow, Terraform desired-state or application change.
+
+**First Pass: Must 1 / Should 0 / Pending Evidence 0 / Decision Needed 0.** M1:
+the reusable E2E guard admitted an unrelated caller, while Python caller/manifest/
+source validation ran after `google-github-actions/auth`. The existing WIF provider
+would reject that caller and the controller would reject before secret access;
+this did not demonstrate a secret-access bypass. It nevertheless violated the
+required validation-before-OIDC ordering.
+
+Only M1 was fixed after First Pass: an exact CD caller guard plus a credential-free
+`candidate_e2e.py preflight` step before Google authentication. It validates the
+actual event, manifest/hash, source and fixed CI inputs, then reads current main;
+the trusted caller already performed the REST CI/job verification. Normal execution
+repeats the checks before secret access. Four regression tests and three independent
+mutants cover both modes, forged metadata/caller, stale main and removal/bypass of
+the pre-auth gate. No new permissions, runtime operations or secret reads were used.
+
+After the fix, the full validation above passed: 148 Python tests, 66 Node tests,
+19 semantic detections and no schema-only detections. Final findings are
+**Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0**. Fresh Result Audit:
+**PASS — MERGE_READY** for source review only; automatic runtime remains NOT YET.
+Commit, push, PR, merge and runtime verification remain separate gates.

@@ -1,6 +1,6 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Current status (C3W, 2026-09-21): **C3 runtime chain CLOSED; C3S IAM remediation
+Current runtime status (C3W, 2026-09-21): **C3 runtime chain CLOSED; C3S IAM remediation
 applied and runtime PROVEN; authorization defect CLOSED; C3V production release
 SUCCESS**. The current production pair is `cd-35545739898-1`, each service at
 100%; `CD_C1_ACTIVATION` is **UNCONFIGURED**. See the
@@ -8,9 +8,11 @@ SUCCESS**. The current production pair is `cd-35545739898-1`, each service at
 
 Must 3 remains **In progress** and Must 4 **Open**. The manually dispatched path
 through production approval, paired promotion and post-deploy verification is
-proven. Automatic main-merge + required-CI-success triggering is still missing:
-[`cd.yml`](../.github/workflows/cd.yml) remains `workflow_dispatch` only.
-Activation being unconfigured does not undo the successful release.
+proven. C4B implements automatic main-merge + required-CI-success triggering in
+source, with offline verification; automatic CD/OIDC/WIF runtime proof is **NOT YET**.
+See [activation and source authority](#activation-and-source-authority).
+Manual activation remains UNCONFIGURED; it is not required by the automatic path.
+This implementation phase performs no runtime action and does not close Must 4.
 
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`; CD-C2A/B provisioning,
 CD-C2C activation and [R8 isolated WIF proof / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure)
@@ -153,8 +155,8 @@ At the R9 checkpoint, Must 4 stayed **Open**: the merged release source needed f
 delivery runtime proof (Build/digests, exact Backend tagged URL and paired Frontend,
 dedicated-secret E2E and cleanup), production approval integration, Backend then
 Frontend promotion, post-deploy verification and failure/rollback verification.
-Automatic main-merge + CI-success triggering is still unimplemented; `cd.yml`
-has only `workflow_dispatch`. Production CD was **inactive** at R9. Isolated WIF
+At R9, automatic main-merge + CI-success triggering was unimplemented and
+`cd.yml` had only `workflow_dispatch`. Production CD was **inactive** at R9. Isolated WIF
 success is no longer a remaining prerequisite. Portfolio Done is not established.
 The later [C3U/C3V closure](#c3u-and-c3v-runtime-closure) proves the manually
 dispatched production path; automatic triggering remains Open and future runtime
@@ -638,28 +640,63 @@ Task's preferred same-pool design explicitly separates subjects and grant attrib
 
 ## Activation and source authority
 
-`cd.yml` has only `workflow_dispatch`, not `workflow_run`. CD-C2C adds a `mode`
-choice: **`wif-proof` (default)** or `release`. Only release requires repository
-variable `CD_C1_ACTIVATION == approved`; it remains **UNCONFIGURED**. The variable
-is an activation latch, not a production approval. Release also requires an exact
-numeric `e2e_secret_version`, checked by preflight before Google authentication.
-Provider activation completed in CD-C2C; merged R7 source passed the separately
-approved R8 proof. C3A subsequently activated release and consumed the dedicated secret once, but
-failed cleanup proof. C3C returned the latch to UNCONFIGURED. Any future activation,
-credential consumption or retry needs a new Human Gate; provisioning is complete.
-C3F/G used separate authorization for one release and one production approval;
-C3G deleted the latch again after the failed run was terminal. C3I freshly
-confirmed UNCONFIGURED without changing it.
-C3K later used separate authorization for a fresh release and production approval;
-its historical closure record confirms activation deletion after terminal failure
-and UNCONFIGURED read-back. C3M performs no runtime read or mutation.
+C4B source implements `workflow_run` for `CI`, `completed`, branch `main`, while
+preserving both manual dispatch inputs. **Source implemented / offline verified;
+automatic runtime NOT YET.** Merge and runtime verification are separate gates.
 
-Release dispatch must use the exact current main SHA and exact `cd.yml` workflow SHA.
-The controller independently queries successful main **push** CI and its required
-`Lint, build, and test baseline` job. Its `head_sha` is the release authority. A
-future automatic adapter must use `workflow_run.head_sha`, validate the same CI
-identity and check out that SHA, not an arbitrary env SHA or newer default-branch
-commit. No PR-controlled source executes in an OIDC/secret-bearing job.
+| Entry | Normalized mode | Release-start authority / E2E version |
+| --- | --- | --- |
+| `workflow_dispatch`, input `wif-proof` (default) | `manual-wif-proof` | Isolated A/B/C authentication proof; no release or secret consumption |
+| `workflow_dispatch`, input `release` | `manual-release` | `CD_C1_ACTIVATION == approved` plus Human-supplied exact positive numeric secret version |
+| Qualified `workflow_run` | `automatic-release` | Protected main + exact successful required CI; reviewed secret-version metadata **`1`**, without activation |
+
+`CD_C1_ACTIVATION` remains **UNCONFIGURED** from C3W runtime read-back. It gates
+manual release only; it is not a global automatic-release kill switch or production
+approval. No variable, provider, IAM or Terraform change is part of C4B. Existing
+WIF conditions constrain repository/main/workflow identities without an event-name
+condition; actual automatic OIDC/WIF compatibility still requires runtime proof.
+
+The runner's `GITHUB_EVENT_PATH` is parsed with strict object/type/duplicate-key
+checks. Automatic qualification requires exact repository `tyosu131/Workout-Journal`,
+repository ID `790375516`, owner ID `95160728`, top-level webhook `action=completed`,
+CI name `CI`, workflow ID `286209592`, path `.github/workflows/ci.yml`, upstream
+`push`, `main`, completed/success and same head repository. SHA must be 40 lowercase
+hex characters; run ID and attempt must be positive integers. Failed, cancelled,
+skipped, PR, feature-branch and foreign-workflow completions cannot start release.
+
+Preflight independently reads the fixed GitHub repository API, never payload URLs.
+Payload and REST run identity/attempt/source must agree. It queries the
+attempt-specific jobs endpoint and requires the sole `Lint, build, and test baseline`
+job to be completed/success at the same SHA/run/attempt. Automatic CI ID/attempt
+come only from the triggering run. Manual release discovers CI once; all later
+checks use those fixed pins and reject attempt changes without selecting another CI.
+
+For automatic release, **S = triggering CI `head_sha` = REST CI SHA = current remote
+main = `GITHUB_SHA` = `GITHUB_WORKFLOW_SHA`**. Preflight checks out the trusted CD
+workflow SHA and verifies this equality. Candidate, verify and production check out
+`preflight.source_sha`; reusable E2E receives the same explicit source and authority
+outputs. Its job guard requires the exact `cd.yml@refs/heads/main` caller. Before
+Google authentication, `candidate_e2e.py preflight` binds actual event, mode,
+manifest/hash and fixed CI pins, and checks current remote main without cloud
+credentials. The secret-consuming entrypoint repeats these checks. No job
+substitutes a newer main or an arbitrary source input. Before Build and promotion,
+current-main equality is checked again. A main advance during candidate creation or
+approval wait stops promotion; it does not refresh the manifest or source.
+
+The valid concurrency group remains `workout-journal-production-delivery` with
+`cancel-in-progress: false`. Obviously unqualified completions use their own CD run
+ID group, so they cannot replace valid pending delivery. GitHub retains at most one
+running and one pending member; a newer eligible pending run may replace the old
+pending run. This is **not FIFO or exactly-once**, and does not cancel an active
+release. TTL is checked by the controller when it runs, not by automatically expiring
+a waiting Environment approval. Repeated successful CI attempts are not a deduplication
+guarantee; stale source and changed attempts fail closed.
+
+Production still has exactly `environment: production`. Automatic Build, 0% paired
+candidates, E2E and verify can precede Human approval, but production traffic writes
+cannot. TTL, captured-production comparison, manifest/configuration hashes, tag and
+revision identity, CAS, Backend-then-Frontend promotion and Frontend-then-Backend
+rollback retain their existing contracts. No artifact/cache handoff is introduced.
 
 All Actions in the CI trust root and privileged delivery jobs are immutable-SHA
 pinned, and checkout does not persist credentials. CI explicitly has only
@@ -679,7 +716,7 @@ It has exactly this dependency chain, with no production Environment:
 | C positive | E2E provider `workout-journal-e2e` / E2E SA | Federation and SA access-token generation succeed inside `candidate-e2e.yml` |
 
 A/B run in `wif-control-negative`; only its success permits `wif-positive`, which
-calls the existing reusable workflow with `mode=wif-proof`. B does not reuse the
+calls the existing reusable workflow with normalized `mode=manual-wif-proof`. B does not reuse the
 impersonated Deploy-SA token. Unexpected success, disabled-provider failure,
 STS failure, network error, malformed response, or any other IAM status fails
 closed and prevents C. Only A+B+C PASS proves this run; a standalone B denial
@@ -697,11 +734,13 @@ Raw auth responses and exceptions never reach logs or evidence.
 
 Every release job is mode-guarded and depends on the release preflight chain.
 The reusable workflow has separate proof and release jobs; its release job still
-requires activation, manifest and hash, then retains existing manifest validation,
-exact secret read, private stdin, scenario and cleanup. Proof performs **no Secret
+requires qualified caller authority, exact source, CI ID/attempt, secret version,
+manifest and hash. Manual release additionally requires activation; automatic
+release revalidates the allowlisted workflow_run authority. Existing exact secret
+read, private stdin, scenario and cleanup remain unchanged. Proof performs **no Secret
 Manager access, E2E/Playwright, Cloud Build, Cloud Run or production operation**.
 The shared concurrency group also serializes proof runs behind an outstanding
-release/approval wait; this deliberately trades convenience for a single queue.
+release/approval wait, subject to the non-FIFO pending behavior described above.
 
 API contracts: [GitHub OIDC claims](https://docs.github.com/en/actions/reference/security/oidc),
 [STS token exchange](https://docs.cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token)
@@ -713,7 +752,12 @@ Offline tests mock all authentication endpoints. Actual A/B/C proof is
 
 The release path builds a v2 manifest from Build and Cloud Run read-back, binding:
 
-- repository, source/workflow SHA, caller, run ID/attempt and CI run ID;
+- repository, source/workflow SHA and caller; `run.id`/`run.attempt` identify CD,
+  `run.ciRunId`/new required `run.ciRunAttempt` identify the fixed CI authority;
+- `run.event` is explicitly `workflow_dispatch` or `workflow_run`; `run.workflowSha`
+  is the actual CD workflow SHA and equals `sourceSha`, which also equals `build.sourceSha`;
+- manifest `version: 2` is retained; old expired manifests lacking CI attempt cannot
+  authorize a new release;
 - `e2eIdentityVersion: 2` for the new deterministic recovery contract (absent in historical C3A);
 - actual Build ID, SUCCESS, dedicated Build SA and both immutable digests;
 - never-reused `CANDIDATE_ID = CANDIDATE_TAG = cd-<run-id>-<attempt>` (at most 22 characters; longer IDs stop before Build);
@@ -1069,9 +1113,10 @@ event is required for this C3 closure.
 **Must 4 remains OPEN.** The verified path is manual dispatch after exact-main CI,
 then OIDC/WIF → Build → immutable digests → paired candidates/exact Backend URL →
 E2E/cleanup → production approval → Backend promotion → Frontend promotion →
-post-deploy verification. Automatic **main merge + required-CI-success triggering**
-is the remaining primary gap; `.github/workflows/cd.yml` still has only
-`workflow_dispatch`. C3W documentation synchronization is complete pending its
+post-deploy verification. At C3W closure, automatic **main merge + required-CI-success
+triggering** was the remaining gap and `cd.yml` had only `workflow_dispatch`.
+C4B source/offline implementation is recorded above; automatic runtime is NOT YET.
+C3W documentation synchronization was complete pending its
 separate Fresh Result Audit; it does not close the Portfolio final documentation
 audit or unrelated Must conditions.
 

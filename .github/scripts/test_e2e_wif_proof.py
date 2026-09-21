@@ -21,7 +21,7 @@ SHA = 'a' * 40
 MARKER = 'OFFLINE_CREDENTIAL_MARKER'
 PATH_MARKER = 'OFFLINE_PATH_MARKER'
 QUERY_MARKER = 'OFFLINE_QUERY_MARKER'
-ENV = {'CD_MODE': 'wif-proof', 'GITHUB_REPOSITORY': wif.REPOSITORY,
+ENV = {'CD_MODE': 'manual-wif-proof', 'GITHUB_REPOSITORY': wif.REPOSITORY,
        'GITHUB_REPOSITORY_ID': '790375516', 'GITHUB_REPOSITORY_OWNER_ID': '95160728',
        'GITHUB_REF': 'refs/heads/main', 'GITHUB_WORKFLOW_REF': wif.CALLER,
        'GITHUB_EVENT_NAME': 'workflow_dispatch', 'GITHUB_SHA': SHA, 'GITHUB_WORKFLOW_SHA': SHA,
@@ -586,18 +586,68 @@ def workflow(name):
         str(wif.ROOT / '.github/workflows' / name)], cwd=wif.ROOT))
 
 
+def expression(source, values):
+    """Only this repository's comparisons, parentheses and &&/||; no eval.
+
+    Unknown operators/functions fail tests instead of approximating Actions.
+    &&/|| return operands, also covering the concurrency group expression.
+    """
+    source = source.strip()
+    if source.startswith('${{') and source.endswith('}}'):
+        source = source[3:-2].strip()
+    token = re.compile(r"\s*('[^']*'|[a-zA-Z_][a-zA-Z0-9_.]*|[0-9]+|==|!=|&&|\|\||[()>])")
+    tokens, at = [], 0
+    while at < len(source):
+        match = token.match(source, at)
+        if not match: raise AssertionError('Unreviewed workflow expression: ' + source[at:])
+        tokens.append(match.group(1)); at = match.end()
+    pos = 0
+
+    def atom():
+        nonlocal pos
+        if pos >= len(tokens): raise AssertionError('Incomplete workflow expression')
+        t = tokens[pos]; pos += 1
+        if t == '(':
+            result = either()
+            if pos >= len(tokens) or tokens[pos] != ')': raise AssertionError('Unbalanced expression')
+            pos += 1
+            return result
+        if t.startswith("'"): return t[1:-1]
+        if t.isdigit(): return int(t)
+        if re.fullmatch(r'[a-zA-Z_][a-zA-Z0-9_.]*', t): return values.get(t, '')
+        raise AssertionError('Unexpected token: ' + t)
+
+    def comparison():
+        nonlocal pos
+        left = atom()
+        if pos < len(tokens) and tokens[pos] in ('==', '!=', '>'):
+            op = tokens[pos]; pos += 1; right = atom()
+            if op == '==': return left == right
+            if op == '!=': return left != right
+            return isinstance(left, int) and isinstance(right, int) and left > right
+        return left
+
+    def both():
+        nonlocal pos
+        value = comparison()
+        while pos < len(tokens) and tokens[pos] == '&&':
+            pos += 1; right = comparison(); value = right if value else value
+        return value
+
+    def either():
+        nonlocal pos
+        value = both()
+        while pos < len(tokens) and tokens[pos] == '||':
+            pos += 1; right = both(); value = value if value else right
+        return value
+
+    result = either()
+    if pos != len(tokens): raise AssertionError('Unsupported expression tail')
+    return result
+
+
 def admitted(job, values):
-    # Deliberately small evaluator: rejects unfamiliar expressions, including
-    # always()/failure()/OR bypasses, rather than pretending to execute Actions.
-    for term in job.get('if', '').split(' && '):
-        match = re.fullmatch(r"([a-zA-Z0-9_.]+) (==|!=) '([^']*)'", term)
-        if not match:
-            raise AssertionError('Unreviewed workflow guard: ' + term)
-        key, operator, literal = match.groups()
-        equal = values.get(key, '') == literal
-        if equal != (operator == '=='):
-            return False
-    return True
+    return bool(expression(job.get('if', "'true'"), values))
 
 
 class WorkflowTests(unittest.TestCase):
@@ -617,7 +667,10 @@ class WorkflowTests(unittest.TestCase):
             for activation in ('', 'approved'):
                 for negative_result in ('success', 'failure'):
                     values = {'github.repository': wif.REPOSITORY, 'github.ref': 'refs/heads/main',
-                              'inputs.mode': mode, 'vars.CD_C1_ACTIVATION': activation}
+                              'inputs.mode': mode, 'vars.CD_C1_ACTIVATION': activation,
+                              'github.repository_id': '790375516', 'github.repository_owner_id': '95160728',
+                              'github.event_name': 'workflow_dispatch',
+                              'needs.preflight.outputs.mode': 'manual-release' if mode == 'release' and activation == 'approved' else ''}
                     reached = set()
                     for name, job in jobs.items():
                         needs = job.get('needs', [])
@@ -629,21 +682,25 @@ class WorkflowTests(unittest.TestCase):
                                 release_jobs if mode == 'release' and activation == 'approved' else set())
                     self.assertEqual(reached, expected)
         self.assertEqual(jobs['wif-positive']['uses'], './.github/workflows/candidate-e2e.yml')
-        self.assertEqual(jobs['wif-positive']['with'], {'mode': 'wif-proof'})
-        self.assertEqual(jobs['candidate-e2e']['with']['mode'], 'release')
+        self.assertEqual(jobs['wif-positive']['with'], {'mode': 'manual-wif-proof'})
+        self.assertEqual(jobs['candidate-e2e']['with']['mode'], '${{ needs.preflight.outputs.mode }}')
 
     def test_reusable_proof_cannot_enter_secret_or_scenario_path(self):
         jobs = self.reusable['jobs']
-        for mode in ('wif-proof', 'release', '', 'invalid'):
+        for mode in ('manual-wif-proof', 'manual-release', '', 'invalid'):
             for activation in ('', 'approved'):
                 for manifest, digest in (('', ''), ('present', ''), ('', 'hash'), ('present', 'hash')):
                     values = {'github.repository': wif.REPOSITORY, 'github.ref': 'refs/heads/main',
                               'github.event_name': 'workflow_dispatch', 'inputs.mode': mode,
+                              'github.workflow_ref': release.CALLER,
                               'inputs.manifest': manifest, 'inputs.manifest_hash': digest,
-                              'vars.CD_C1_ACTIVATION': activation}
+                              'vars.CD_C1_ACTIVATION': activation,
+                              'github.repository_id': '790375516', 'github.repository_owner_id': '95160728',
+                              'github.sha': SHA, 'github.workflow_sha': SHA, 'inputs.source_sha': SHA,
+                              'inputs.ci_run_id': '99', 'inputs.ci_run_attempt': '1', 'inputs.e2e_secret_version': '17'}
                     reached = {name for name, job in jobs.items() if admitted(job, values)}
-                    expected = {'wif-proof'} if mode == 'wif-proof' else (
-                        {'e2e'} if mode == 'release' and activation == 'approved' and manifest and digest else set())
+                    expected = {'wif-proof'} if mode == 'manual-wif-proof' else (
+                        {'e2e'} if mode == 'manual-release' and activation == 'approved' and manifest and digest else set())
                     self.assertEqual(reached, expected)
         for job in (self.main['jobs']['wif-control-negative'], jobs['wif-proof']):
             self.assertEqual(job['permissions'], {'contents': 'read', 'id-token': 'write'})
@@ -654,21 +711,13 @@ class WorkflowTests(unittest.TestCase):
             self.assertIs(checkout['with']['persist-credentials'], False)
             self.assertEqual(checkout['with']['ref'], '${{ github.sha }}')
             self.assertRegex(proof['run'], r'^python3 -B \.github/scripts/e2e_wif_proof.py (control-negative|positive)$')
-        self.assertEqual(jobs['wif-proof']['steps'][-1]['env']['CD_MODE'], 'wif-proof')
-        self.assertEqual(jobs['e2e']['steps'][-1]['env']['CD_MODE'], 'release')
+        self.assertEqual(jobs['wif-proof']['steps'][-1]['env']['CD_MODE'], 'manual-wif-proof')
+        self.assertEqual(jobs['e2e']['steps'][-1]['env']['CD_MODE'], '${{ inputs.mode }}')
 
-    def test_release_controller_rejects_proof_and_preflight_requires_numeric_version(self):
+    def test_release_controller_rejects_proof_context(self):
         for mode in ('wif-proof', '', 'invalid'):
             with self.assertRaises(release.proof.GateError):
                 release.identity({**ENV, 'CD_MODE': mode, 'CD_C1_ACTIVATION': 'approved'})
-        for version in ('', 'latest', '0', '-1', '1\n', '1;command'):
-            env = {**ENV, 'CD_MODE': 'release', 'CD_C1_ACTIVATION': 'approved', 'E2E_SECRET_VERSION': version}
-            with patch.dict(release.os.environ, env, clear=True), \
-                 patch.object(release.sys, 'argv', ['cd_release.py', 'preflight']), \
-                 patch.object(release, 'preflight') as preflight, \
-                 redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
-                self.assertEqual(release.main(), 1)
-                preflight.assert_not_called()
 
 
 if __name__ == '__main__':

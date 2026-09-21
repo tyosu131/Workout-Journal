@@ -37,7 +37,8 @@ test('dynamic manifest rejects tampering of every authority and boundary', () =>
     v => { v.sourceSha = 'b'.repeat(40); }, v => { v.run.id = '333'; },
     v => { v.run.workflowRef = CALLER.replace('cd.yml', 'evil.yml'); },
     v => { v.run.event = 'pull_request'; }, v => { v.run.ownerId = '1'; },
-    v => { v.run.repositoryId = '1'; }, v => { v.run.ciRunId = ''; },
+    v => { v.run.repositoryId = '1'; }, v => { v.run.ciRunId = ''; }, v => { delete v.run.ciRunAttempt; },
+    v => { v.run.ciRunAttempt = '0'; }, v => { v.run.workflowSha = 'b'.repeat(40); },
     v => { v.build.serviceAccount = 'default'; }, v => { v.build.sourceSha = 'b'.repeat(40); },
     v => { v.build.id = 'other'; }, v => { v.frontend.digest = 'sha256:' + 'e'.repeat(64); },
     v => { v.frontend.backendInternalUrl = v.production.frontend.backendInternalUrl; },
@@ -60,7 +61,9 @@ test('manifest must belong to this exact workflow run, not just a plausible docu
   const m = manifest();
   const env = { GITHUB_REPOSITORY: m.repository, GITHUB_REF: 'refs/heads/main', GITHUB_SHA: m.sourceSha,
     GITHUB_WORKFLOW_SHA: m.sourceSha, GITHUB_WORKFLOW_REF: CALLER, GITHUB_EVENT_NAME: 'workflow_dispatch',
-    GITHUB_RUN_ID: m.run.id, GITHUB_RUN_ATTEMPT: m.run.attempt };
+    GITHUB_RUN_ID: m.run.id, GITHUB_RUN_ATTEMPT: m.run.attempt,
+    CD_MODE: 'manual-release', CD_SOURCE_SHA: m.sourceSha, CD_CI_RUN_ID: m.run.ciRunId,
+    CD_CI_RUN_ATTEMPT: m.run.ciRunAttempt, E2E_SECRET_VERSION: m.e2eSecret.version };
   assert.doesNotThrow(() => bindWorkflow(m, env));
   for (const key of Object.keys(env)) assert.throws(() => bindWorkflow(m, { ...env, [key]: 'wrong' }));
   const changed = structuredClone(m); changed.e2eSecret.version = '18';
@@ -71,4 +74,23 @@ test('historical v1 receipt identity remains byte-for-byte compatible', () => {
   const m = manifest(); m.version = 1;
   assert.equal(candidateIdentity(m), sha256(JSON.stringify([m.project, m.region,
     m.sourceSha, m.candidateId, m.backend, m.frontend, m.production, m.supabase, m.build])));
+});
+
+test('automatic authority binds the exact CI attempt and reviewed secret version', () => {
+  const m = manifest(); m.run.event = 'workflow_run'; m.e2eSecret.version = '1';
+  const env = { GITHUB_REPOSITORY: m.repository, GITHUB_REF: 'refs/heads/main', GITHUB_SHA: m.sourceSha,
+    GITHUB_WORKFLOW_SHA: m.sourceSha, GITHUB_WORKFLOW_REF: CALLER, GITHUB_EVENT_NAME: 'workflow_run',
+    GITHUB_RUN_ID: m.run.id, GITHUB_RUN_ATTEMPT: m.run.attempt, CD_MODE: 'automatic-release',
+    CD_SOURCE_SHA: m.sourceSha, CD_CI_RUN_ID: m.run.ciRunId, CD_CI_RUN_ATTEMPT: m.run.ciRunAttempt,
+    E2E_SECRET_VERSION: '1' };
+  assert.doesNotThrow(() => validateReleaseManifest(m, 'candidate:' + m.candidateId));
+  assert.doesNotThrow(() => bindWorkflow(m, env));
+  for (const [key, bad] of [['GITHUB_EVENT_NAME', 'workflow_dispatch'], ['CD_MODE', 'manual-release'],
+    ['CD_CI_RUN_ATTEMPT', '2'], ['CD_CI_RUN_ID', '999'], ['GITHUB_WORKFLOW_SHA', 'b'.repeat(40)]]) {
+    assert.throws(() => bindWorkflow(m, { ...env, [key]: bad }));
+  }
+  for (const version of ['latest', '2']) {
+    const bad = structuredClone(m); bad.e2eSecret.version = version;
+    assert.throws(() => validateReleaseManifest(bad, 'candidate:' + bad.candidateId));
+  }
 });

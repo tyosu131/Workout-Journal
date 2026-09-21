@@ -5,7 +5,15 @@ on:
     inputs:
       mode:
         type: string
-        default: release
+        default: manual-wif-proof
+      source_sha:
+        type: string
+      ci_run_id:
+        type: string
+      ci_run_attempt:
+        type: string
+      e2e_secret_version:
+        type: string
       manifest:
         required: false
         type: string
@@ -20,7 +28,7 @@ permissions: {}
 
 jobs:
   wif-proof:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'wif-proof'
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'manual-wif-proof'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -33,12 +41,13 @@ jobs:
           persist-credentials: false
       - name: Dedicated E2E provider authentication only
         env:
-          CD_MODE: wif-proof
+          CD_MODE: manual-wif-proof
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -B .github/scripts/e2e_wif_proof.py positive
 
   e2e:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'release' && inputs.manifest != '' && inputs.manifest_hash != '' && vars.CD_C1_ACTIVATION == 'approved'
+    if: >-
+      github.repository == 'tyosu131/Workout-Journal' && github.repository_id == '790375516' && github.repository_owner_id == '95160728' && github.ref == 'refs/heads/main' && github.workflow_ref == 'tyosu131/Workout-Journal/.github/workflows/cd.yml@refs/heads/main' && inputs.source_sha == github.sha && inputs.source_sha == github.workflow_sha && inputs.ci_run_id != '' && inputs.ci_run_attempt != '' && inputs.e2e_secret_version != '' && inputs.manifest != '' && inputs.manifest_hash != '' && ((github.event_name == 'workflow_dispatch' && inputs.mode == 'manual-release' && vars.CD_C1_ACTIVATION == 'approved') || (inputs.mode == 'automatic-release' && (github.event_name == 'workflow_run' && github.event.action == 'completed' && github.event.workflow_run.name == 'CI' && github.event.workflow_run.workflow_id == 286209592 && github.event.workflow_run.path == '.github/workflows/ci.yml' && github.event.workflow_run.event == 'push' && github.event.workflow_run.status == 'completed' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == 'tyosu131/Workout-Journal' && github.event.workflow_run.head_repository.id == 790375516 && github.event.workflow_run.id > 0 && github.event.workflow_run.run_attempt > 0 && github.event.workflow_run.head_sha == github.sha && github.event.workflow_run.head_sha == github.workflow_sha)))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -49,11 +58,23 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
+      - name: Verify caller, manifest and current source before Google authentication
+        env:
+          CD_MODE: ${{ inputs.mode }}
+          CD_SOURCE_SHA: ${{ inputs.source_sha }}
+          CD_CI_RUN_ID: ${{ inputs.ci_run_id }}
+          CD_CI_RUN_ATTEMPT: ${{ inputs.ci_run_attempt }}
+          E2E_SECRET_VERSION: ${{ inputs.e2e_secret_version }}
+          CD_C1_ACTIVATION: ${{ vars.CD_C1_ACTIVATION }}
+          CD_MANIFEST: ${{ inputs.manifest }}
+          CD_MANIFEST_HASH: ${{ inputs.manifest_hash }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -B .github/scripts/candidate_e2e.py preflight
       - name: Install locked E2E tooling before Google authentication
         run: |
           npm ci --ignore-scripts
@@ -72,7 +93,11 @@ jobs:
       - name: Exact secret read, private stdin, candidate scenario and exact-user cleanup
         id: e2e
         env:
-          CD_MODE: release
+          CD_MODE: ${{ inputs.mode }}
+          CD_SOURCE_SHA: ${{ inputs.source_sha }}
+          CD_CI_RUN_ID: ${{ inputs.ci_run_id }}
+          CD_CI_RUN_ATTEMPT: ${{ inputs.ci_run_attempt }}
+          E2E_SECRET_VERSION: ${{ inputs.e2e_secret_version }}
           CD_C1_ACTIVATION: ${{ vars.CD_C1_ACTIVATION }}
           CD_MANIFEST: ${{ inputs.manifest }}
           CD_MANIFEST_HASH: ${{ inputs.manifest_hash }}

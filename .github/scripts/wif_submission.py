@@ -1,4 +1,4 @@
-"""CD-A only. No deploy, secret retrieval, IAM mutation or token output.
+"""Shared Build/source authority. No deploy, secret retrieval or IAM mutation.
 
 Uses the runner's Python standard library; gcloud output/errors stay private.
 The exact reviewed Cloud Build bytes are a deliberate fail-closed allowlist.
@@ -49,6 +49,103 @@ def matches(pattern, value):
     return isinstance(value, str) and re.fullmatch(pattern, value) is not None
 
 
+CI_WORKFLOW_ID = 286209592
+CI_PATH = '.github/workflows/ci.yml'
+CALLER = f'{REPOSITORY}/.github/workflows/cd.yml@refs/heads/main'
+AUTO_E2E_SECRET_VERSION = '1'  # Reviewed metadata, never a payload or latest alias.
+
+
+def positive(value, digits=20):
+    return type(value) is int and 0 < value < 10 ** digits
+
+
+def repository_identity(value):
+    return (type(value) is dict and value.get('full_name') == REPOSITORY and
+            type(value.get('id')) is int and value['id'] == 790375516)
+
+
+def event_payload(env):
+    # The runner supplies this file. Do not accept a payload/URL through inputs.
+    def unique(pairs):
+        obj = {}
+        for key, value in pairs:
+            require(key not in obj, 'EVENT_MISMATCH')
+            obj[key] = value
+        return obj
+    try:
+        with Path(env['GITHUB_EVENT_PATH']).open('rb') as source:
+            raw = source.read(1024 * 1024 + 1)
+        require(len(raw) <= 1024 * 1024, 'EVENT_MISMATCH')
+        event = json.loads(raw, object_pairs_hook=unique)
+        require(type(event) is dict, 'EVENT_MISMATCH')
+        return event
+    except Exception:
+        raise GateError('EVENT_MISMATCH') from None
+
+
+def ci_identity(run, sha):
+    require(type(run) is dict, 'CI_SOURCE_UNPROVEN')
+    require(run.get('name') == 'CI' and run.get('workflow_id') == CI_WORKFLOW_ID and
+            type(run.get('workflow_id')) is int and run.get('path') == CI_PATH and
+            run.get('head_sha') == sha and run.get('head_branch') == 'main' and
+            run.get('event') == 'push' and run.get('status') == 'completed' and
+            run.get('conclusion') == 'success' and
+            repository_identity(run.get('repository')) and repository_identity(run.get('head_repository')) and
+            positive(run.get('id')) and positive(run.get('run_attempt'), 4), 'CI_SOURCE_UNPROVEN')
+    return sha
+
+
+def release_context(env):
+    """Pure event authority; CI API verification is exclusively in preflight.
+
+    CD_* values are checked propagation outputs, never mode/source selectors.
+    Manual CI pins can only originate in preflight (no workflow input exposes them).
+    """
+    require(env.get('GITHUB_REPOSITORY') == REPOSITORY and
+            env.get('GITHUB_REPOSITORY_ID') == '790375516' and
+            env.get('GITHUB_REPOSITORY_OWNER_ID') == '95160728', 'REPOSITORY_MISMATCH')
+    require(env.get('GITHUB_REF') == 'refs/heads/main' and
+            env.get('GITHUB_WORKFLOW_REF') == CALLER, 'CALLER_MISMATCH')
+    require(matches(r'[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID')) and
+            matches(r'[1-9][0-9]{0,3}', env.get('GITHUB_RUN_ATTEMPT')), 'RUN_ID_MISMATCH')
+    event = event_payload(env)
+    repo = event.get('repository')
+    require(repository_identity(repo) and type(repo.get('owner')) is dict and
+            type(repo['owner'].get('id')) is int and repo['owner']['id'] == 95160728,
+            'REPOSITORY_MISMATCH')
+    name = env.get('GITHUB_EVENT_NAME')
+    if name == 'workflow_run':
+        require(event.get('action') == 'completed', 'EVENT_MISMATCH')
+        run = event.get('workflow_run')
+        require(type(run) is dict, 'CI_SOURCE_UNPROVEN')
+        sha = run.get('head_sha')
+        # Webhook repository authority is top-level; REST run responses also
+        # include it inside the run. Reject a conflicting copy if supplied.
+        require('repository' not in run or repository_identity(run['repository']), 'REPOSITORY_MISMATCH')
+        ci_identity({**run, 'repository': repo}, sha)
+        mode, version = 'automatic-release', AUTO_E2E_SECRET_VERSION
+        ci_id, attempt = str(run['id']), str(run['run_attempt'])
+    elif name == 'workflow_dispatch':
+        inputs = event.get('inputs')
+        require(type(inputs) is dict and inputs.get('mode') == 'release', 'RELEASE_MODE_REQUIRED')
+        require(env.get('CD_C1_ACTIVATION') == 'approved', 'CD_C1_NOT_ACTIVATED')
+        sha, mode, version = env.get('GITHUB_SHA'), 'manual-release', inputs.get('e2e_secret_version')
+        ci_id, attempt = env.get('CD_CI_RUN_ID'), env.get('CD_CI_RUN_ATTEMPT')
+        require((ci_id is None and attempt is None) or
+                (matches(r'[1-9][0-9]{0,19}', ci_id) and matches(r'[1-9][0-9]{0,3}', attempt)),
+                'CI_SOURCE_UNPROVEN')
+    else:
+        raise GateError('EVENT_MISMATCH')
+    require(matches(r'[a-f0-9]{40}', sha) and env.get('GITHUB_SHA') == sha and
+            env.get('GITHUB_WORKFLOW_SHA') == sha, 'SOURCE_SHA_MISMATCH')
+    require(matches(r'[1-9][0-9]{0,19}', version), 'E2E_SECRET_VERSION_REQUIRED')
+    for key, value in [('CD_MODE', mode), ('CD_SOURCE_SHA', sha), ('CD_CI_RUN_ID', ci_id),
+                       ('CD_CI_RUN_ATTEMPT', attempt), ('E2E_SECRET_VERSION', version)]:
+        require(key not in env or env[key] == value, 'MANIFEST_RUN_MISMATCH')
+    return {'mode': mode, 'event': name, 'sourceSha': sha, 'ciRunId': ci_id,
+            'ciRunAttempt': attempt, 'e2eSecretVersion': version}
+
+
 def command(args, code, *, cwd=None, timeout=120):
     # Never stream SDK errors, build bodies, substitutions or authenticated logs.
     try:
@@ -80,6 +177,11 @@ def context(env):
             "SOURCE_SHA_MISMATCH")
     require(matches(r"[1-9][0-9]*", env.get("GITHUB_RUN_ID")) and
             matches(r"[1-9][0-9]*", env.get("GITHUB_RUN_ATTEMPT")), "RUN_ID_MISMATCH")
+    build_inputs(env)
+    return sha
+
+
+def build_inputs(env):
     require(env.get("GCP_PROJECT") == PROJECT and env.get("WIF_PROVIDER") == PROVIDER
             and env.get("DEPLOY_SERVICE_ACCOUNT") == DEPLOY_SA, "WIF_INPUT_MISMATCH")
     url = env.get("NEXT_PUBLIC_SUPABASE_URL", "")
@@ -87,14 +189,20 @@ def context(env):
     # New publishable keys only, not a legacy JWT, secret key or substitution delimiter.
     require(matches(r"https://[a-z]{20}\.supabase\.co", url), "PUBLIC_URL_INVALID")
     require(matches(r"sb_publishable_[A-Za-z0-9_-]{10,256}", key), "PUBLIC_KEY_INVALID")
-    return sha
+
+
+def release_build_context(env, authority):
+    require(authority == release_context(env) and authority['ciRunId'] is not None and
+            authority['ciRunAttempt'] is not None, 'CI_SOURCE_UNPROVEN')
+    build_inputs(env)
+    return authority['sourceSha']
 
 
 def check_source(repo, sha):
     head = command(["git", "rev-parse", "HEAD"], "SOURCE_SHA_MISMATCH", cwd=repo).decode().strip()
     require(head == sha, "SOURCE_SHA_MISMATCH")
     command(["git", "diff", "--quiet", "HEAD", "--"], "TRACKED_SOURCE_DIRTY", cwd=repo)
-    # Refuse an old dispatch if main has moved. Public repository: no persisted PAT.
+    # Refuse a stale release if main has moved. Public repository: no persisted PAT.
     remote = command(["git", "ls-remote", "https://github.com/tyosu131/Workout-Journal.git",
                       "refs/heads/main"], "MAIN_READ_FAILED", cwd=repo).decode().strip()
     require(remote == f"{sha}\trefs/heads/main", "MAIN_MOVED")
@@ -140,8 +248,8 @@ def stage_source(repo, sha, runner_temp):
     return source
 
 
-def prepare(env):
-    sha = context(env)
+def prepare(env, *, authority=None):
+    sha = context(env) if authority is None else release_build_context(env, authority)
     repo = Path(env["GITHUB_WORKSPACE"]).resolve()
     check_source(repo, sha)
     source = stage_source(repo, sha, env["RUNNER_TEMP"])
@@ -223,8 +331,8 @@ def resolve_digests(build, sha):
     return result
 
 
-def prove(env, evidence):
-    sha = context(env)
+def prove(env, evidence, *, authority=None):
+    sha = context(env) if authority is None else release_build_context(env, authority)
     evidence.update({"runId": env["GITHUB_RUN_ID"], "runAttempt": env["GITHUB_RUN_ATTEMPT"],
                      "githubSha": sha, "project": PROJECT})
     repo = Path(env["GITHUB_WORKSPACE"]).resolve()

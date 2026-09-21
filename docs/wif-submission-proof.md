@@ -20,7 +20,12 @@ current `CD_C1_ACTIVATION` is UNCONFIGURED. R9 added no runtime execution or aut
 
 Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
 Must 3 In progress; WIF `ACTIVE` / `disabled = false`.** C3 runtime chain is now
-CLOSED; Must 4 still lacks automatic main-merge + required-CI-success triggering.
+CLOSED; Must 4 remains Open for automatic main-merge + required-CI-success runtime
+proof. [C4B source](./cd-c1-candidate-delivery.md#activation-and-source-authority) is
+implemented / offline verified, but actual workflow_run OIDC/WIF is **NOT YET**.
+The manual WIF proof route remains isolated (normalized `manual-wif-proof`); shared
+Build preparation accepts explicitly qualified release authority without weakening
+its source, provider, service-account or reviewed build-configuration checks.
 The two repository variables are configured and privately read-back verified.
 
 CD-A supplied the `workflow_dispatch`-only implementation; CD-B1 prepared the
@@ -106,7 +111,9 @@ candidate deployment and exact pairing, E2E integration, runtime Environment
 approval, promotion, post-deploy verification and rollback/failure behavior were
 still unimplemented at CD-B2 closure. CD-C1 subsequently added their gated source
 contract, and C3V now supplies successful production delivery evidence. Automatic
-triggering remains future work; current release activation is UNCONFIGURED.
+trigger source is now implemented in C4B; automatic runtime remains future work.
+Manual release activation remains UNCONFIGURED; automatic qualification does not
+use that latch. The following inputs describe the historical CD-A/CD-B2 proof.
 
 ## Inputs and trust boundary
 

@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 import cd_release as cd
-from test_cd_release import ENV, fixture
+from test_cd_release import AUTHORITY, ENV, fixture
 
 
 class PromotionDiagnosticTests(unittest.TestCase):
@@ -61,7 +61,7 @@ class PromotionDiagnosticTests(unittest.TestCase):
                    'GITHUB_STEP_SUMMARY': str(summary)}
             with patch.dict(os.environ, env, clear=True), patch.object(cd.sys, 'argv', ['cd_release.py', 'promote']), \
                  patch.object(cd, 'input_manifest', return_value=manifest), \
-                 patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+                 patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
                  patch.object(cd, 'read_state', side_effect=read_state), \
                  patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]), \
                  patch.object(cd, 'recheck', side_effect=recheck), patch.object(cd, 'cas_traffic', side_effect=update), \

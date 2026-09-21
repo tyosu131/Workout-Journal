@@ -55,10 +55,14 @@ def access_secret(ref):
 
 
 def child_environment(env, m, filename, result_file):
+    authority = release.proof.release_context(env)
     allowed = ['PATH', 'HOME', 'TMPDIR', 'GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_REF',
                'GITHUB_SHA', 'GITHUB_WORKFLOW_SHA', 'GITHUB_WORKFLOW_REF', 'GITHUB_EVENT_NAME',
                'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']
     return {**{k: env[k] for k in allowed if k in env},
+            'CD_MODE': authority['mode'], 'CD_SOURCE_SHA': authority['sourceSha'],
+            'CD_CI_RUN_ID': authority['ciRunId'], 'CD_CI_RUN_ATTEMPT': authority['ciRunAttempt'],
+            'E2E_SECRET_VERSION': authority['e2eSecretVersion'],
             'E2E_TARGET': 'candidate:' + m['candidateId'], 'E2E_TARGET_MANIFEST': str(filename),
             'E2E_RESULT_FILE': str(result_file),
             'E2E_MANIFEST_SHA256': env['CD_MANIFEST_HASH'], 'TZ': 'Asia/Tokyo',
@@ -129,14 +133,27 @@ def controller(env, m, secret):
             payload = b''  # Never forward child stdout/stderr, even on success.
 
 
+def preflight(env):
+    """Bind caller/event, manifest, CI pins and current source before OIDC.
+
+    The trusted CD caller already queried the fixed CI attempt. This stage uses
+    its bound manifest/outputs and public Git reads only, never cloud credentials.
+    """
+    m = release.input_manifest(env)
+    proof.check_source(release.ROOT, m['sourceSha'])
+    return m
+
+
 def main():
     env = os.environ
     phase = 'e2e-preflight'
     try:
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-        proof.require(len(sys.argv) == 1, 'E2E_ARGUMENTS_REFUSED')
-        m = release.input_manifest(env)
-        proof.check_source(release.ROOT, m['sourceSha'])
+        proof.require(sys.argv[1:] in ([], ['preflight']), 'E2E_ARGUMENTS_REFUSED')
+        m = preflight(env)
+        if sys.argv[1:] == ['preflight']:
+            print('CD-C4B E2E caller, manifest and source preflight: PASS')
+            return 0
         proof.check_credentials(env, provider=E2E_PROVIDER, service_account=E2E_SA)
         phase = 'e2e-credential'
         secret = access_secret(m['e2eSecret'])
