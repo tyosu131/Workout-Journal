@@ -2,6 +2,11 @@
 
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
+Current release closure: [C3W runtime/documentation verification](#cd-c3w-runtime-closure-documentation-validation).
+C3 runtime chain is CLOSED and Must 4 remains OPEN for automatic main-merge +
+required-CI-success triggering. Dated source-validation sections retain their
+phase-local NOT-YET results and do not override the latest runtime record.
+
 ## Local Commands
 
 ```bash
@@ -136,9 +141,10 @@ No E2E step was added to the required PR CI workflow. P2B is Must 2 evidence,
 not promotion, full v1 cross-browser smoke, password-recovery evidence or CD
 activation. Subsequent [CD-B2 evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof)
 closed PE-P1C-01B and confirmed WIF `ACTIVE` / `disabled = false`; Must 4 remains
-Open and production CD inactive. The production Environment was separately
+Open. Production CD was inactive at CD-B2. The production Environment was separately
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency);
-runtime deployment-approval integration was later exercised in C3G, not in P2B.
+runtime deployment-approval integration was later exercised in C3G and the full
+production path succeeded in C3V, not in P2B.
 
 ## CD-C3I Promotion Diagnostic Durability Validation
 
@@ -413,6 +419,11 @@ it does not claim that the separate audit or production runtime verification pas
 
 ## CD-C3S Least-Privilege IAM Validation
 
+Historical source-validation record. Its 35-resource / apply-NOT-YET statements
+describe C3S before merge and are preserved below. Current state is **37 resources**
+after C3U; remediation is runtime PROVEN and C3V production succeeded. See
+[C3W closure verification](#cd-c3w-runtime-closure-documentation-validation).
+
 Authority: main / HEAD / `origin/main`
 `e922feab245546fb308621782dc7d067eb469833`, required CI `35495319133` SUCCESS.
 Implementation branch: `fix/cd-c3s-operation-iam`, started clean from that SHA.
@@ -421,7 +432,7 @@ owns **403 / OPERATION_GET runtime PROVEN**, **current missing effective allow
 PROVEN**, and **historical root cause STRONGLY_SUPPORTED_NOT_PROVEN**.
 
 C3S adds only a project custom role containing `run.operations.get` and an
-additive Deploy SA project IAM member. [Design comparison and eligibility](../infra/terraform/README.md#cd-c3s-operation-iam-desired-state-not-applied)
+additive Deploy SA project IAM member. [Design comparison and eligibility](../infra/terraform/README.md#cd-c3s-operation-iam-applied-and-runtime-verified)
 record why broader project Developer/Viewer roles were rejected. Existing
 service-level Developer grants and all CD controller/workflow behavior remain
 unchanged. `ci.yml` only adds Terraform `1.16.0` and backend-disabled initialization
@@ -489,7 +500,7 @@ attribute changed and the planned action is no-op. This follows the existing
 computed-only drift rule; **semantic unrelated drift: NONE**. It is not described
 as zero refresh drift, and `-refresh=false` was not used.
 
-**Current remote state: 35; planned: +2. Apply: NOT YET. C3S runtime: NOT YET.**
+**At C3S validation: remote state 35; planned +2. Apply NOT YET. C3S runtime NOT YET.**
 Saved plans remain local, ignored source-validation evidence. **No C3S saved
 plan may be applied after commit, PR or merge.** A future apply must use merged
 exact source, fresh current remote state and a new saved plan approved through
@@ -499,6 +510,54 @@ and cleanup/codification is deferred. Runtime mutation **NONE**: no apply, IAM,
 Cloud Run, release/approval/rerun, activation, Secret payload or Supabase operation.
 No commit, push or PR. Stop at **READY FOR FRESH RESULT AUDIT**, then require a
 separate Human-gated apply and control/Operation authorization proof before release.
+
+## CD-C3W Runtime Closure Documentation Validation
+
+On 2026-09-21, C3W applied the current Source Map, Core Harness and Workflow Router
+to documentation closure only. Local preflight was clean `main`; HEAD and
+`origin/main` were `cc608aa5f2edbd81952024d497bdc5838b796599`. Fresh GitHub reads
+confirmed main at that SHA, required CI `35507087914` SUCCESS / attempt 1 and
+release `35545739898` SUCCESS / attempt 1 / workflow_dispatch / exact source.
+All five release jobs, including production, were SUCCESS. Activation GET
+returned HTTP 404 / UNCONFIGURED.
+
+Fresh GCP metadata reads independently confirmed Build
+`cebec13a-f307-43f9-95d6-3071b83dcadb` SUCCESS with exact source and digests,
+the `cd-35545739898-1` revision pair at 100% each, the previous production pair at
+0%, and the Frontend's exact immutable Backend tagged URL. Policy Troubleshooter
+API remains enabled and outside Terraform ownership. No Secret payload was read.
+
+The [durable C3U/C3V closure record](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+contains all identifiers, digests, the owner-supplied C3V safe E2E/cleanup/hash and
+post-deploy diagnostic, and retained C3U apply/state/authorization evidence.
+C3W did not download raw job logs or rerun E2E, Terraform or Troubleshooter.
+The evidence classes are explicit: fresh read-back, retained runtime proof and
+owner-supplied safe release evidence.
+
+Current classifications: **C3 runtime chain CLOSED; C3S runtime PROVEN;
+authorization defect CLOSED; historical C3N/C3P root cause
+STRONGLY_SUPPORTED_NOT_PROVEN; C3V production SUCCESS; Must 4 OPEN for automatic main-merge + required-CI-success
+triggering**. C3G/C3K root causes remain Historical / NOT PROVEN. Prior 30/35-resource
+and NOT-YET source-validation records are not rewritten as historical mistakes.
+Rollback restoration, diagnostic and permission evidence remain separate;
+no C3V rollback is claimed. Monitoring/alert scope and other Portfolio Musts are unchanged.
+
+Documentation validation **PASS**: `git diff --check`; 122 outgoing relative
+links plus 9 inbound references from other documents; 78 anchors checked with
+zero broken targets; added-text credential-pattern inspection with zero matches;
+full diff/scope review confirming only 9 Markdown files, unstaged. The Terraform
+managed-resource table has exactly 37 rows. Byte comparisons against HEAD preserve
+the canonical R1–R7 history, C3K/C3N diagnostics, C3F/G/H evidence, C3A/D and recovery
+contract, P2A/P2B and CD-B2 runtime evidence, Portfolio Must conditions/non-goals, and
+deployment/rollback command contracts.
+
+No dedicated docs validator is configured in repository scripts/CI; standard-library
+checks introduced no repository tooling. Application tests/build and Terraform
+commands are unnecessary for these Markdown-only changes.
+
+Runtime mutation **NONE**; application/workflow/script/Terraform desired-state
+mutation **NONE**. No commit, push or PR. Handoff stops at
+**READY FOR FRESH RESULT AUDIT**, without claiming that separate audit has passed.
 
 ## CD-C3C Recovery Contract Validation
 
@@ -624,11 +683,12 @@ for B. C executes through `candidate-e2e.yml` after A/B.
 
 R2's broad P1 failure, R4's endpoint-validation failure and R6's fixed-path
 rejection remain Historical. R8 passed the remediated path boundary and completed
-the isolated proof; it did not prove the full release delivery path. Must 3 is
+the isolated proof; it did not prove the full release delivery path. At R9, Must 3 was
 **In progress** (monitoring/alert resources deferred to Must 5 design), Must 4
 **Open** (full delivery runtime proof, automatic triggering and production
-activation). Production CD is **inactive**; R9 read back `CD_C1_ACTIVATION`
-**UNCONFIGURED**. No R9 cloud state read-back is claimed.
+activation). Production CD was **inactive**; R9 read back `CD_C1_ACTIVATION`
+**UNCONFIGURED**. No R9 cloud state read-back is claimed. The later C3W record
+above supersedes those remaining-runtime-proof statements.
 
 R9 documentation validation **PASS**: `git status --short`, `git diff --name-status`,
 full `git diff` review and `git diff --check`; 64 local links checked with no new
@@ -755,8 +815,9 @@ runtime proof. Workflow YAML, Terraform and application source remain unchanged;
 audit runtime mutation is NONE. Details are in the canonical R4/R5 record.
 At that R5 handoff, positive/negative WIF proof was still pending; R8 now closes
 the isolated A/B/C proof above. Credential consumption and candidate/promotion/
-rollback runtime proofs remain separate Human Gates. Must 3 stays In progress, Must 4 Open,
-production CD inactive. The existing required CI job runs both offline test
+rollback runtime proofs required separate Human Gates at that checkpoint. The
+later C3W closure records the executed release evidence; Must 3 stays In progress
+and Must 4 Open for automatic triggering. The existing required CI job runs both offline test
 commands; its check name is unchanged. These tests never authenticate to Google
 or Supabase.
 

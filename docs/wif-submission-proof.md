@@ -2,7 +2,9 @@
 
 This is the durable **CD-B2 executed-proof record** at the SHA below. CD-C1 merged
 [gated delivery and dedicated E2E](./cd-c1-candidate-delivery.md) source in
-`cd.yml`; its release mode remains inactive and does not supersede this runtime evidence.
+`cd.yml`; the later [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+proves the manually dispatched production release without rewriting this earlier
+submission-only evidence.
 The CD-A workflow/command descriptions below refer to the recorded proof path,
 not a claim that current `cd.yml` still contains only the submission job.
 
@@ -13,11 +15,12 @@ auth-only proof is now **CLOSED / PASS**, A/B/C **PASS**, owned by
 at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7's fixed-path
 remediation is runtime verified; R6's path failure remains Historical evidence.
 This is separate from PE-P1C-01B, which remains Closed. No full delivery or
-secret payload consumption ran in R8. Production CD remains inactive and
-`CD_C1_ACTIVATION` UNCONFIGURED; R9 adds no runtime execution or authorization.
+secret payload consumption ran in R8. C3V later completed production delivery;
+current `CD_C1_ACTIVATION` is UNCONFIGURED. R9 added no runtime execution or authorization.
 
 Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Open;
-Must 3 In progress; WIF `ACTIVE` / `disabled = false`; production CD inactive.**
+Must 3 In progress; WIF `ACTIVE` / `disabled = false`.** C3 runtime chain is now
+CLOSED; Must 4 still lacks automatic main-merge + required-CI-success triggering.
 The two repository variables are configured and privately read-back verified.
 
 CD-A supplied the `workflow_dispatch`-only implementation; CD-B1 prepared the
@@ -35,9 +38,10 @@ exact main SHA -> GitHub OIDC / WIF -> Deploy SA
 -> two immutable image digests + unchanged Cloud Run
 ```
 
-This is not full CD. There is no automatic trigger, candidate deployment, E2E job,
-Environment approval job, promotion, post-deploy smoke or rollback automation.
-The existing required [CI workflow](../.github/workflows/ci.yml) is unchanged.
+The historical CD-A submission proof was not full CD: it had no automatic trigger,
+candidate deployment, E2E job, Environment approval job, promotion, post-deploy
+smoke or rollback automation. Current delivery behavior is owned by the C3V record.
+The required [CI workflow](../.github/workflows/ci.yml) was unchanged by CD-A.
 
 ## CD-B2 verified runtime proof
 
@@ -100,9 +104,9 @@ R8 adds isolated WIF evidence without closing that remaining scope.
 Must 4 stays Open: automatic main-merge + CI-success delivery,
 candidate deployment and exact pairing, E2E integration, runtime Environment
 approval, promotion, post-deploy verification and rollback/failure behavior were
-still unimplemented at CD-B2 closure. CD-C1 now adds their gated source contract,
-not runtime evidence; automatic triggering remains future work. Production CD
-remains inactive.
+still unimplemented at CD-B2 closure. CD-C1 subsequently added their gated source
+contract, and C3V now supplies successful production delivery evidence. Automatic
+triggering remains future work; current release activation is UNCONFIGURED.
 
 ## Inputs and trust boundary
 

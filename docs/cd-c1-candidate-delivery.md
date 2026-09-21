@@ -1,33 +1,26 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Status: **CD-C1 merged; CD-C2A/B complete; CD-C2C provider activation COMPLETE;
-CD-C2D-R8 isolated WIF proof CLOSED / PASS (A/B/C PASS); R7 remediation runtime verification PASS.** Must 3 is **In progress**,
-Must 4 **Open**, production CD **inactive**. Existing Deploy WIF is Current and
-runtime proven by [CD-B2 / PE-P1C-01B](./wif-submission-proof.md#cd-b2-verified-runtime-proof).
-CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`.
-The [R8 evidence / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure) owns the
-Current isolated authentication/isolation proof. Full CD runtime proof remains **OPEN**.
-C3A built and created the paired 0% candidates but failed at cleanup proof;
-[C3C incident and recovery contract](./cd-c3-e2e-recovery-contract.md) owns the
-current fail-closed state, merged source remediation and C3D residual closure.
-PR #106 merged at `a332289c95b846aed10c6f9d31c9339e7fc279ed`; required
-post-merge CI run `35418949564` passed.
-C3F at main `8ac592abcfeee607229fada3f5685e8c1630ddef` subsequently passed the
-complete candidate/E2E/cleanup/verify portion. C3G production promotion failed
-and restored the previous pair. [C3F/G/H evidence and C3I source diagnostics](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
-retain technical root cause **NOT PROVEN**; C3I changes diagnostics only.
-[C3K / C3M](#c3k-incident-and-c3m-api-failure-diagnostics) records the later
-production failure at source `ba9ddf34b401355fa9ab98d87dec054ca4c8165f`:
-candidate delivery PASS and C3I promotion/rollback diagnostic durability runtime
-proven, but successful production promotion remains unproven. C3K technical root
-cause is **NOT PROVEN**. Later [C3N / C3O / C3P](#c3n-runtime-evidence-c3o-diagnosis-and-c3p-http-status)
-runtime-proved C3M's observed `HTTP_STATUS / OPERATION_GET` classification;
-C3N did not capture the HTTP integer, so C3O retained **PENDING_EVIDENCE**.
-[C3P runtime / C3R2 diagnosis / C3S desired state](#c3p-runtime-c3r2-authorization-proof-and-c3s-desired-state)
-subsequently established **403 / OPERATION_GET** and **current missing effective
-allow PROVEN**. Historical root cause is **STRONGLY_SUPPORTED_NOT_PROVEN**.
-C3S prepares least-privilege Terraform remediation; **apply and C3S runtime: NOT YET**.
-Source implementation, offline tests and a Terraform plan are not runtime proof.
+Current status (C3W, 2026-09-21): **C3 runtime chain CLOSED; C3S IAM remediation
+applied and runtime PROVEN; authorization defect CLOSED; C3V production release
+SUCCESS**. The current production pair is `cd-35545739898-1`, each service at
+100%; `CD_C1_ACTIVATION` is **UNCONFIGURED**. See the
+[C3U/C3V closure and current production record](#c3u-and-c3v-runtime-closure).
+
+Must 3 remains **In progress** and Must 4 **Open**. The manually dispatched path
+through production approval, paired promotion and post-deploy verification is
+proven. Automatic main-merge + required-CI-success triggering is still missing:
+[`cd.yml`](../.github/workflows/cd.yml) remains `workflow_dispatch` only.
+Activation being unconfigured does not undo the successful release.
+
+CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`; CD-C2A/B provisioning,
+CD-C2C activation and [R8 isolated WIF proof / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure)
+remain complete. [C3C/C3D recovery evidence](./cd-c3-e2e-recovery-contract.md)
+retains the historical cleanup limits. C3P proved `HTTP_STATUS / OPERATION_GET / 403`,
+C3R2 proved missing effective allow, and C3U/C3V establish remediation runtime
+**PROVEN** and the current authorization defect **CLOSED**. Historical C3N/C3P
+incident root cause remains **STRONGLY_SUPPORTED_NOT_PROVEN** for the reasons in
+the closure record. C3N's unrecorded HTTP integer is not retroactively filled in.
+C3G and C3K technical root causes remain **NOT PROVEN**.
 
 ## Current CD-C2A/B runtime record
 
@@ -70,7 +63,7 @@ synthetic candidates were 0. Residual Pending Evidence is CLOSED; this does not
 prove historical cleanup execution or scenario success. See the
 [C3D evidence boundary](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure).
 
-C3C deleted `CD_C1_ACTIVATION` exactly once under explicit Human authorization;
+Historical C3C/C3D state: C3C deleted `CD_C1_ACTIVATION` exactly once under explicit Human authorization;
 read-back on 2026-09-19 confirmed **UNCONFIGURED**. Both C3A candidates are retained
 at 0%; production Backend `workout-journal-backend-00003-luc` and Frontend
 `workout-journal-frontend-00003-xar` remain at 100%, reconfirmed in C3D. C3C
@@ -161,10 +154,11 @@ delivery runtime proof (Build/digests, exact Backend tagged URL and paired Front
 dedicated-secret E2E and cleanup), production approval integration, Backend then
 Frontend promotion, post-deploy verification and failure/rollback verification.
 Automatic main-merge + CI-success triggering is still unimplemented; `cd.yml`
-has only `workflow_dispatch`. Production CD activation remains a separate Human
-Gate; production CD is **inactive**. Isolated WIF success is no longer a remaining
-prerequisite. Portfolio Done is not established. The later C3A partial runtime
-evidence and C3C fail-closed state are recorded above.
+has only `workflow_dispatch`. Production CD was **inactive** at R9. Isolated WIF
+success is no longer a remaining prerequisite. Portfolio Done is not established.
+The later [C3U/C3V closure](#c3u-and-c3v-runtime-closure) proves the manually
+dispatched production path; automatic triggering remains Open and future runtime
+actions retain their Human Gates.
 
 R9 is documentation closure only: no dispatch, rerun, Terraform operation, IAM/WIF
 change, Secret Manager access/mutation, Build, Cloud Run mutation, GitHub settings
@@ -181,7 +175,7 @@ A/B/C source semantics and the complete eight-file diff agreed with the runtime
 records. The canonical R1-R7 block was byte-for-byte identical to main; all 64
 local links resolved, and credential checks passed. Must 3's remaining resource
 scope comes from the existing monitoring/alert ownership decision deferred to
-Must 5 design; Must 4 retains full release verification and automatic triggering.
+Must 5 design; at R9, Must 4 retained full release verification and automatic triggering.
 No remediation was needed. Only this audit record and its verification summary
 were updated after First Pass; Pre-PR rechecks those additions before staging.
 Commit/push/PR and required CI verification may proceed under the Pre-PR gate;
@@ -588,7 +582,7 @@ Must 3 **In progress**, Must 4 **Open**, production CD **inactive**.
 
 | Identity | Current permissions and responsibility |
 | --- | --- |
-| Existing Deploy SA | Existing build/candidate/promotion/rollback grants unchanged; no privileged Supabase payload access |
+| Existing Deploy SA | Existing service-level Developer grants preserved; C3U added the project custom role containing only `run.operations.get`; no privileged Supabase payload access |
 | Existing Build SA | Existing dedicated Cloud Build execution grants unchanged |
 | Provisioned `workout-journal-e2e` | Only `secretAccessor` on `workout-journal-e2e-supabase-secret-key` |
 
@@ -888,8 +882,10 @@ Project Admin Activity from **2026-09-20T07:22:00Z through 08:06:01Z** contained
 eight entries with no relevant IAM policy, policy binding, role or project-move
 mutation. The query was not truncated. **Historical-policy continuity:
 SUPPORTED**; log absence is not an absolute proof of the historical snapshot.
-Thus **current missing effective allow: PROVEN** and **historical incident root
-cause: STRONGLY_SUPPORTED_NOT_PROVEN** remain separate conclusions.
+At C3R2, **current missing effective allow: PROVEN** and **historical incident root
+cause: STRONGLY_SUPPORTED_NOT_PROVEN** were separate conclusions. The later
+[C3U/C3V closure](#c3u-and-c3v-runtime-closure) supplies the targeted remediation
+and successful fresh-release evidence; it does not alter this historical evaluation.
 
 Stable evaluation covers [allow and deny](https://docs.cloud.google.com/sdk/gcloud/reference/policy-intelligence/troubleshoot-policy/iam).
 PAB was **not evaluated**; it restricts access and cannot supply the missing allow.
@@ -897,20 +893,191 @@ Policy Troubleshooter does [not diagnose VPC-SC](https://docs.cloud.google.com/p
 C3R2 enabled only `policytroubleshooter.googleapis.com`, exactly once; it made no
 IAM, Cloud Run or release changes. The API remains enabled outside Terraform.
 
-C3S prepares a project custom role with only `run.operations.get` and an additive
+C3S prepared a project custom role with only `run.operations.get` and an additive
 Deploy SA project member, preserving both service-level Developer grants. See
-the [design and eligibility evidence](../infra/terraform/README.md#cd-c3s-operation-iam-desired-state-not-applied).
-**Current remote state: 35; planned: +2; apply: NOT YET; C3S runtime: NOT YET.**
-No claim of repaired IAM, successful production CD or release is made. A separate
-Human-gated apply and authorization proof must precede a fresh release.
+the [design, eligibility and applied-state evidence](../infra/terraform/README.md#cd-c3s-operation-iam-applied-and-runtime-verified).
+**Historical C3S source-validation snapshot: remote state 35; planned +2; apply
+NOT YET; C3S runtime NOT YET.** C3U subsequently applied the fresh post-merge C3T
+plan and verified authorization; C3V then completed the fresh production release.
 
 C3R2 read-back and C3S authority retain Backend `workout-journal-backend-00003-luc`
 and Frontend `workout-journal-frontend-00003-xar` at 100%, both C3P candidates at
-0%, and `CD_C1_ACTIVATION` UNCONFIGURED. C3S does not mutate this state.
+0%, and `CD_C1_ACTIVATION` UNCONFIGURED. These are historical phase snapshots;
+the current pair is recorded below.
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
 CD-C1 does not use that builder's fixed SHA, Build ID, digests or pair.
+
+## C3U and C3V runtime closure
+
+**C3 runtime chain: CLOSED. Must 4: OPEN.** This is the C3W documentation closure
+of C3P → C3R2 → C3S → C3U → C3V, not a new runtime execution.
+
+### Authority and evidence provenance
+
+C3W started from clean `main`, with local HEAD, `origin/main` and freshly read
+GitHub main all `cc608aa5f2edbd81952024d497bdc5838b796599`.
+[Required CI `35507087914`](https://github.com/tyosu131/Workout-Journal/actions/runs/35507087914)
+is `.github/workflows/ci.yml`, `push`, attempt 1, completed/SUCCESS at that exact SHA.
+[Release `35545739898`](https://github.com/tyosu131/Workout-Journal/actions/runs/35545739898)
+is `.github/workflows/cd.yml`, `workflow_dispatch`, branch `main`, attempt 1,
+completed/SUCCESS at the same SHA. It was created at `2026-09-20T23:48:49Z`;
+production completed at `2026-09-21T00:19:12Z`.
+
+GitHub run/jobs/activation were freshly read at `2026-09-21T00:26:36Z`; GCP
+service traffic, exact revision digests, Frontend Backend URL, API enabled state
+and Build metadata were freshly read during C3W. The detailed E2E safe result,
+manifest/E2E hash and production diagnostic below are the project owner's C3V
+closure evidence supplied for C3W, corroborated by the fresh job conclusions and
+GCP read-back. They are not represented as a new C3W log download or E2E execution.
+The C3U apply/state/authorization record is retained evidence, not a C3W re-apply
+or fresh Terraform plan.
+
+| Release job | Fresh result |
+| --- | --- |
+| [preflight](https://github.com/tyosu131/Workout-Journal/actions/runs/35545739898/job/106171182617) | SUCCESS |
+| [candidate](https://github.com/tyosu131/Workout-Journal/actions/runs/35545739898/job/106171195820) | SUCCESS |
+| [candidate-e2e / e2e](https://github.com/tyosu131/Workout-Journal/actions/runs/35545739898/job/106172151503) | SUCCESS |
+| [verify-candidate](https://github.com/tyosu131/Workout-Journal/actions/runs/35545739898/job/106172291548) | SUCCESS |
+| [production](https://github.com/tyosu131/Workout-Journal/actions/runs/35545739898/job/106172387569) | SUCCESS |
+
+### C3U applied IAM and authorization
+
+The exact C3T plan (SHA-256
+`b159b4ef895f9ce54434a1272e575ae45041d3084d736bae887f6a658892603a`)
+was applied once under its separate Human Gate, using Terraform `1.16.0` and
+Google provider `7.45.0`. It completed at `2026-09-20T23:34:57Z` with **2 added /
+0 changed / 0 destroyed**. State advanced from 35 resources / serial 8 to **37 /
+serial 9**, lineage `66945691-ab92-e20a-4bc1-badb121e7ab4` unchanged, GCS generation
+`1789947297225011`. The post-apply plan was **0 add / 0 change / 0 destroy**, all
+37 resources no-op. Three existing project IAM member `etag` refresh differences
+were computed-only and no-op; no unrelated semantic drift was present.
+
+The two added addresses are `google_project_iam_custom_role.deploy_run_operation_reader`
+and `google_project_iam_member.deploy_run_operation_reader`. Runtime read-back
+confirmed `projects/workout-journal-506909/roles/workoutJournalRunOperationReader`,
+stage GA, not deleted, with exactly **`["run.operations.get"]`**. Its additive
+project member is
+`serviceAccount:workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com`.
+Existing project bindings and both Backend/Frontend `roles/run.developer`
+service bindings remained unchanged.
+
+| C3U Policy Troubleshooter resource | Permission | Overall / allow / deny | Decisive binding |
+| --- | --- | --- | --- |
+| Backend service | `run.services.update` | CAN_ACCESS / GRANTED / NOT_DENIED | Existing service `roles/run.developer` |
+| Exact promotion Operation `d07f3193-fad6-4fd7-99f9-282af19fe15c` | `run.operations.get` | CAN_ACCESS / GRANTED / NOT_DENIED | New project custom role; permission included, principal matched |
+| Exact rollback Operation `109471a4-8672-491f-906d-13f60ce4e1a5` | `run.operations.get` | CAN_ACCESS / GRANTED / NOT_DENIED | New project custom role; permission included, principal matched |
+
+Operation resource prefix is the same exact project/location recorded in C3R2.
+Both Operation checks passed on the first attempt; propagation retries/wait were
+0. **C3S IAM remediation runtime: PROVEN. Current authorization defect: CLOSED.**
+
+### C3V release and current production
+
+Cloud Build **`cebec13a-f307-43f9-95d6-3071b83dcadb`** is SUCCESS, with
+`COMMIT_SHA=cc608aa5f2edbd81952024d497bdc5838b796599`, dedicated Build SA and both
+immutable image results matching the live revisions. Candidate ID is
+**`cd-35545739898-1`**.
+
+| Current production | Backend | Frontend |
+| --- | --- | --- |
+| Revision | `workout-journal-backend-cd-35545739898-1` | `workout-journal-frontend-cd-35545739898-1` |
+| Digest | `sha256:c6d003dce4352e7d9f68839635faf510a571a2266856f8c9215e336d28f7c35d` | `sha256:eae20a34275a727a9df33b4c1b4fd936bfbc8ebafb648552363b1ba82f50d516` |
+| Production traffic | 100% | 100% |
+| Previous production revision | `workout-journal-backend-00003-luc` | `workout-journal-frontend-00003-xar` |
+| Previous pair traffic | 0% | 0% |
+
+Read-back scope: project `workout-journal-506909`, region `asia-northeast1`,
+`2026-09-21T00:30:28Z`. Frontend `BACKEND_INTERNAL_URL` equals exactly
+`https://cd-35545739898-1---workout-journal-backend-cpbzb7lqza-an.a.run.app`;
+the Backend tag still points to the paired Backend revision. Historical candidates
+remain at 0%; no old tag or traffic was manually changed in C3W.
+
+E2E scenario **PASS**, **8/8 PASS**: login, tag-create, note-create-save-read,
+tag-use, Calendar, Analytics, tag-delete, logout. `httpsCookieVerified=true`;
+cleanup `auth=0 / users=0 / notes=0 / user_tags=0`; `cleanupState=PROVEN_ZERO`,
+`localReceiptState=PERSISTED`, `evidenceState=PASS`.
+`CD_MANIFEST_HASH = CD_E2E_HASH = a32a07f291e31d522640ce80f62bf384d26e24d02ccd3ac1fd72a243a6ae5294`;
+equality **PASS**.
+
+Production diagnostic is **`CD-C1: PASS / post-deploy-verification`**:
+
+```json
+{"failureCode":null,"promotionFailureCode":null,"promotionFailureStage":null,"rollback":null,"rollbackFailureCode":null,"rollbackFailureStage":null,"runApiFailureKind":null,"runApiFailureStage":null,"runApiHttpStatus":null}
+```
+
+Production approval, Backend then Frontend promotion and post-deploy verification
+completed successfully. **C3V had no rollback.** Fresh repository-variable GET
+returned HTTP 404: `CD_C1_ACTIVATION` is **UNCONFIGURED**. C3W did not recreate it.
+
+### Incident classification and remaining completion gap
+
+| Incident / capability | Current conclusion and evidence limit |
+| --- | --- |
+| C3P numeric HTTP diagnostic | 403 / OPERATION_GET runtime PROVEN; shared API fields identify the first failure, not an independent rollback HTTP status |
+| C3R2 missing effective allow | PROVEN by exact historical Operation evaluations, allow NOT_GRANTED / deny NOT_DENIED |
+| C3N/C3P historical incident root cause | **STRONGLY_SUPPORTED_NOT_PROVEN:** missing effective allow for `run.operations.get` is the leading causal explanation. C3P's numeric 403 and exact Operation evaluations are stronger evidence than C3N's unrecorded HTTP integer; the later successful release does not reconstruct either incident's authorization decision |
+| Earlier C3G technical root cause | **NOT PROVEN / Historical:** original technical failure provenance was lost; no claim that it had the same IAM cause |
+| C3K technical root cause | **NOT PROVEN / Historical:** captured promotion/rollback failure diagnostics remain valid; later HTTP/IAM evidence is not retroactively assigned to C3K |
+
+The Fresh Result Audit distinguishes the proven defect from historical causal
+attribution. C3P captured `HTTP_STATUS / OPERATION_GET / 403`; C3N captured only
+`HTTP_STATUS / OPERATION_GET`. C3R2 evaluated the recovered C3P Operation resources
+at diagnosis time, finding allow NOT_GRANTED / deny NOT_DENIED. It did not capture
+the effective authorization decision of the original denied GET. C3U's exact
+one-permission apply, GRANTED read-back and C3V success prove that the diagnosed
+gap was repaired and that the fresh production path works.
+
+The audit freshly expanded Admin Activity inspection to
+**2026-09-20T05:16:00Z–08:06:01Z**, covering C3N through C3R2: **19 entries**, below
+the 1,000-entry limit, with no relevant IAM policy/binding/role or project-move
+mutation. This strengthens continuity beyond the earlier C3R2 interval. A separate
+Cloud Run Operation GET / Policy Denied query over the same interval returned
+zero entries, so no contemporaneous denied-GET authorization record was recovered.
+Absence of a logged mutation supports continuity; it is not itself a historical
+effective-policy snapshot or the server's request-specific refusal reason.
+
+The material unresolved alternative for C3N is a different HTTP failure, such as
+404, 429 or 5xx, which its captured kind/stage cannot distinguish. C3P is narrower:
+403 is proven and the missing-allow explanation is strongly supported, but its
+safe record does not isolate the original authorization decision from another
+request-specific 403. No competing cause was positively observed. The fresh
+release used a new request/Operation after the fix, not a replay of the original
+denial. Together these limits prevent elevating the combined historical claim
+to PROVEN; they do not reopen the now-closed effective-allow defect.
+
+Reassessment requires incident-time evidence tying the actual principal,
+Operation and `run.operations.get` refusal to missing allow, or equivalent
+historical evidence that resolves these alternatives. Conversely, evidence of
+effective allow at the incident or a different refusal reason would refute or
+narrow the IAM attribution. No historical HTTP value or policy snapshot is
+invented to close this documentation task.
+
+The previous blanket requirement for rollback verification is closed for C3's
+restoration and diagnostic-durability evidence: C3G actually restored the previous
+pair with post-rollback smoke PASS; C3K runtime-recorded the observed promotion
+and rollback failure fields; C3U proved read authorization on the exact rollback
+Operation. These are distinct facts. They do not recover C3G's missing workflow
+field or establish a new successful rollback after C3U. The Completion Contract
+requires preservation of the paired rollback/runbook contract, not an induced
+production failure for every release. The runbook's checks still apply to any
+future rollback; full authenticated post-rollback browser coverage is not newly
+claimed by these endpoint smoke results. No forced failure or additional rollback
+event is required for this C3 closure.
+
+**Must 4 remains OPEN.** The verified path is manual dispatch after exact-main CI,
+then OIDC/WIF → Build → immutable digests → paired candidates/exact Backend URL →
+E2E/cleanup → production approval → Backend promotion → Frontend promotion →
+post-deploy verification. Automatic **main merge + required-CI-success triggering**
+is the remaining primary gap; `.github/workflows/cd.yml` still has only
+`workflow_dispatch`. C3W documentation synchronization is complete pending its
+separate Fresh Result Audit; it does not close the Portfolio final documentation
+audit or unrelated Must conditions.
+
+`policytroubleshooter.googleapis.com` remains **ENABLED / not Terraform-owned**;
+cleanup/codification is **DEFERRED**, not an inferred Portfolio Must. C3W made no
+runtime, workflow, application or Terraform desired-state change.
 
 ## Approval, traffic and concurrency
 
@@ -1007,10 +1174,11 @@ privileged E2E credential's strict transport boundary.
 ## Validation and runtime boundary
 
 Use the [C3C validation record](./verification.md#cd-c3c-recovery-contract-validation)
-and [offline commands](./verification.md#cd-c1-offline-validation). Terraform
-remote state is **35**. C3S desired state plans **+2 / 0 change / 0 destroy**;
-all 35 existing resources/grants must remain no-op. The earlier post-CD-C2C
-baseline was **No changes / exit 0**. No apply/import/state mutation, Cloud
+and [offline commands](./verification.md#cd-c1-offline-validation). Current Terraform
+state is **37** at C3U closure; the post-apply plan was **0 add / 0 change / 0 destroy**.
+The historical C3S plan was **+2 / 0 change / 0 destroy**, with all 35 existing
+resources no-op; the earlier post-CD-C2C baseline was **No changes / exit 0**.
+No apply/import/state mutation, Cloud
 Build, dispatch, Supabase key creation or Cloud Run mutation is authorized by
 source validation. Fresh independent Result Audit precedes any Human runtime gate.
 

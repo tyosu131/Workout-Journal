@@ -12,7 +12,7 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1C-D2 Compute default SA Editor cleanup (Current / Complete):** P1C-D found zero current active dependencies and returned `SAFE_CANDIDATE`; after a separate Human Gate, P1C-D2 removed only the legacy project-level `roles/editor` binding outside Terraform. The Compute default Service Account still exists, remains enabled, and is not Terraform-managed.
 - **CD-B1 / CD-B2 WIF activation (Current / Complete):** CD-B1 prepared the provider desired state. On 2026-09-06, CD-B2 applied exactly one in-place update to `disabled = false` and the reviewed neutral description; actual provider is `ACTIVE` / `disabled = false`, and the normally locked post-apply plan reported `0 add / 0 change / 0 destroy`.
 
-PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress: monitoring and alert resources are unimplemented and deferred to Must 5 design in the [ownership matrix](../../docs/portfolio-infra-ownership.md#approved-ownership-matrix). Must 4 is Open and production CD remains inactive.
+PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress: monitoring and alert resources are unimplemented and deferred to Must 5 design in the [ownership matrix](../../docs/portfolio-infra-ownership.md#approved-ownership-matrix). C3U applied and runtime-verified the two-resource C3S IAM remediation; current state is **37 resources**. C3V production release succeeded. Must 4 remains **Open** because automatic main-merge + required-CI-success triggering is missing; release activation is currently UNCONFIGURED.
 
 This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources, or monitoring resources. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired **Deploy** provider state agree on `disabled = false`. The separate E2E provider's current/desired distinction is below. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
@@ -21,7 +21,7 @@ This root intentionally contains no Cloud Run service bodies, Secret Manager ver
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`. CD-C2A separately
 applied its five resources in [`candidate_e2e.tf`](./candidate_e2e.tf): E2E SA,
 dedicated secret metadata, exact-secret Accessor, disabled E2E provider and mapped
-impersonation member. **Current state: 35 resources / no-op CD-C2B baseline**.
+impersonation member. **Historical CD-C2B baseline: 35 resources / no-op**.
 CD-C2B separately populated exactly version **1 / ENABLED** from Human-created
 Supabase key display name `candidate_e2e`; no key/version/payload is Terraform-owned.
 E2E SA has zero user-managed keys; exact-secret IAM was runtime read-back verified.
@@ -38,8 +38,9 @@ approved for apply. Optional null-to-empty normalization with a no-op action mus
 be distinguished from planned changes. Existing Deploy WIF remains enabled/proven.
 
 See the [current runtime record and isolated proof contract](../../docs/cd-c1-candidate-delivery.md).
-Full CD proof remains **OPEN**; `CD_C1_ACTIVATION` is
-**UNCONFIGURED**, Must 3 In progress, Must 4 Open and production CD inactive.
+The subsequent [C3U/C3V runtime closure](../../docs/cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+proves the manually dispatched production release path. `CD_C1_ACTIVATION` is
+currently **UNCONFIGURED**; Must 3 remains In progress and Must 4 Open for automatic triggering.
 R9 performs no Terraform or cloud operation; the provider/resource/no-op statements
 above retain their existing evidence owners. Monitoring/alert resources remain
 future scope; no new identity/build hardening requirement is inferred from R8.
@@ -47,19 +48,19 @@ The completed CD-B2 evidence below remains historical evidence for Deploy WIF.
 [C3A/C3C](../../docs/cd-c3-e2e-recovery-contract.md) subsequently recorded successful
 Build and 0% candidates but failed E2E cleanup proof. Historical scenario remains
 NOT PROVEN and cleanup execution UNPROVEN. C3C source remediation merged via
-PR #106 with post-merge CI PASS; runtime proof is still pending.
+PR #106 with post-merge CI PASS; C3F and C3V later proved its successful candidate/E2E/cleanup path.
 [C3D](../../docs/cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure) closed
 current residual uncertainty: PROVEN_ZERO under verified current schema contract.
 C3C deleted only the release activation variable; C3D was read-only and C3E is
 docs-only. These phases supply no new Terraform/IAM/WIF or Cloud Run mutation
 and no new no-drift plan.
 
-## CD-C3S Operation IAM desired state (not applied)
+## CD-C3S Operation IAM applied and runtime verified
 
-C3S prepares two additive resources in [`iam.tf`](./iam.tf), based on
+C3S prepared two additive resources in [`iam.tf`](./iam.tf), based on
 `e922feab245546fb308621782dc7d067eb469833` / required CI `35495319133` SUCCESS:
 
-| Planned address | Desired authorization |
+| Applied address | Authorization |
 | --- | --- |
 | `google_project_iam_custom_role.deploy_run_operation_reader` | Project custom role `workoutJournalRunOperationReader`, exactly `run.operations.get` |
 | `google_project_iam_member.deploy_run_operation_reader` | That role, only `workout-journal-deploy@workout-journal-506909.iam.gserviceaccount.com`, project `workout-journal-506909` |
@@ -89,18 +90,37 @@ gcloud iam list-testable-permissions \
   --filter='name=run.operations.get' --format=json
 ```
 
-**Current remote state: 35. Planned: +2. Terraform apply: NOT YET. C3S runtime:
-NOT YET.** The normally locked, refresh-enabled C3S plan is `2 add / 0 change /
-0 destroy`; all 35 existing resources are no-op. Its one computed-only refresh
+**Historical C3S source-validation snapshot: remote state 35; planned +2; apply
+NOT YET; C3S runtime NOT YET.** The normally locked, refresh-enabled C3S plan was
+`2 add / 0 change / 0 destroy`; all 35 existing resources were no-op. Its one computed-only refresh
 difference is separately classified in the [C3S validation record](../../docs/verification.md#cd-c3s-least-privilege-iam-validation).
-This is prepared desired state, not a claim that IAM or production CD is fixed.
+
+**Current: applied and runtime PROVEN; authorization defect CLOSED.** C3T generated
+a new saved plan from merged exact source `cc608aa5f2edbd81952024d497bdc5838b796599`.
+C3U's separately authorized single apply completed on 2026-09-20 with **2 added /
+0 changed / 0 destroyed**; current state is **37 resources**, serial **9**, lineage
+`66945691-ab92-e20a-4bc1-badb121e7ab4`, GCS generation `1789947297225011`.
+The fresh post-apply plan was **0 add / 0 change / 0 destroy** with 37 no-op
+resources. Three existing project IAM member `etag` refresh differences were
+computed-only (`computed=true / optional=false / required=false`), each no-op;
+there was no unrelated semantic drift. Existing project bindings and both
+service-level Developer grants were preserved.
+
+Runtime role read-back confirmed
+`projects/workout-journal-506909/roles/workoutJournalRunOperationReader`, GA,
+not deleted, exactly `["run.operations.get"]`, with the exact Deploy SA project
+member. Policy Troubleshooter granted the service `run.services.update` control
+and both exact historical promotion/rollback Operations' `run.operations.get`,
+with deny NOT_DENIED. C3V then completed production release `35545739898`.
+See [C3U/C3V evidence and classification](../../docs/cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure).
+The 30/35-resource records elsewhere remain historical phase evidence.
 
 `policytroubleshooter.googleapis.com` was enabled once in C3R2 and remains
 temporary diagnostic infrastructure, **not Terraform-owned**. C3S neither adds
-it to `services.tf` nor imports/disables it; keep-and-codify versus disable is
-deferred. A separate Human Gate must approve a fresh plan/apply and then prove
-Backend `run.services.update` and exact/current-equivalent `run.operations.get`
-both GRANTED before a fresh release. No C3S saved plan is authorized for apply.
+it to `services.tf` nor imports/disables it. C3W freshly confirmed ENABLED;
+cleanup/codification is **DEFERRED**, with no new Portfolio Must inferred.
+The C3U one-time apply authorization is consumed; this documentation authorizes
+no apply or runtime mutation. No historical C3S source-validation plan may be reused.
 
 ## Completed CD-B2 provider activation
 
@@ -173,6 +193,8 @@ Official references: [Terraform installation and current release](https://develo
 | `google_service_account_iam_member.deploy_workload_identity_user` | Exact repository principal's additive deploy-SA impersonation member |
 | `google_project_iam_member.deploy_cloud_build_editor` | Deploy SA Cloud Build invocation member on project `workout-journal-506909` |
 | `google_project_iam_member.deploy_service_usage_consumer` | Deploy SA Service Usage consumer member on project `workout-journal-506909` |
+| `google_project_iam_custom_role.deploy_run_operation_reader` | Project custom role `workoutJournalRunOperationReader`, exactly `run.operations.get`; C3U applied and runtime verified |
+| `google_project_iam_member.deploy_run_operation_reader` | Exact additive Deploy SA project member of that custom role |
 | `google_artifact_registry_repository_iam_member.deploy_artifact_registry_reader` | Deploy SA reader member on Artifact Registry repository `workout-journal` |
 | `google_cloud_run_v2_service_iam_member.deploy_backend_run_developer` | Deploy SA developer member on Backend Cloud Run service |
 | `google_cloud_run_v2_service_iam_member.deploy_frontend_run_developer` | Deploy SA developer member on Frontend Cloud Run service |
@@ -190,7 +212,7 @@ Official references: [Terraform installation and current release](https://develo
 | `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual ACTIVE / disabled=false; activation COMPLETE, isolated A/B/C WIF proof CLOSED / PASS for R8's exact run/source |
 | `google_service_account_iam_member.e2e_workload_identity_user` | Exact `attribute.e2e_boundary/candidate-e2e-v1` impersonation member |
 
-Remote state contains exactly these 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary.
+Remote state contains exactly these **37 resources**: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer, five-resource CD-C2A E2E boundary and two-resource C3S Operation IAM remediation applied in C3U.
 
 The repository description, Service Account display names, automatic secret replication, and the two IAM members were rechecked against read-only GCP metadata before encoding them. The import IDs use the fully qualified formats documented for [Artifact Registry repositories](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/artifact_registry_repository), [Service Accounts](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/google_service_account), [Secret Manager secrets](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret), and [Secret Manager IAM](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret_iam).
 
