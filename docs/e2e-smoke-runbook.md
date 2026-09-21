@@ -11,15 +11,20 @@ CD-C2C provider activation is COMPLETE (ACTIVE / disabled=false).
 owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, source
 `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
 verified; R6's fixed-path failure remains Historical. This auth-only run did not
-read the secret or execute this browser scenario. Full CD runtime proof remains
-Open: C3A consumed the dedicated secret and reached the dynamic scenario controller,
+read the secret or execute this browser scenario. Historically, C3A consumed
+the dedicated secret and reached the dynamic scenario controller,
 but E2E/cleanup proof failed. Historical scenario remains NOT PROVEN and cleanup
 execution UNPROVEN. [C3D](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure)
 closed current residual uncertainty: PROVEN_ZERO under verified current schema
 contract, based on complete Auth discovery (0 matches) and public corroboration
 (0 candidates). This does not establish execution-time cleanup success.
-Local P2A is unchanged; production CD remains inactive and `CD_C1_ACTIVATION`
-UNCONFIGURED after the authorized C3C deletion. R9 itself performed no runtime execution.
+Local P2A is unchanged. The later [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+proves the manually dispatched production path: C3V E2E 8/8 PASS, HTTPS cookie
+verified, cleanup PROVEN_ZERO (auth/users/notes/user_tags all 0), receipt PERSISTED,
+evidence PASS and matching manifest/E2E hashes, then production SUCCESS.
+C3 runtime chain is CLOSED; Must 4 remains Open for automatic main-merge +
+required-CI-success triggering. Current activation is UNCONFIGURED after C3V;
+R9 itself performed no runtime execution.
 
 The [C3A incident / C3C recovery contract](./cd-c3-e2e-recovery-contract.md) is Current.
 C3C's source changes merged in PR #106 with required post-merge CI PASS and add
@@ -31,16 +36,19 @@ historical cleanup CLI refuses CD v2. Do not apply deterministic reconstruction 
 C3A's lost random UUID. C3D's one-time authorized read-only Auth listing and synthetic
 profile corroboration are separate from the runtime contract and authorize no
 generic discovery fallback. No new browser scenario or cleanup ran in C3C/C3D;
-C3C runtime proof remains pending. P2B historical evidence below is unchanged.
+C3F/C3V subsequently proved the successful C3C candidate/E2E/cleanup path;
+failure-injection and cross-run recovery are not established by that success.
+P2B historical evidence below is unchanged.
 
 P2A alone is the safe local foundation for Portfolio Must 2, not its closure.
 P2B has now verified the actual production-like 0% candidate path described below.
 Together they close Must 2, including fresh review of the implementation, runtime
 proof and cleanup evidence on 2026-09-05. Subsequent [CD-B2 evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof)
 closed PE-P1C-01B and confirmed WIF `ACTIVE` / `disabled = false`; Must 4 remains
-Open and production CD inactive. The production Environment is
+Open for automatic triggering. The production Environment is
 [configuration-verified](./portfolio-infra-ownership.md#production-environment-and-activation-dependency)
-under a subsequent gate; its runtime CD approval integration remains future work.
+under a subsequent gate; C3V subsequently completed its runtime approval and
+production delivery integration.
 The required CI workflow does not execute this suite.
 
 ## P2A local prerequisites

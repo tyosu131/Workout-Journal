@@ -39,7 +39,7 @@ Portfolio Finish does not apply one priority chain to every kind of evidence. Us
 | Historical design / past decisions | ADR / PR / commit history / explicitly historical design documents |
 | External technology behavior | Official primary documentation |
 
-The current production release evidence is the [v1 production release record](./releases/workout-journal-v1.md). The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
+The current production pair and latest successful release are recorded in the [C3U/C3V runtime closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure). The [v1 production release record](./releases/workout-journal-v1.md) remains the original known-good v1 evidence. The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
 
 Claims must distinguish:
 
@@ -204,7 +204,7 @@ The following are not Portfolio Done conditions unless concrete evidence shows t
 ## 5. Completion Evidence Matrix
 
 [CD-C1 merged source and CD-C2A/B runtime completion](./cd-c1-candidate-delivery.md)
-establish dedicated E2E identity/credential separation: 35 Terraform resources,
+establish dedicated E2E identity/credential separation: then 35 Terraform resources,
 no-op baseline, exact-secret IAM verified, actual Supabase display name
 `candidate_e2e`, Secret Manager version 1 ENABLED. CD-C2C provider activation is
 COMPLETE; both providers are ACTIVE / disabled=false.
@@ -214,7 +214,7 @@ owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, exact source
 verification is **PASS**; R2/R4/R6 failures remain Historical. This closes only
 the specified Deploy positive, Deploy-provider-to-E2E negative and E2E positive
 authentication/isolation contracts. Full automatic CD proof remains Open.
-Must 3 is In progress, Must 4 Open and production CD inactive; existing CD-B2
+Must 3 is In progress and Must 4 Open; existing CD-B2
 Deploy WIF / PE-P1C-01B remains Current and Closed.
 
 [C3F/G/H incident evidence](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
@@ -236,11 +236,44 @@ C3M added API failure provenance using fixed kind/stage enums. Later
 records candidate/E2E/cleanup/verify PASS and production FAIL at main
 `5586ca9fafa7b9b42170cf261e49a9d24bdd8023`, required CI `35488494492` SUCCESS.
 C3N runtime-proved `HTTP_STATUS / OPERATION_GET`; the HTTP integer was not captured.
-C3O root cause remains **PENDING_EVIDENCE**, with exact historical effective
-permission UNKNOWN. C3P adds only integer-or-null `runApiHttpStatus` in source;
-**C3P runtime: NOT YET**. No completion status closes. The Human-confirmed C3N
-final state retains the previous production pair at 100%, candidates at 0%, and
-activation UNCONFIGURED; C3P performs no runtime operation.
+At C3O, root cause was **PENDING_EVIDENCE**, with exact historical effective
+permission UNKNOWN; C3P's source-only validation was initially **runtime NOT YET**.
+The historical C3N terminal state was the previous pair at 100%, candidates at 0%,
+activation UNCONFIGURED. Those phase records are preserved, not current blockers.
+
+[C3P → C3R2 → C3S → C3U → C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+now establishes **C3 runtime chain CLOSED**: numeric 403 / Operation GET PROVEN,
+missing effective allow PROVEN, exact one-permission remediation applied and
+runtime PROVEN, authorization defect CLOSED, then fresh production release
+`35545739898` SUCCESS at `cc608aa5f2edbd81952024d497bdc5838b796599` (required CI
+`35507087914` SUCCESS / attempt 1). C3U added 2 resources with 0 changes/destroys;
+current Terraform state is **37** and the post-apply plan was **0/0/0**. C3V proves
+the manually dispatched path through production approval, Backend then Frontend
+promotion and post-deploy verification. Current pair `cd-35545739898-1` is 100% on
+both services; activation is again UNCONFIGURED. The diagnosed missing effective
+allow is **PROVEN and CLOSED**; historical C3N/C3P incident root cause remains
+**STRONGLY_SUPPORTED_NOT_PROVEN**. C3N's HTTP integer is absent; C3P's 403 and
+later exact Operation evaluations strongly support IAM causation, but neither
+the no-mutation continuity evidence nor C3V success reconstructs the original
+GET authorization decision. The closure record gives the alternatives and
+reassessment conditions. C3G/C3K root causes remain Historical / NOT PROVEN.
+
+The former broad rollback-verification gap is closed for C3 restoration and
+diagnostic durability by combined C3G actual previous-pair restoration/smoke PASS,
+C3K workflow-recorded failure diagnostics and C3U exact rollback Operation GRANTED.
+These satisfy the bounded evidence needed to preserve the paired rollback
+contract without inventing a new C3V rollback; C3V's rollback field is null.
+C3G's missing diagnostic and unrecorded full authenticated post-rollback browser
+coverage are not newly proven. The runbook still requires its checks whenever a
+rollback occurs; this contract does not require an induced production failure
+after every remediation. Historical unknowns are not silently reclassified.
+
+**Must 4 remains OPEN:** automatic **main-merge + required-CI-success triggering**
+is not implemented or runtime verified. Current `cd.yml` is `workflow_dispatch`
+only. A successful manually dispatched release closes the C3 runtime chain,
+not this remaining completion condition. C3W synchronizes current documentation;
+the separate Fresh Result Audit and final Portfolio stale-claim audit are not
+claimed complete here.
 
 Must 3's concrete remaining resource gap is monitoring and alert resources:
 they are included in section 3 and explicitly unimplemented/deferred to Must 5
@@ -255,8 +288,8 @@ prevention remains the existing Backlog / separate hardening item.
 | --- | --- | --- | --- | --- |
 | 1. Documentation consistency | In progress | Current code, release record, deployment runbook, and P0 documentation sync | Complete P0 sync, keep later docs current, and pass final stale-claim audit | P0 + Final Portfolio Audit |
 | 2. Automated production-like E2E smoke | Closed | P2A local isolated foundation plus P2B actual HTTPS 0% candidate proof: run `p2b-1788593776629-9943a84c9ea7c644` passed login, note create/autosave/read, tag create/use/delete, Calendar, Analytics and logout on exact paired candidate `p2b-081adb25`; production traffic stayed 100%, Auth/profile/notes/user_tags residuals were zero and sanitized evidence passed leak inspection. Implementation and proof were freshly reviewed on 2026-09-05; the [durable E2E evidence record](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) does not depend on local JSON availability | None for Must 2; CD integration and production promotion remain separately gated under Must 4 | P2A + P2B |
-| 3. Infrastructure as Code / Identity | In progress | P1B imported the eight-resource existing GCP foundation without cloud resource mutation; P1C-A added the disabled keyless WIF foundation; P1C-B added and verified the exact 13-member operational least-privilege IAM layer; P1C-C verified dedicated Build execution from exact commit `709c55a934783917184d09831facc085e7bc19c9`, including both immutable image digests and Cloud Logging, without Cloud Run mutation; P1C-D found zero current active Compute default SA dependencies; after a separate Human Gate, P1C-D2 removed only its legacy project-level `roles/editor` binding outside Terraform; post-removal lightweight production verification passed. CD-B2 applied the exact provider update, confirmed actual `ACTIVE` / `disabled = false`, and closed [PE-P1C-01B with runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof) on 2026-09-06. At CD-B2 closure Terraform had 30 resources with a no-op post-plan. CD-C2A provisioned five E2E resources, giving 35; CD-C2B verified the no-op baseline and dedicated key/version 1. CD-C2C provider activation is COMPLETE; R8 run `35411846680` at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1` closes isolated A/B/C WIF proof with all checks PASS and runtime-verifies R7 remediation | Implement and verify the monitoring/alert resource scope deferred to Must 5 design in the ownership matrix; isolated WIF success does not close this remaining Must 3 scope | P1 + IaC phase |
-| 4. Continuous Delivery | Open | CI, Cloud Build image creation, the manual candidate/promotion/rollback runbook and P2B automated candidate smoke proof exist; [production Environment configuration](./portfolio-infra-ownership.md#production-environment-and-activation-dependency) was read-back verified on 2026-09-05: only reviewer `tyosu131`, self-review allowed, admin bypass disabled, exact branch `main` only, no tag policies or Environment secrets/variables. CD-B2 configured the two repository public-config variables, activated WIF and verified one manual [CD-A run](./wif-submission-proof.md#cd-b2-verified-runtime-proof): GitHub OIDC -> Deploy SA -> Cloud Build -> dedicated Build SA -> immutable digests, with unchanged Cloud Run. PE-P1C-01B is Closed; its images are undeployed submission-proof artifacts; R8 isolated A/B/C WIF prerequisite is CLOSED / PASS (run `35411846680`, exact source recorded above), with R7 remediation runtime verified. [C3A/C3C](./cd-c3-e2e-recovery-contract.md): run `35414003825` passed preflight/Build/immutable images/paired 0% candidate creation but failed `E2E_CLEANUP_UNPROVEN`; historical scenario NOT PROVEN, cleanup execution UNPROVEN and exact recovery handle LOST. [C3D](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure) closed current residual Pending Evidence: HISTORICAL_RESIDUAL_PROVEN_ZERO under verified current schema contract (Auth matches 0, synthetic public candidates 0). C3C merged via PR #106 and passed required CI. C3F run `35421684166` runtime-proved candidate delivery, dedicated-secret E2E, PROVEN_ZERO cleanup and verify-candidate. C3G approved production once, then failed promotion; Backend promoted then restored, exact previous pair restored, post-rollback smoke PASS. C3H technical root cause NOT PROVEN, diagnostic durability defect PROVEN; C3I diagnostic remediation passed Fresh Result Audit and its observed promotion/rollback failure fields were runtime proven in C3K run `35442981748`; C3K candidate delivery PASS, production promotion FAIL, technical root cause NOT PROVEN; C3M added API failure classification; C3N run `35490314562` runtime-proved HTTP_STATUS / OPERATION_GET with candidate/E2E/cleanup/verify PASS and production FAIL; HTTP integer not captured, C3O root cause PENDING_EVIDENCE; C3P adds numeric HTTP status in source only, runtime NOT YET | Successful Backend then Frontend production promotion and post-deploy verification; remaining failure/rollback contract verification, including workflow-recorded rollback diagnostics. C3G actual restoration does not prove its unavailable rollback field. C3K does not establish the underlying Cloud Run failure cause; C3N proves the observed C3M kind/stage only; runtime verification of C3P numeric HTTP status and final documentation closure remain required. Automatic main-merge + CI-success triggering remains to be implemented and verified (`cd.yml` is dispatch-only). Production activation requires a separate Human Gate; production CD is inactive and `CD_C1_ACTIVATION` is UNCONFIGURED in the Human-confirmed terminal C3N state (no C3P runtime operation). Track [publishable-key runner-metadata hygiene](./wif-submission-proof.md#follow-up-should-publishable-key-log-hygiene) as the existing Should before full CD | CD phase |
+| 3. Infrastructure as Code / Identity | In progress | P1B imported the eight-resource existing GCP foundation without cloud resource mutation; P1C-A added the disabled keyless WIF foundation; P1C-B added and verified the exact 13-member operational least-privilege IAM layer; P1C-C verified dedicated Build execution from exact commit `709c55a934783917184d09831facc085e7bc19c9`, including both immutable image digests and Cloud Logging, without Cloud Run mutation; P1C-D found zero current active Compute default SA dependencies; after a separate Human Gate, P1C-D2 removed only its legacy project-level `roles/editor` binding outside Terraform; post-removal lightweight production verification passed. CD-B2 applied the exact provider update, confirmed actual `ACTIVE` / `disabled = false`, and closed [PE-P1C-01B with runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof) on 2026-09-06. At CD-B2 closure Terraform had 30 resources with a no-op post-plan. CD-C2A provisioned five E2E resources, giving 35; CD-C2B verified the no-op baseline and dedicated key/version 1. CD-C2C provider activation is COMPLETE; R8 run `35411846680` at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1` closes isolated A/B/C WIF proof with all checks PASS and runtime-verifies R7 remediation. C3U added the two C3S Operation IAM resources: current state 37, post-plan 0/0/0, remediation runtime PROVEN | Implement and verify the monitoring/alert resource scope deferred to Must 5 design in the ownership matrix; isolated WIF success does not close this remaining Must 3 scope | P1 + IaC phase |
+| 4. Continuous Delivery | Open | [C3U/C3V runtime closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure): exact-main required CI followed by one manual release dispatch, keyless OIDC/WIF, dedicated Cloud Build, immutable digests, paired candidates with exact Backend URL, E2E 8/8 PASS and PROVEN_ZERO cleanup, production Environment approval, Backend then Frontend promotion, post-deploy verification PASS. Run `35545739898`, attempt 1, exact SHA `cc608aa5f2edbd81952024d497bdc5838b796599`, SUCCESS. C3G actual rollback restoration/smoke, C3K observed failure diagnostics and C3U exact Operation authorization retain the bounded rollback evidence described above. C3 runtime chain CLOSED; current pair `cd-35545739898-1`, activation UNCONFIGURED | Implement and verify automatic main-merge + required-CI-success triggering; `cd.yml` remains workflow_dispatch only. Preserve the existing Human approval, pairing, cleanup and rollback contracts. Future activation/release requires its separate Human Gate. The existing [publishable-key runner-metadata hygiene](./wif-submission-proof.md#follow-up-should-publishable-key-log-hygiene) remains Should, not an added Must | CD phase |
 | 5. Observability | Open | Sanitized failure summaries and manual inspection guidance exist | Add health/probe, structured logging, availability monitoring, actionable alerting, and recovery evidence | Observability phase |
 | 6. Security / Repository Governance | Open | Existing CI and secret-safety boundaries exist; `main` is protected by a strict, GitHub-Actions-pinned required check; temporary PR #91 proved merge blocking with no CI result and availability after the required CI succeeded | Add static security scanning and dependency/security automation | Security / Governance phase |
 | 7. Portfolio presentation | Open | Current READMEs and technical documents provide partial product and architecture coverage | Complete the P6 README and repository-surface rewrite, including a verified live URL and bilingual consistency | P6 |

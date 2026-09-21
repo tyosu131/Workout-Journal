@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. Must 3 remains In progress, Must 4 Open, production CD inactive
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: current state 37, post-plan 0/0/0, authorization defect CLOSED. C3V production release succeeded; Must 3 remains In progress and Must 4 Open for automatic main-merge + required-CI-success triggering
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -9,7 +9,7 @@
 
 CD-C1's [dedicated E2E identity and gated delivery source](./cd-c1-candidate-delivery.md)
 is merged. **CD-C2A/B are COMPLETE**: five additional resources are provisioned,
-giving **35 applied resources / no-op baseline**. E2E secret access is runtime
+giving **35 applied resources / no-op baseline at CD-C2B**. E2E secret access is runtime
 verified and exact-resource scoped; existing Deploy/Build grants are unchanged.
 Supabase key display name is `candidate_e2e`; Secret Manager version 1 is ENABLED.
 CD-C2C provider activation is COMPLETE: both providers are ACTIVE / disabled=false.
@@ -18,13 +18,15 @@ owns isolated WIF proof **CLOSED / PASS**, A/B/C **PASS**, source
 `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
 verified; R6's fixed-path failure remains Historical. R8 proves only the specified
 Deploy positive, same-STS-token Deploy-to-E2E denial and E2E positive paths.
-Full CD runtime proof remains Open. Must 3 stays In progress, Must 4 Open and
-production CD inactive; `CD_C1_ACTIVATION` is UNCONFIGURED. R9 changes no IAM/WIF
+The [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+now proves the manually dispatched production path; C3 runtime chain is CLOSED.
+Must 3 stays In progress and Must 4 Open for automatic triggering;
+`CD_C1_ACTIVATION` is currently UNCONFIGURED. R9 changed no IAM/WIF
 configuration and performs no runtime execution or new cloud metadata check.
 C3A later proved Build and paired 0% candidate creation but failed E2E cleanup proof.
 [C3C](./cd-c3-e2e-recovery-contract.md) returned activation to UNCONFIGURED and adds
 merged future recovery safety (PR #106, post-merge CI PASS) without changing
-infrastructure ownership; runtime proof remains pending. Historical scenario is
+infrastructure ownership; C3F/C3V later proved the successful path. C3A's historical scenario is
 NOT PROVEN and cleanup execution UNPROVEN. [C3D](./cd-c3-e2e-recovery-contract.md#c3d-current-residual-closure)
 closed current residual uncertainty: PROVEN_ZERO under verified current schema
 contract. C3E changes documentation only; monitoring/alert scope is unchanged.
@@ -49,6 +51,8 @@ Terraform and CD must not compete for the same mutable production state.
 | Deploy-SA WIF impersonation member | Terraform Owns | Exact additive `roles/iam.workloadIdentityUser` member scoped to repository ID `790375516` |
 | E2E SA, exact-secret Accessor, E2E provider and impersonation member | Terraform Owns | CD-C2A provisioned; zero SA keys; `attribute.e2e_boundary/candidate-e2e-v1` separates the mapped grant; actual provider ACTIVE / disabled=false after CD-C2C; isolated A/B/C proof CLOSED / PASS for R8's exact run/source |
 | P1C-B operational IAM members | Terraform Owns | Exactly 13 additive members are in remote state and actual IAM; zero-drift verified |
+| C3S Operation reader custom role and Deploy SA project member | Terraform Owns | C3U applied exactly 2 additions; `workoutJournalRunOperationReader` has only `run.operations.get`; exact Deploy SA binding and service grants runtime verified |
+| Policy Troubleshooter API | External / Manually Managed | ENABLED; not Terraform-owned; cleanup/codification DEFERRED, with no inferred Portfolio Must |
 | Cloud Run services, image, revision, env, secret-version refs, tags, and traffic | CD Owns | No Terraform resource or import |
 | Cloud Build source bucket body `workout-journal-506909_cloudbuild` | External / Manually Managed | Terraform owns only the three exact P1C-B additive bucket IAM members, not the bucket body or legacy members |
 | Candidate creation, promotion, post-deploy verification, and rollback pair | CD / runbook Owns | Must preserve the current paired-release contract |
@@ -70,7 +74,7 @@ R8 closes the isolated WIF prerequisite only. No new identity/build hardening
 requirement is inferred; automatic default-SA-grant prevention remains the
 Backlog / separate hardening item recorded below.
 
-The current remote state contains exactly 35 resources: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer and five-resource CD-C2A E2E boundary. CD-C2B's read-only baseline was no-op. Historical P1C-B added 13 without changing existing resources; CD-B2 applied one Deploy-provider update with a zero-change post-plan. See the [historical activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation). CD-C2C activation is complete; R1 read-only plan is No changes / exit 0 and all IAM remains unchanged.
+The current remote state contains exactly **37 resources**: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer, five-resource CD-C2A E2E boundary and two-resource C3S Operation IAM remediation applied in C3U. C3U's post-apply plan was 0/0/0; existing project bindings and service-level Developer grants were preserved. CD-C2B's historical 35-resource baseline was no-op. Historical P1C-B added 13 without changing existing resources; CD-B2 applied one Deploy-provider update with a zero-change post-plan. See the [historical activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation). CD-C2C activation is complete; R1's historical read-only plan was No changes / exit 0 with no IAM change in that phase.
 
 ## CD-owned delivery contract
 
@@ -167,7 +171,9 @@ No workflow was created or activated during that Environment configuration phase
 Subsequent CD-A repository implementation added a [manual submission-proof workflow](./wif-submission-proof.md)
 at `cd.yml`, not an Environment approval job or full CD. CD-B2 activated WIF and
 verified one manual submission-proof run; it did not exercise Environment approval.
-Main protection and Environment configuration were unchanged. Production CD remains inactive.
+Main protection and Environment configuration were unchanged in CD-B2. C3V later
+exercised the production approval and delivery path successfully; current release
+activation is UNCONFIGURED after that completed run.
 
 The required delivery sequence remains:
 
@@ -187,14 +193,14 @@ Current status of that sequence:
 | Terraform/WIF foundation | Implemented; CD-B2 applied the exact provider update, actual `ACTIVE` / `disabled = false`, post-apply plan zero-change |
 | `main` branch protection + required CI | Implemented and functionally verified |
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
-| GitHub production Environment | Satisfied: Implemented and configuration-verified; runtime approval integration remains part of CD work |
-| Keyless WIF/CD integration | CD-B2 manual submission proof verified and PE-P1C-01B Closed; two repository variables configured; R8 isolated A/B/C proof CLOSED / PASS. C3A Build/paired 0% candidates passed, E2E cleanup proof failed; C3C source recovery remediation passed Fresh Result Audit; runtime verification remains pending. Full delivery proof, automatic CI-success triggering and production activation remain future work |
-| Production CD activation | Future; blocked until the remaining preceding requirements are implemented and verified |
+| GitHub production Environment | Implemented and configuration-verified; C3V runtime approval integration and production job SUCCESS |
+| Keyless WIF/CD integration | CD-B2 and R8 proofs retained; C3U least-privilege IAM remediation PROVEN; C3V manually dispatched full production delivery SUCCESS. Automatic main-merge + required-CI-success triggering remains Open |
+| Production CD activation | C3V was separately activated and approved; current `CD_C1_ACTIVATION` UNCONFIGURED. Any future activation/release needs its own Human Gate |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
 The production Environment configuration prerequisite is also satisfied. The next
-unmet work is full CD integration, including use of this Environment for runtime
-release approval under a separate Human Gate. CD-B2 closed `PE-P1C-01B`
+unmet delivery capability is automatic main-merge + required-CI-success triggering;
+C3V verified Environment approval and production delivery. CD-B2 closed `PE-P1C-01B`
 Deploy-SA/WIF submission evidence; Must 4 remains Open. Historically, P2B did not
 activate the provider, create an Environment, implement CD, promote traffic or
 close Must 4; this subsequent Environment setup does not activate WIF/CD or
@@ -205,8 +211,9 @@ with runner changes on `test/portfolio-p2b-candidate-proof`. The Backend and Fro
 revisions `workout-journal-backend-p2b-081adb25` and
 `workout-journal-frontend-p2b-081adb25` remain at 0%, sharing tag
 `candidate-p2b-081adb25`. The Frontend points to the exact Backend tagged URL,
-not the production service URL. Production remains `00003-luc` / `00003-xar`
-at 100%, with the known-good `candidate-0829-923536` pair intact. These revisions,
+not the production service URL. At P2B, production remained `00003-luc` / `00003-xar`
+at 100%, with the known-good `candidate-0829-923536` pair intact. C3V subsequently
+promoted `cd-35545739898-1`; the older production pair is now at 0%. These revisions,
 tags, images and configuration remain outside Terraform ownership; keeping this
 proof pair does not authorize tag reassignment or deletion.
 
@@ -238,10 +245,11 @@ CD-B2 created only the two repository variables `NEXT_PUBLIC_SUPABASE_URL` and
 executed one dispatch/Build with source staging and two proof-image pushes.
 The proof images were not deployed. IAM grants, Service Accounts, GitHub secrets,
 Environment settings and Cloud Run were unchanged; full mutation accounting is
-in the linked evidence record. Must 3 remains In progress, Must 4 Open and production
-CD inactive. P2B's Admin credential currently enters its runner via private stdin;
-the Deploy SA has no Secret Manager payload access. Future CD credential delivery
-is a separate Human Decision, not a new grant or secret in CD-A.
+in the linked evidence record. At CD-B2, production CD was inactive and full CD
+credential delivery remained future work. C3V subsequently verified delivery
+with the separate E2E identity/credential boundary; the Deploy SA still has no
+Secret Manager payload access. Must 3 remains In progress and Must 4 Open for
+automatic triggering; current release activation is UNCONFIGURED.
 
 Compute default Service Account Editor removal was **not** part of initial creation. The approved boundary required all three gates:
 
@@ -313,5 +321,5 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | CD-B2 provider activation and Deploy-SA/WIF submission | High | Complete: exact saved-plan apply, post-apply zero-change, one successful workflow/Build, Human-confirmed Summary and independent read-back; PE-P1C-01B Closed |
 | Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
 | Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
-| Production CD activation | High | Protected `main`, required CI, candidate E2E, production Environment configuration and PE-P1C-01B submission proof verified; automatic delivery, candidate/approval integration, promotion, post-deploy and rollback/failure verification remain required |
+| Production CD activation | High | C3V verified the manually dispatched candidate/E2E/approval/promotion/post-deploy path; existing rollback evidence and its limits are recorded in the C3U/C3V closure. Must 4 remains Open for automatic main-merge + required-CI-success triggering. Current activation UNCONFIGURED; a future activation/release requires a separate Human Gate |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |

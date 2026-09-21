@@ -3,11 +3,16 @@
 This runbook starts at the Human Gate. It does not authorize resource creation or deployment by itself.
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
-existing-service candidate/E2E/approval/promotion path. C3A runtime reached Build
-and paired 0% candidates, then failed E2E cleanup proof; approval/promotion remain
-unproved. The [C3C fail-closed record](./cd-c3-e2e-recovery-contract.md) retains both
-C3A candidates and unchanged production traffic; activation was returned to UNCONFIGURED.
-Production CD remains inactive. Before Build it stops at 20 retained tags or 40
+existing-service candidate/E2E/approval/promotion path. The latest
+[C3U/C3V runtime closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+records successful release `35545739898`: current production pair
+`cd-35545739898-1` at 100% each, prior pair at 0%, production approval and
+post-deploy verification PASS. C3 runtime chain is CLOSED. Must 4 remains Open
+for automatic main-merge + required-CI-success triggering; current workflow is
+dispatch-only and `CD_C1_ACTIVATION` is UNCONFIGURED.
+The [C3C fail-closed record](./cd-c3-e2e-recovery-contract.md) preserves C3A's
+historical cleanup failure and unchanged traffic at that phase. Before Build the
+controller stops at 20 retained tags or 40
 revisions per service; retiring old pairs is a separate Human operation and must
 preserve every rollback-eligible Frontend's Backend tag. Pre-approval E2E cleanup
 removes synthetic user data, not the Cloud Run pair. The manual contract below
@@ -21,8 +26,8 @@ closes isolated WIF proof **CLOSED / PASS**, with A/B/C **PASS** at source
 `6c0b91579f2caff02e9e190249c4c4bd73e877d1`, attempt 1. R7 remediation is runtime
 verified; R6's fixed-path failure remains Historical. All release jobs were skipped:
 no Build, candidates, E2E secret consumption, production approval or promotion ran.
-Full delivery runtime proof and production activation remain future Human Gates;
-R9 performs no runtime action. `mode=release` still requires
+R9 performed no runtime action; C3V subsequently proved full manually dispatched
+delivery. Future releases retain their separate Human Gates. `mode=release` still requires
 `CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and an exact secret version.
 
 ## Architecture and runtime contract

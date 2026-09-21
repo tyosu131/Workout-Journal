@@ -1,7 +1,12 @@
 # CD-C3: candidate incident and E2E recovery contract
 
-Current status: **C3N candidate delivery PASS; C3N production promotion FAIL; Must 4 Open;
-production CD inactive; `CD_C1_ACTIVATION` UNCONFIGURED**. Isolated WIF remains
+Current status (C3W): **C3 runtime chain CLOSED; C3V production release SUCCESS;
+authorization defect CLOSED; Must 4 Open; `CD_C1_ACTIVATION` UNCONFIGURED**.
+The current production pair is `cd-35545739898-1`, each at 100%. The
+[C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure) records
+the exact source, successful jobs, E2E/cleanup, immutable digests and fresh traffic
+read-back. Must 4 still lacks automatic main-merge + required-CI-success triggering.
+Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
 CD-C3C source remediation is merged via [PR #106](https://github.com/tyosu131/Workout-Journal/pull/106)
 at main `a332289c95b846aed10c6f9d31c9339e7fc279ed`; required post-merge
@@ -14,12 +19,16 @@ root cause remains **NOT PROVEN**. Later
 [C3K evidence and C3M API provenance](./cd-c1-candidate-delivery.md#c3k-incident-and-c3m-api-failure-diagnostics)
 runtime-prove C3I's observed promotion/rollback failure diagnostics. C3K root cause
 remains **NOT PROVEN**. Later [C3N / C3O / C3P evidence](./cd-c1-candidate-delivery.md#c3n-runtime-evidence-c3o-diagnosis-and-c3p-http-status)
-runtime-proves C3M's observed `HTTP_STATUS / OPERATION_GET` classification, but
-the HTTP integer was not captured. C3O root cause remains **PENDING_EVIDENCE**;
-the exact historical effective permission is UNKNOWN. C3P adds only a safe numeric
-status field in source; **C3P runtime: NOT YET**. The Human-confirmed C3N final
-state has the previous production pair at 100%, C3N candidates at 0%, and activation
-UNCONFIGURED. No release retry is authorized by this source remediation.
+runtime-proves C3M's observed `HTTP_STATUS / OPERATION_GET` classification; C3N's
+HTTP integer was not captured. At C3O, root cause was PENDING_EVIDENCE. Subsequent
+C3P proved numeric 403 and C3R2 proved missing effective allow. C3U applied only
+`run.operations.get` and verified both exact Operations GRANTED; C3V succeeded.
+**Current missing-allow defect: PROVEN and CLOSED. Historical C3N/C3P incident
+root cause: STRONGLY_SUPPORTED_NOT_PROVEN.** The closure record explains the
+continuity evidence and remaining historical request/HTTP limits. This does not
+assign the same cause to C3G/C3K or recover their missing diagnostics. The previous pair
+at 100% is the historical C3N terminal state, superseded by C3V. No release retry
+or other runtime operation is authorized by this documentation closure.
 
 ## C3F / C3G incident and C3H diagnosis
 
@@ -89,7 +98,9 @@ CAS, recheck, traffic comparison and Backend→Frontend promotion / Frontend→B
 rollback ordering remain unchanged. **C3G technical root cause: NOT PROVEN.**
 C3K runtime-proved the observed C3I promotion/rollback diagnostics. This does not
 retroactively recover the lost C3G error. C3N later runtime-proved the observed
-C3M HTTP kind/stage; C3P numeric status remains offline-validated only.
+C3M HTTP kind/stage; C3P later runtime-proved numeric 403. The
+[C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
+supplies the subsequent authorization remediation and successful release evidence.
 
 ## Historical C3A execution record
 
@@ -295,10 +306,13 @@ for current residual/data-hygiene concerns only. Scenario NOT PROVEN and cleanup
 execution UNPROVEN remain historical limitations. Must 3 remains In progress (monitoring/alert resources deferred
 to Must 5 design); Must 4 remains Open. C3F closes the successful candidate
 E2E/cleanup/re-verification portion; C3G proves approval integration and actual
-previous-pair restoration after failed promotion. Successful production promotion
-and post-deploy verification, remaining failure/rollback contract evidence,
-runtime verification of C3P numeric HTTP status, automatic main-merge + CI-success
-triggering and final documentation closure remain open. C3F successful result
+previous-pair restoration after failed promotion. C3K supplies observed failure
+diagnostics, C3P proves numeric 403, C3U closes the IAM defect, and C3V proves
+successful production promotion/post-deploy verification. C3W synchronizes
+documentation; **C3 runtime chain is CLOSED**. The combined rollback evidence and
+its historical limits are assessed in the [closure record](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure),
+without a new C3V rollback. **Must 4 remains Open for automatic main-merge +
+required-CI-success triggering**. C3F successful result
 transport is not runtime failure-injection or cross-run recovery evidence.
 
 C3I implementation stopped before commit/push/PR at **READY FOR FRESH RESULT AUDIT**.
