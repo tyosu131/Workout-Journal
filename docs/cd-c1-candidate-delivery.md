@@ -1,20 +1,20 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Current runtime status (C3W, 2026-09-21): **C3 runtime chain CLOSED; C3S IAM remediation
-applied and runtime PROVEN; authorization defect CLOSED; C3V production release
-SUCCESS**. The current production pair is `cd-35545739898-1`, each service at
-100%; `CD_C1_ACTIVATION` is **UNCONFIGURED**. See the
-[C3U/C3V closure and current production record](#c3u-and-c3v-runtime-closure).
+Current runtime status (C4D, 2026-09-21): **Must 4 Closed; automatic production
+delivery SUCCESS; C4C remediation source and runtime PROVEN**. The current
+production pair is `cd-35573153822-1`, each service at 100%; `CD_C1_ACTIVATION`
+is **UNCONFIGURED**. See the [C4D evidence and requirement mapping](#c4d-automatic-production-delivery-runtime-closure).
+Must 3 remains **In progress** for monitoring/alert resources. C3 runtime chain
+and the authorization defect remain CLOSED; historical root-cause boundaries are unchanged.
 
-Must 3 remains **In progress** and Must 4 **Open**. The manually dispatched path
-through production approval, paired promotion and post-deploy verification is
-proven. Automatic run `35557989507` now proves main-CI triggering, exact-source
-preflight, Deploy WIF/Build, 0% candidates, reusable pre-auth validation and E2E WIF.
-The scenario failed before its first step; cleanup was PROVEN_ZERO. Full automatic
-E2E/release success remains **NOT YET**. See the [C4C diagnosis](#c4c-nested-playwright-authority-remediation)
-and [activation and source authority](#activation-and-source-authority).
-Manual activation remains UNCONFIGURED; it is not required by the automatic path.
-This implementation phase performs no runtime action and does not close Must 4.
+PR #114 → main CI `35572912520` → automatic `workflow_run` CD `35573153822`
+proved exact-source Build/candidates, 8/8 E2E, PROVEN_ZERO cleanup, verify,
+Human production Environment approval, paired promotion and post-deploy verification.
+Manual activation remains UNCONFIGURED; the automatic path succeeded without it.
+The [C4B failure/C4C diagnosis](#c4c-nested-playwright-authority-remediation) remains
+Historical. Dated phase sections retain their then-current traffic and OPEN/NOT-YET
+states; they do not override this Current summary. C4D only reads runtime evidence
+and synchronizes docs; it performs no runtime mutation.
 
 CD-C1 merged at `b73e2461de363f00fb01e5620cf3fe7288078a37`; CD-C2A/B provisioning,
 CD-C2C activation and [R8 isolated WIF proof / R9 closure](#cd-c2d-r8-runtime-proof-and-r9-closure)
@@ -161,8 +161,8 @@ At R9, automatic main-merge + CI-success triggering was unimplemented and
 `cd.yml` had only `workflow_dispatch`. Production CD was **inactive** at R9. Isolated WIF
 success is no longer a remaining prerequisite. Portfolio Done is not established.
 The later [C3U/C3V closure](#c3u-and-c3v-runtime-closure) proves the manually
-dispatched production path; full automatic E2E/release proof remains Open and future runtime
-actions retain their Human Gates.
+dispatched production path; [C4D](#c4d-automatic-production-delivery-runtime-closure)
+subsequently closes full automatic delivery proof. Future runtime actions retain their Human Gates.
 
 R9 is documentation closure only: no dispatch, rerun, Terraform operation, IAM/WIF
 change, Secret Manager access/mutation, Build, Cloud Run mutation, GitHub settings
@@ -643,9 +643,10 @@ Task's preferred same-pool design explicitly separates subjects and grant attrib
 ## Activation and source authority
 
 C4B source implements `workflow_run` for `CI`, `completed`, branch `main`, while
-preserving both manual dispatch inputs. **Automatic runtime is partially PROVEN
-through E2E WIF** in run `35557989507`; full E2E/verify/production success remains
-unproven. C4C repairs only the nested Playwright metadata boundary in source.
+preserving both manual dispatch inputs. **Automatic runtime is PROVEN through
+production and post-deploy verification** in run `35573153822`. C4C's nested
+Playwright metadata remediation is source/runtime PROVEN; the earlier failed
+run `35557989507` remains Historical evidence.
 
 | Entry | Normalized mode | Release-start authority / E2E version |
 | --- | --- | --- |
@@ -958,6 +959,9 @@ CD-C1 does not use that builder's fixed SHA, Build ID, digests or pair.
 
 ## C3U and C3V runtime closure
 
+Historical C3W checkpoint: production/activation/status statements in this section
+describe that closure. The Current production and Must 4 status are in the C4D record below.
+
 **C3 runtime chain: CLOSED. Must 4: OPEN.** This is the C3W documentation closure
 of C3P → C3R2 → C3S → C3U → C3V, not a new runtime execution.
 
@@ -1243,6 +1247,9 @@ and its own Human Gate.
 
 ## C4C nested Playwright authority remediation
 
+Historical C4C implementation checkpoint: the failed run, then-current production
+and source-only NOT-YET statements below are preserved. C4D records the later runtime result.
+
 On 2026-09-21, merged source `719b22f246ed63f5512e9efff6773e6309dc0ad1` passed
 [main CI 35557808342](https://github.com/tyosu131/Workout-Journal/actions/runs/35557808342),
 attempt 1, and automatically triggered [CD 35557989507](https://github.com/tyosu131/Workout-Journal/actions/runs/35557989507),
@@ -1283,3 +1290,117 @@ E2E/release NOT YET.** This source fix has no new runtime proof. Do not rerun
 produce fresh main CI, automatic CD and a new candidate ID; production promotion
 still requires its own Environment Human approval. No commit/push/PR, dispatch,
 rerun or runtime mutation was performed in C4C implementation.
+
+## C4D automatic production delivery runtime closure
+
+On 2026-09-21, read-only GitHub and GCP reacquisition established **Must 4 Closed;
+remaining gap None**. [PR #114](https://github.com/tyosu131/Workout-Journal/pull/114)
+merged at `2026-09-21T07:25:42Z` as `03f45f3b7ba2d48040cffcb2130318717a1e9d09`.
+[Main CI 35572912520](https://github.com/tyosu131/Workout-Journal/actions/runs/35572912520)
+was `push`, main, attempt 1, completed/success, workflow ID `286209592`,
+`.github/workflows/ci.yml`; required job `Lint, build, and test baseline`
+(`106248199139`) succeeded. [Automatic CD 35573153822](https://github.com/tyosu131/Workout-Journal/actions/runs/35573153822)
+was `workflow_run`, main, attempt 1, completed/success, `.github/workflows/cd.yml`.
+The completed CI run reports `updated_at=07:28:50Z`; CD was created at `07:28:52Z`. Timing is corroboration;
+the manifest's fixed CI ID/attempt provides the direct causal binding.
+
+| Job | Job ID | Result |
+| --- | --- | --- |
+| preflight | `106248958626` | SUCCESS |
+| candidate | `106248991045` | SUCCESS |
+| candidate-e2e / e2e | `106250992925` | SUCCESS |
+| verify-candidate | `106251358813` | SUCCESS |
+| production | `106251581582` | SUCCESS |
+| wif-control-negative | `106248959676` | SKIPPED |
+| wif-positive | `106248959548` | SKIPPED |
+| candidate-e2e / wif-proof | `106250994241` | SKIPPED |
+
+Preflight outputs consumed by the later jobs record `mode=automatic-release`,
+source `03f45f3b7ba2d48040cffcb2130318717a1e9d09`, CI ID `35572912520`, CI attempt `1`
+and reviewed E2E version metadata `1`. The identical v2 manifest in E2E, verify
+and production records `run.event=workflow_run`, `run.id=35573153822`,
+`run.attempt=1`, `run.ciRunId=35572912520`, `run.ciRunAttempt=1`,
+`run.workflowRef=tyosu131/Workout-Journal/.github/workflows/cd.yml@refs/heads/main`
+and `run.workflowSha=03f45f3b7ba2d48040cffcb2130318717a1e9d09`.
+**Exact source binding PROVEN:** sourceSha = build.sourceSha = run.workflowSha =
+CI head SHA = CD head SHA = freshly read main. No manual dispatch or CI reselection
+is used as proof of this automatic run.
+
+Build `b53e2ad8-8e66-4f98-a3f6-f4a380f383c8` was SUCCESS at that exact source.
+Candidate identity is `cd-35573153822-1`; capture time was
+`2026-09-21T07:36:34.512431+00:00`, `ttlMs=3600000`.
+
+| Evidence | Backend | Frontend |
+| --- | --- | --- |
+| Revision | `workout-journal-backend-cd-35573153822-1` | `workout-journal-frontend-cd-35573153822-1` |
+| Immutable digest | `sha256:3b35f794badf0ffe0efff96aa681a8cbf2115ca0ffc95ad67ede40087eabc047` | `sha256:5cdc518627ba9415b7312352d1b9802369613fbf99fcbd5e68b00e5d5478cd56` |
+| Captured candidate traffic | 0% | 0% |
+| Previous C3V revision at capture | `workout-journal-backend-cd-35545739898-1` / 100% | `workout-journal-frontend-cd-35545739898-1` / 100% |
+| Fresh Current traffic | 100% | 100% |
+
+Manifest capture and successful pre-production verify retained the prior 100% pair;
+production traffic mutation before approval was **0**. The Frontend's manifest
+pairing and fresh revision `BACKEND_INTERNAL_URL` both equal
+`https://cd-35573153822-1---workout-journal-backend-cpbzb7lqza-an.a.run.app`.
+Fresh service/revision reads in `workout-journal-506909`, `asia-northeast1`, matched
+both manifest digests and the Current 100% pair. The previous C3V pair and failed
+C4B pair `cd-35557989507-1` are each 0% on both services.
+
+The independently reacquired safe E2E result is **PASS, 8/8 PASS**: login,
+tag-create, note-create-save-read, tag-use, Calendar, Analytics, tag-delete, logout.
+`httpsCookieVerified=true`, `localReceiptState=PERSISTED`, `evidenceState=PASS`;
+auth/users/notes/user_tags are `0/0/0/0`, `cleanupState=PROVEN_ZERO`.
+Manifest hash and E2E hash are both
+`7048471087a6f88173106dd853186e30b66c216d0cd7f23d7bed29d8c62948df`.
+Canonical manifest bytes independently hash to that value; verify-candidate SUCCESS
+confirms equality and the re-read pair before production.
+
+**Human approval is independently confirmed**, not inferred from an empty pending
+deployment list: `GET /repos/tyosu131/Workout-Journal/actions/runs/35573153822/approvals`
+returned `state=approved`, reviewer `tyosu131` (`User`), environment `production`
+(`21297410440`). The exact workflow has `environment: production`; production ran
+after verify and this Environment review. No automatic approval is claimed.
+Backend then Frontend promotion and post-deploy verification passed. The production
+log records `CD-C1: PASS / post-deploy-verification` and this fixed safe diagnostic:
+
+```json
+{"failureCode":null,"phase":"post-deploy-verification","promotionFailureCode":null,"promotionFailureStage":null,"result":"PASS","rollback":null,"rollbackFailureCode":null,"rollbackFailureStage":null,"runApiFailureKind":null,"runApiFailureStage":null,"runApiHttpStatus":null}
+```
+
+`CD_C1_ACTIVATION` freshly returned HTTP 404 / **UNCONFIGURED**. The automatic E2E
+job's activation metadata was empty; automatic delivery succeeded without the manual
+latch. Manual release retains its explicit activation/input contract. Production
+approval remains required for future releases.
+
+| Contract requirement | Evidence | Result |
+| --- | --- | --- |
+| main merge | PR #114 / `03f45f3b7ba2d48040cffcb2130318717a1e9d09` | PASS |
+| CI success | `35572912520`, attempt 1; required job `106248199139` | PASS |
+| automatic causal trigger | `workflow_run` `35573153822`; fixed manifest CI ID/attempt | PASS |
+| OIDC / WIF | Candidate Deploy auth and E2E auth steps SUCCESS; source uses keyless WIF | PASS |
+| Cloud Build | `b53e2ad8-8e66-4f98-a3f6-f4a380f383c8`, SUCCESS | PASS |
+| immutable digests | Manifest digests above equal fresh revision read-back | PASS |
+| Backend candidate | `workout-journal-backend-cd-35573153822-1`, captured 0% | PASS |
+| exact Backend tagged URL | Manifest and fresh Frontend BACKEND_INTERNAL_URL equality | PASS |
+| Frontend candidate | `workout-journal-frontend-cd-35573153822-1`, captured 0% | PASS |
+| automated smoke | Eight named steps PASS; HTTPS cookie verified | PASS |
+| cleanup | PROVEN_ZERO / 0/0/0/0; receipt PERSISTED | PASS |
+| production approval | GitHub production Environment review: approved by `tyosu131` | PASS |
+| Backend promotion | Production PASS and fresh 100% read-back | PASS |
+| Frontend promotion | Production PASS and fresh 100% read-back | PASS |
+| post-deploy verification | `CD-C1: PASS / post-deploy-verification` | PASS |
+
+**C4C remediation source PROVEN; runtime PROVEN.** The formerly failing nested
+authority boundary now passes all eight scenario steps and the complete release.
+Historical C4B run `35557989507` remains FAILURE with its PROVEN propagation root
+cause and PROVEN_ZERO cleanup. C3 runtime chain remains CLOSED; C3N/C3P historical
+root cause remains STRONGLY_SUPPORTED_NOT_PROVEN, and C3G/C3K remain NOT PROVEN.
+
+Rollback was **NOT EXECUTED** in C4D; no new rollback-success event is manufactured.
+The existing bounded C3G restoration/smoke, C3K durable diagnostics and C3U rollback
+Operation authorization evidence remains sufficient for the unchanged Completion
+Contract. Other Musts are unchanged: 1 In progress, 2 Closed, 3 In progress,
+5–8 Open. Must 3 monitoring/alert resources and Must 5 Observability remain future work.
+C4D performs read-only evidence collection and docs synchronization only: no
+dispatch/rerun/approval, cloud/traffic/IAM/Terraform/variable mutation, secret payload
+access, Supabase mutation, commit, push or PR. Fresh Result Audit is next.

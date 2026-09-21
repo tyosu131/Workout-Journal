@@ -4,14 +4,14 @@ This runbook starts at the Human Gate. It does not authorize resource creation o
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
 existing-service candidate/E2E/approval/promotion path. The latest
-[C3U/C3V runtime closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
-records successful release `35545739898`: current production pair
-`cd-35545739898-1` at 100% each, prior pair at 0%, production approval and
-post-deploy verification PASS. C3 runtime chain is CLOSED. Must 4 remains Open
-for full automatic delivery proof. [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
-records automatic run `35557989507`: trigger through E2E WIF PROVEN, scenario failed
-before step 1, cleanup PROVEN_ZERO, production skipped. Failed candidates remain 0%.
-Do not rerun/reuse that pair; the source fix needs a fresh merged-source CI/CD run.
+[C4D automatic runtime closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+records successful automatic release `35573153822`: current production pair
+`cd-35573153822-1` at 100% each, exact digests/pairing, E2E 8/8 PASS, cleanup
+PROVEN_ZERO, Human production approval and post-deploy verification PASS.
+Must 4 is Closed. C3 runtime chain remains CLOSED; the previous C3V pair
+`cd-35545739898-1` and failed C4B pair `cd-35557989507-1` are 0% on both services.
+The [C4B failure/C4C remediation](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+is Historical; do not rerun or reuse its failed candidate identity.
 `CD_C1_ACTIVATION` remains UNCONFIGURED and gates manual release only.
 The [C3C fail-closed record](./cd-c3-e2e-recovery-contract.md) preserves C3A's
 historical cleanup failure and unchanged traffic at that phase. Before Build the
@@ -30,7 +30,8 @@ closes isolated WIF proof **CLOSED / PASS**, with A/B/C **PASS** at source
 verified; R6's fixed-path failure remains Historical. All release jobs were skipped:
 no Build, candidates, E2E secret consumption, production approval or promotion ran.
 R9 performed no runtime action; C3V subsequently proved full manually dispatched
-delivery. Manual `mode=release` still requires its separate Human authorization,
+delivery. Manual `mode=release` is a separate, explicitly gated recovery/release
+route; it still requires its separate Human authorization,
 `CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and a numeric secret version.
 After reviewed implementation merge, automatic release starts only from qualified
 successful main push CI, without this manual latch, using reviewed version metadata
@@ -38,6 +39,10 @@ successful main push CI, without this manual latch, using reviewed version metad
 not authorize or execute a merge, release, secret read or approval.
 
 ## Automatic release operating contract
+
+The Current runtime-proven flow is main merge → required CI success → automatic
+CD → Build/paired 0% candidates/E2E/verify → production Environment approval wait
+→ Human approval → Backend promotion → Frontend promotion → post-deploy verification.
 
 The [canonical authority contract](./cd-c1-candidate-delivery.md#activation-and-source-authority)
 binds triggering CI ID/attempt, workflow identity and required job to exact source S.
