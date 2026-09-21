@@ -41,9 +41,10 @@ export function validateReleaseManifest(m, target, now = Date.now()) {
     m.region === REGION && SHA.test(m.sourceSha), 'RELEASE_IDENTITY_INVALID');
   const r = m.run;
   check(decimal(r?.id) && decimal(r.attempt) && r.attempt.length <= 4 &&
-    r.event === 'workflow_dispatch' && r.workflowRef === CALLER &&
+    ['workflow_dispatch', 'workflow_run'].includes(r.event) && r.workflowRef === CALLER &&
     r.workflowSha === m.sourceSha && r.repositoryId === '790375516' &&
-    r.ownerId === '95160728' && decimal(r.ciRunId), 'RELEASE_WORKFLOW_INVALID');
+    r.ownerId === '95160728' && decimal(r.ciRunId) && decimal(r.ciRunAttempt) &&
+    r.ciRunAttempt.length <= 4, 'RELEASE_WORKFLOW_INVALID');
   check(m.candidateId === 'cd-' + r.id + '-' + r.attempt && target === 'candidate:' + m.candidateId,
     'CANDIDATE_IDENTITY_UNPROVEN');
   check(m.candidateId.length <= 22, 'CANDIDATE_TAG_TOO_LONG');
@@ -54,6 +55,7 @@ export function validateReleaseManifest(m, target, now = Date.now()) {
     m.supabase.url === 'https://' + SUPABASE_REF + '.supabase.co', 'SUPABASE_PROJECT_MISMATCH');
   check(m.e2eSecret?.project === PROJECT && m.e2eSecret.name === E2E_SECRET &&
     decimal(m.e2eSecret.version), 'E2E_SECRET_REFERENCE_INVALID');
+  check(r.event !== 'workflow_run' || m.e2eSecret.version === '1', 'E2E_SECRET_REFERENCE_INVALID');
   check(m.build?.status === 'SUCCESS' && m.build.sourceSha === m.sourceSha &&
     /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(m.build.id) &&
     m.build.serviceAccount === 'projects/' + PROJECT + '/serviceAccounts/workout-journal-build@' +
@@ -95,7 +97,10 @@ export function bindWorkflow(m, env) {
   validateReleaseManifest(m, 'candidate:' + m.candidateId);
   check(env.GITHUB_REPOSITORY === REPOSITORY && env.GITHUB_REF === 'refs/heads/main' &&
     env.GITHUB_SHA === m.sourceSha && env.GITHUB_WORKFLOW_SHA === m.sourceSha &&
-    env.GITHUB_WORKFLOW_REF === CALLER && env.GITHUB_EVENT_NAME === 'workflow_dispatch' &&
-    env.GITHUB_RUN_ID === m.run.id && env.GITHUB_RUN_ATTEMPT === m.run.attempt,
+    env.GITHUB_WORKFLOW_REF === CALLER && env.GITHUB_EVENT_NAME === m.run.event &&
+    env.GITHUB_RUN_ID === m.run.id && env.GITHUB_RUN_ATTEMPT === m.run.attempt &&
+    env.CD_MODE === (m.run.event === 'workflow_run' ? 'automatic-release' : 'manual-release') &&
+    env.CD_SOURCE_SHA === m.sourceSha && env.CD_CI_RUN_ID === m.run.ciRunId &&
+    env.CD_CI_RUN_ATTEMPT === m.run.ciRunAttempt && env.E2E_SECRET_VERSION === m.e2eSecret.version,
   'EXECUTION_IDENTITY_MISMATCH');
 }

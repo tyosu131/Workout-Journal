@@ -78,7 +78,7 @@ def require(ok):
 
 
 def context(env):
-    expected = {'CD_MODE': 'wif-proof', 'GITHUB_REPOSITORY': REPOSITORY,
+    expected = {'CD_MODE': 'manual-wif-proof', 'GITHUB_REPOSITORY': REPOSITORY,
                 'GITHUB_REPOSITORY_ID': '790375516', 'GITHUB_REPOSITORY_OWNER_ID': '95160728',
                 'GITHUB_REF': 'refs/heads/main', 'GITHUB_WORKFLOW_REF': CALLER,
                 'GITHUB_EVENT_NAME': 'workflow_dispatch'}

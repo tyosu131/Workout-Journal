@@ -23,7 +23,11 @@ proves the manually dispatched production path: C3V E2E 8/8 PASS, HTTPS cookie
 verified, cleanup PROVEN_ZERO (auth/users/notes/user_tags all 0), receipt PERSISTED,
 evidence PASS and matching manifest/E2E hashes, then production SUCCESS.
 C3 runtime chain is CLOSED; Must 4 remains Open for automatic main-merge +
-required-CI-success triggering. Current activation is UNCONFIGURED after C3V;
+required-CI-success runtime proof. [C4B source](./cd-c1-candidate-delivery.md#activation-and-source-authority)
+is implemented / offline verified; automatic runtime NOT YET. Release E2E now consumes
+qualified source/CI ID/attempt and explicit manual-release or automatic-release authority.
+Manual activation is UNCONFIGURED after C3V; automatic release uses reviewed secret
+version metadata `1` without that latch. Actual secret access/cleanup is unchanged.
 R9 itself performed no runtime execution.
 
 The [C3A incident / C3C recovery contract](./cd-c3-e2e-recovery-contract.md) is Current.

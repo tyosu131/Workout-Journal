@@ -5,7 +5,10 @@ authorization defect CLOSED; Must 4 Open; `CD_C1_ACTIVATION` UNCONFIGURED**.
 The current production pair is `cd-35545739898-1`, each at 100%. The
 [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure) records
 the exact source, successful jobs, E2E/cleanup, immutable digests and fresh traffic
-read-back. Must 4 still lacks automatic main-merge + required-CI-success triggering.
+read-back. Must 4 remains Open for automatic main-merge + required-CI-success runtime
+proof: [C4B source](./cd-c1-candidate-delivery.md#activation-and-source-authority) is
+implemented / offline verified, automatic runtime NOT YET. Recovery/cleanup semantics
+and these historical classifications are unchanged.
 Isolated WIF remains
 [R8 CLOSED / PASS](./cd-c1-candidate-delivery.md#cd-c2d-r8-runtime-proof-and-r9-closure).
 CD-C3C source remediation is merged via [PR #106](https://github.com/tyosu131/Workout-Journal/pull/106)

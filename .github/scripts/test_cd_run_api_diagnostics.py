@@ -14,7 +14,7 @@ from urllib.error import HTTPError, URLError
 
 import cd_release as cd
 import test_cd_diagnostics as diagnostics
-from test_cd_release import ENV, fixture
+from test_cd_release import AUTHORITY, ENV, fixture
 
 
 PRIVATE = ('SECRET_MARKER', 'TOKEN_MARKER', 'CREDENTIAL_MARKER', 'REQUEST_MARKER',
@@ -87,7 +87,7 @@ class RunApiDiagnosticTests(unittest.TestCase):
                    'GITHUB_STEP_SUMMARY': str(summary)}
             with patch.dict(os.environ, env, clear=True), patch.object(cd.sys, 'argv', ['cd_release.py', 'promote']), \
                  patch.object(cd, 'input_manifest', return_value=manifest), \
-                 patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+                 patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
                  patch.object(cd, 'read_state', return_value=state), \
                  patch.object(cd, 'read_revision', side_effect=lambda revision: revisions[revision]), \
                  patch.object(cd.proof, 'command', return_value=b'TOKEN_MARKER') as token, \

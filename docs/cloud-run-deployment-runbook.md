@@ -8,8 +8,9 @@ existing-service candidate/E2E/approval/promotion path. The latest
 records successful release `35545739898`: current production pair
 `cd-35545739898-1` at 100% each, prior pair at 0%, production approval and
 post-deploy verification PASS. C3 runtime chain is CLOSED. Must 4 remains Open
-for automatic main-merge + required-CI-success triggering; current workflow is
-dispatch-only and `CD_C1_ACTIVATION` is UNCONFIGURED.
+for automatic main-merge + required-CI-success runtime proof. C4B implements the
+`workflow_run` source and offline contracts; automatic runtime is **NOT YET**.
+`CD_C1_ACTIVATION` remains UNCONFIGURED and gates manual release only.
 The [C3C fail-closed record](./cd-c3-e2e-recovery-contract.md) preserves C3A's
 historical cleanup failure and unchanged traffic at that phase. Before Build the
 controller stops at 20 retained tags or 40
@@ -27,8 +28,35 @@ closes isolated WIF proof **CLOSED / PASS**, with A/B/C **PASS** at source
 verified; R6's fixed-path failure remains Historical. All release jobs were skipped:
 no Build, candidates, E2E secret consumption, production approval or promotion ran.
 R9 performed no runtime action; C3V subsequently proved full manually dispatched
-delivery. Future releases retain their separate Human Gates. `mode=release` still requires
-`CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and an exact secret version.
+delivery. Manual `mode=release` still requires its separate Human authorization,
+`CD_C1_ACTIVATION == approved` (currently UNCONFIGURED) and a numeric secret version.
+After reviewed implementation merge, automatic release starts only from qualified
+successful main push CI, without this manual latch, using reviewed version metadata
+`1`. Both routes stop for **production Environment Human approval**. C4B itself does
+not authorize or execute a merge, release, secret read or approval.
+
+## Automatic release operating contract
+
+The [canonical authority contract](./cd-c1-candidate-delivery.md#activation-and-source-authority)
+binds triggering CI ID/attempt, workflow identity and required job to exact source S.
+S must equal current main, runner SHA and CD workflow SHA. Preflight outputs own all
+release checkouts and reusable E2E inputs; CI authority is never reselected mid-run.
+Build produces immutable digests, then Backend and Frontend candidates at 0%, with
+Frontend pointing to the exact Backend tagged URL. E2E must prove cleanup and return
+the same manifest hash; verify re-reads the pair before the production approval wait.
+
+Before approving, inspect run/CI provenance, exact source, candidate pair/digests,
+E2E/cleanup evidence and 60-minute manifest expiry. A newer main or expired manifest
+makes promotion fail closed; an old waiting run is not automatically refreshed.
+Human approval permits Backend then Frontend promotion followed by post-deploy
+verification. Failure retains Frontend then Backend rollback and post-rollback checks.
+No production traffic write is reachable in the pre-approval jobs.
+
+Eligible releases share `workout-journal-production-delivery`, with no in-progress
+cancellation. One running and one pending member are possible; a newer eligible
+pending run may replace an older pending run. This is not FIFO/exactly-once. Obvious
+non-qualifying CI completions have a separate per-run group. The manual commands
+below retain their own Human Gate and are not an automatic repair fallback.
 
 ## Architecture and runtime contract
 

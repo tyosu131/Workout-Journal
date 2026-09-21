@@ -1,6 +1,7 @@
 """Offline tests: synthetic read-backs only; all cloud/auth/mutations mocked."""
 from copy import deepcopy
 from contextlib import redirect_stderr, redirect_stdout
+import atexit
 import base64
 import io
 import json
@@ -21,7 +22,23 @@ ENV = {'GITHUB_REPOSITORY': cd.proof.REPOSITORY, 'GITHUB_REPOSITORY_ID': '790375
        'GITHUB_REPOSITORY_OWNER_ID': '95160728', 'GITHUB_REF': 'refs/heads/main',
        'GITHUB_WORKFLOW_REF': cd.CALLER, 'GITHUB_WORKFLOW_SHA': SHA, 'GITHUB_SHA': SHA,
        'GITHUB_EVENT_NAME': 'workflow_dispatch', 'GITHUB_RUN_ID': '12345',
-       'GITHUB_RUN_ATTEMPT': '1', 'CD_MODE': 'release', 'CD_C1_ACTIVATION': 'approved', 'E2E_SECRET_VERSION': '17'}
+       'GITHUB_RUN_ATTEMPT': '1', 'CD_MODE': 'manual-release', 'CD_C1_ACTIVATION': 'approved', 'E2E_SECRET_VERSION': '17'}
+_EVENT_DIR = tempfile.TemporaryDirectory(prefix='cd-manual-event-')
+atexit.register(_EVENT_DIR.cleanup)
+_EVENT_PATH = Path(_EVENT_DIR.name) / 'event.json'
+REPOSITORY = {'id': 790375516, 'full_name': cd.proof.REPOSITORY, 'owner': {'id': 95160728}}
+MANUAL_EVENT = {'repository': REPOSITORY, 'inputs': {'mode': 'release', 'e2e_secret_version': '17'}}
+_EVENT_PATH.write_text(json.dumps(MANUAL_EVENT))
+ENV.update(GITHUB_EVENT_PATH=str(_EVENT_PATH), CD_SOURCE_SHA=SHA, CD_CI_RUN_ID='99', CD_CI_RUN_ATTEMPT='1')
+AUTHORITY = cd.proof.release_context(ENV)
+
+
+def ci_run():
+    return {'id': 99, 'run_attempt': 1, 'name': 'CI', 'workflow_id': 286209592,
+            'path': '.github/workflows/ci.yml', 'head_sha': SHA, 'head_branch': 'main',
+            'event': 'push', 'status': 'completed', 'conclusion': 'success',
+            'repository': deepcopy(REPOSITORY), 'head_repository': deepcopy(REPOSITORY)}
+
 BUILD = {'buildId': '00000000-0000-4000-8000-000000000001', 'buildResult': 'SUCCESS',
          'actualBuildServiceAccount': cd.proof.BUILD_SA,
          'digests': {'workout-journal-backend': 'sha256:' + 'b' * 64,
@@ -71,7 +88,7 @@ def fixture():
                                              'tag': 'cd-12345-1', 'url': tagged(part, 'cd-12345-1')})
         after[part] = {'service': new_raw, 'traffic': cd.traffic(new_raw), 'production': previous}
     with patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]):
-        manifest = cd.make_manifest(before, after, BUILD, ENV, '99')
+        manifest = cd.make_manifest(before, after, BUILD, ENV, AUTHORITY)
     return before, after, revisions, manifest
 
 
@@ -97,9 +114,7 @@ class ProvenanceTests(unittest.TestCase):
             with self.assertRaises(cd.proof.GateError): cd.input_manifest({**env, key: value})
 
     def test_ci_head_sha_is_authority_and_pr_source_is_rejected(self):
-        r = {'head_sha': SHA, 'head_branch': 'main', 'event': 'push', 'conclusion': 'success',
-             'status': 'completed', 'path': '.github/workflows/ci.yml', 'id': 99,
-             'repository': {'full_name': cd.proof.REPOSITORY}, 'head_repository': {'full_name': cd.proof.REPOSITORY}}
+        r = ci_run()
         self.assertEqual(cd.ci_authority(r, SHA), SHA)
         for key, bad in [('head_sha', 'b' * 40), ('event', 'pull_request'), ('head_branch', 'feature'),
                          ('conclusion', 'failure'), ('path', '.github/workflows/fake.yml'),
@@ -152,7 +167,7 @@ class ProvenanceTests(unittest.TestCase):
         promoted = deepcopy(after)
         for p in cd.PARTS: promoted[p]['production']['metadata']['name'] = current[p]
         changes = []
-        with patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+        with patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
              patch.object(cd, 'recheck', return_value=after), patch.object(cd, 'read_state', return_value=promoted), \
              patch.object(cd, 'cas_traffic', side_effect=lambda p, s, dest: changes.append((p, cd.production_revision(dest)))), \
              patch.object(cd, 'smoke', side_effect=[cd.proof.GateError('POST_DEPLOY_SMOKE_FAILED'), None]):
@@ -169,7 +184,7 @@ class ProvenanceTests(unittest.TestCase):
     def test_stale_promotion_never_writes(self):
         m = fixture()[3]
         env = {**ENV, 'CD_MANIFEST': cd.canonical(m), 'CD_MANIFEST_HASH': cd.digest(m), 'CD_E2E_HASH': cd.digest(m)}
-        with patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+        with patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
              patch.object(cd, 'recheck', side_effect=cd.proof.GateError('STALE')), patch.object(cd, 'cas_traffic') as update:
             with self.assertRaises(cd.proof.GateError): cd.promote(env, {})
             update.assert_not_called()
@@ -189,11 +204,11 @@ class ProvenanceTests(unittest.TestCase):
             calls.append(part)
             state[part] = deepcopy(after[part])
 
-        with patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+        with patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
              patch.object(cd, 'read_state', side_effect=lambda: deepcopy(state)), \
              patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]), \
              patch.object(cd, 'cloud_run', return_value={'revisions': []}), \
-             patch.object(cd.proof, 'prove', side_effect=lambda env, build: build.update(BUILD)) as build, \
+             patch.object(cd.proof, 'prove', side_effect=lambda env, build, **kwargs: build.update(BUILD)) as build, \
              patch.object(cd.proof, 'cloud', side_effect=deploy), \
              patch.object(cd, 'emit', side_effect=lambda env, name, value: outputs.update({name: value})):
             record = {}
@@ -210,7 +225,7 @@ class ProvenanceTests(unittest.TestCase):
         for state in (after, deepcopy(before)):
             if state is not after:
                 state['frontend']['production']['spec']['containers'][0]['env'][0]['value'] = tagged('backend', 'retained-stale')
-            with patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+            with patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
                  patch.object(cd, 'read_state', return_value=state), \
                  patch.object(cd, 'cloud_run', return_value={'revisions': []}), \
                  patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]), \
@@ -242,7 +257,7 @@ class ProvenanceTests(unittest.TestCase):
                     raise cd.proof.GateError('POST_DEPLOY_SMOKE_FAILED')
             env = {**ENV, 'CD_MANIFEST': cd.canonical(m), 'CD_MANIFEST_HASH': cd.digest(m), 'CD_E2E_HASH': cd.digest(m)}
             cd.input_manifest(env)
-            with patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+            with patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
                  patch.object(cd, 'read_state', side_effect=lambda: deepcopy(state)), \
                  patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]), \
                  patch.object(cd, 'cas_traffic', side_effect=update), patch.object(cd, 'smoke', side_effect=smoke):
@@ -276,7 +291,7 @@ class ProvenanceTests(unittest.TestCase):
                         raise cd.proof.GateError('UNCERTAIN_UPDATE')
                 env = {**ENV, 'CD_MANIFEST': cd.canonical(m), 'CD_MANIFEST_HASH': cd.digest(m),
                        'CD_E2E_HASH': cd.digest(m)}
-                with patch.object(cd, 'preflight', return_value='99'), patch.object(cd.proof, 'check_credentials'), \
+                with patch.object(cd, 'preflight', return_value=AUTHORITY), patch.object(cd.proof, 'check_credentials'), \
                      patch.object(cd, 'read_state', side_effect=lambda: deepcopy(state)), \
                      patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]), \
                      patch.object(cd, 'cas_traffic', side_effect=update), patch.object(cd, 'smoke'):
@@ -436,16 +451,16 @@ class TrustTests(unittest.TestCase):
         self.assertEqual(ci['name'], 'Lint, build, and test baseline')
         self.assertTrue(any(s.get('run') == 'npm run e2e:test' for s in ci['steps']))
         self.assertTrue(any("python3 -B -m unittest discover" in s.get('run', '') for s in ci['steps']))
-        self.assertEqual(set(main['on']), {'workflow_dispatch'})
+        self.assertEqual(set(main['on']), {'workflow_dispatch', 'workflow_run'})
         self.assertEqual(set(reusable['on']), {'workflow_call'})
         self.assertEqual(main['permissions'], {})
         self.assertEqual(main['concurrency']['cancel-in-progress'], False)
         jobs = main['jobs']
         self.assertEqual(jobs['candidate']['needs'], 'preflight')
-        self.assertEqual(jobs['candidate-e2e']['needs'], 'candidate')
+        self.assertEqual(jobs['candidate-e2e']['needs'], ['preflight', 'candidate'])
         self.assertEqual(jobs['candidate-e2e']['uses'], './.github/workflows/candidate-e2e.yml')
-        self.assertEqual(jobs['verify-candidate']['needs'], ['candidate', 'candidate-e2e'])
-        self.assertEqual(jobs['production']['needs'], ['candidate', 'verify-candidate'])
+        self.assertEqual(jobs['verify-candidate']['needs'], ['preflight', 'candidate', 'candidate-e2e'])
+        self.assertEqual(jobs['production']['needs'], ['preflight', 'candidate', 'verify-candidate'])
         self.assertEqual(jobs['production']['environment'], 'production')
         self.assertNotIn('id-token', jobs['preflight']['permissions'])
         self.assertIn("vars.CD_C1_ACTIVATION == 'approved'", jobs['preflight']['if'])

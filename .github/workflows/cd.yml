@@ -1,7 +1,11 @@
 name: Gated candidate delivery and isolated WIF proof
 
-# Desired state only. No workflow_run trigger; activation remains Human-gated.
+# Automatic candidates follow exact-main CI. Production still requires Environment approval.
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       mode:
@@ -20,11 +24,12 @@ on:
 permissions: {}
 
 concurrency:
-  group: workout-journal-production-delivery
+  # Ineligible completions cannot displace a valid pending release. Not a FIFO queue.
+  group: >-
+    ${{ (github.repository == 'tyosu131/Workout-Journal' && github.repository_id == '790375516' && github.repository_owner_id == '95160728' && github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && (inputs.mode == 'wif-proof' || (inputs.mode == 'release' && vars.CD_C1_ACTIVATION == 'approved'))) || (github.event_name == 'workflow_run' && github.event.action == 'completed' && github.event.workflow_run.name == 'CI' && github.event.workflow_run.workflow_id == 286209592 && github.event.workflow_run.path == '.github/workflows/ci.yml' && github.event.workflow_run.event == 'push' && github.event.workflow_run.status == 'completed' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == 'tyosu131/Workout-Journal' && github.event.workflow_run.head_repository.id == 790375516 && github.event.workflow_run.id > 0 && github.event.workflow_run.run_attempt > 0 && github.event.workflow_run.head_sha == github.sha && github.event.workflow_run.head_sha == github.workflow_sha))) && 'workout-journal-production-delivery' || github.run_id }}
   cancel-in-progress: false
 
 env:
-  CD_MODE: ${{ inputs.mode }}
   CD_C1_ACTIVATION: ${{ vars.CD_C1_ACTIVATION }}
   GCP_PROJECT: workout-journal-506909
   WIF_PROVIDER: projects/437413312066/locations/global/workloadIdentityPools/github-actions/providers/workout-journal
@@ -33,7 +38,7 @@ env:
 
 jobs:
   wif-control-negative:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && inputs.mode == 'wif-proof'
+    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'wif-proof'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -45,42 +50,48 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Deploy control then expected E2E impersonation denial
+        env:
+          CD_MODE: manual-wif-proof
         run: python3 -B .github/scripts/e2e_wif_proof.py control-negative
 
   wif-positive:
     needs: wif-control-negative
-    if: inputs.mode == 'wif-proof'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'wif-proof'
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/candidate-e2e.yml
     with:
-      mode: wif-proof
+      mode: manual-wif-proof
 
   preflight:
-    if: github.repository == 'tyosu131/Workout-Journal' && github.ref == 'refs/heads/main' && inputs.mode == 'release' && vars.CD_C1_ACTIVATION == 'approved'
+    if: >-
+      github.repository == 'tyosu131/Workout-Journal' && github.repository_id == '790375516' && github.repository_owner_id == '95160728' && github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.mode == 'release' && vars.CD_C1_ACTIVATION == 'approved') || (github.event_name == 'workflow_run' && github.event.action == 'completed' && github.event.workflow_run.name == 'CI' && github.event.workflow_run.workflow_id == 286209592 && github.event.workflow_run.path == '.github/workflows/ci.yml' && github.event.workflow_run.event == 'push' && github.event.workflow_run.status == 'completed' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == 'tyosu131/Workout-Journal' && github.event.workflow_run.head_repository.id == 790375516 && github.event.workflow_run.id > 0 && github.event.workflow_run.run_attempt > 0 && github.event.workflow_run.head_sha == github.sha && github.event.workflow_run.head_sha == github.workflow_sha))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
       actions: read
     outputs:
+      mode: ${{ steps.check.outputs.mode }}
       source_sha: ${{ steps.check.outputs.source_sha }}
+      ci_run_id: ${{ steps.check.outputs.ci_run_id }}
+      ci_run_attempt: ${{ steps.check.outputs.ci_run_attempt }}
+      e2e_secret_version: ${{ steps.check.outputs.e2e_secret_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.workflow_sha }}
           persist-credentials: false
       - name: Exact main and successful required CI authority
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          E2E_SECRET_VERSION: ${{ inputs.e2e_secret_version }}
         run: python3 -B .github/scripts/cd_release.py preflight
 
   candidate:
     needs: preflight
-    if: inputs.mode == 'release'
+    if: needs.preflight.outputs.mode == 'manual-release' || needs.preflight.outputs.mode == 'automatic-release'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -90,6 +101,12 @@ jobs:
     outputs:
       manifest: ${{ steps.candidate.outputs.manifest }}
       manifest_hash: ${{ steps.candidate.outputs.manifest_hash }}
+    env:
+      CD_MODE: ${{ needs.preflight.outputs.mode }}
+      CD_SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
+      CD_CI_RUN_ID: ${{ needs.preflight.outputs.ci_run_id }}
+      CD_CI_RUN_ATTEMPT: ${{ needs.preflight.outputs.ci_run_attempt }}
+      E2E_SECRET_VERSION: ${{ needs.preflight.outputs.e2e_secret_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -121,24 +138,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_SECRET_VERSION: ${{ inputs.e2e_secret_version }}
         run: python3 -B .github/scripts/cd_release.py candidate
 
   candidate-e2e:
-    needs: candidate
-    if: inputs.mode == 'release'
+    needs: [preflight, candidate]
+    if: needs.preflight.outputs.mode == 'manual-release' || needs.preflight.outputs.mode == 'automatic-release'
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/candidate-e2e.yml
     with:
-      mode: release
+      mode: ${{ needs.preflight.outputs.mode }}
+      source_sha: ${{ needs.preflight.outputs.source_sha }}
+      ci_run_id: ${{ needs.preflight.outputs.ci_run_id }}
+      ci_run_attempt: ${{ needs.preflight.outputs.ci_run_attempt }}
+      e2e_secret_version: ${{ needs.preflight.outputs.e2e_secret_version }}
       manifest: ${{ needs.candidate.outputs.manifest }}
       manifest_hash: ${{ needs.candidate.outputs.manifest_hash }}
 
   verify-candidate:
-    needs: [candidate, candidate-e2e]
-    if: inputs.mode == 'release'
+    needs: [preflight, candidate, candidate-e2e]
+    if: needs.preflight.outputs.mode == 'manual-release' || needs.preflight.outputs.mode == 'automatic-release'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -146,10 +166,16 @@ jobs:
       id-token: write
     outputs:
       e2e_hash: ${{ steps.verify.outputs.e2e_hash }}
+    env:
+      CD_MODE: ${{ needs.preflight.outputs.mode }}
+      CD_SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
+      CD_CI_RUN_ID: ${{ needs.preflight.outputs.ci_run_id }}
+      CD_CI_RUN_ATTEMPT: ${{ needs.preflight.outputs.ci_run_attempt }}
+      E2E_SECRET_VERSION: ${{ needs.preflight.outputs.e2e_secret_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.preflight.outputs.source_sha }}
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -174,8 +200,8 @@ jobs:
         run: python3 -B .github/scripts/cd_release.py verify
 
   production:
-    needs: [candidate, verify-candidate]
-    if: inputs.mode == 'release'
+    needs: [preflight, candidate, verify-candidate]
+    if: needs.preflight.outputs.mode == 'manual-release' || needs.preflight.outputs.mode == 'automatic-release'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -183,10 +209,16 @@ jobs:
       contents: read
       actions: read
       id-token: write
+    env:
+      CD_MODE: ${{ needs.preflight.outputs.mode }}
+      CD_SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
+      CD_CI_RUN_ID: ${{ needs.preflight.outputs.ci_run_id }}
+      CD_CI_RUN_ATTEMPT: ${{ needs.preflight.outputs.ci_run_attempt }}
+      E2E_SECRET_VERSION: ${{ needs.preflight.outputs.e2e_secret_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.preflight.outputs.source_sha }}
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:

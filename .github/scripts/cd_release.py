@@ -1,4 +1,4 @@
-"""CD-C1 desired execution path. Only main, successful CI and explicit activation.
+"""Exact-main delivery: successful CI authority; manual activation or workflow_run.
 
 No entrypoint is executed by offline tests. GCP mutations exist ONLY behind the
 candidate/promote entrypoints; repository implementation never invokes them.
@@ -161,47 +161,41 @@ def github(path, env):
 
 
 def identity(env):
-    require(env.get('CD_MODE') == 'release', 'RELEASE_MODE_REQUIRED')
-    require(env.get('GITHUB_REPOSITORY') == proof.REPOSITORY and
-            env.get('GITHUB_REPOSITORY_ID') == '790375516' and
-            env.get('GITHUB_REPOSITORY_OWNER_ID') == '95160728', 'REPOSITORY_MISMATCH')
-    require(env.get('GITHUB_REF') == 'refs/heads/main' and
-            env.get('GITHUB_WORKFLOW_REF') == CALLER and
-            env.get('GITHUB_EVENT_NAME') == 'workflow_dispatch', 'CALLER_MISMATCH')
-    sha = env.get('GITHUB_SHA')
-    require(matches(r'[a-f0-9]{40}', sha) and env.get('GITHUB_WORKFLOW_SHA') == sha, 'SOURCE_SHA_MISMATCH')
-    require(matches(r'[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID')) and
-            matches(r'[1-9][0-9]{0,3}', env.get('GITHUB_RUN_ATTEMPT')), 'RUN_ID_MISMATCH')
-    # Absent by default. This variable may only be configured under a later Human Gate.
-    require(env.get('CD_C1_ACTIVATION') == 'approved', 'CD_C1_NOT_ACTIVATED')
-    return sha
+    return proof.release_context(env)['sourceSha']
 
 
 def ci_authority(run, sha):
-    # The source comes from the successful CI run's head_sha, never a free-form
-    # release SHA input. A future workflow_run adapter must use this same oracle.
-    require(run.get('head_sha') == sha and run.get('head_branch') == 'main' and
-            run.get('event') == 'push' and run.get('conclusion') == 'success' and
-            run.get('status') == 'completed' and run.get('path') == '.github/workflows/ci.yml' and
-            run.get('repository', {}).get('full_name') == proof.REPOSITORY and
-            run.get('head_repository', {}).get('full_name') == proof.REPOSITORY and
-            type(run.get('id')) is int, 'CI_SOURCE_UNPROVEN')
-    return run['head_sha']
+    return proof.ci_identity(run, sha)
 
 
-def preflight(env):
-    sha = identity(env)
+def preflight(env, *, discover=False):
+    authority = proof.release_context(env)
+    sha = authority['sourceSha']
     proof.check_source(ROOT, sha)
-    runs = github(f'actions/workflows/ci.yml/runs?head_sha={sha}&event=push&status=success&per_page=100', env)
-    candidates = runs.get('workflow_runs', [])
-    require(bool(candidates), 'CI_SUCCESS_MISSING')
-    run = candidates[0]
+    if discover and authority['mode'] == 'manual-release':
+        require(authority['ciRunId'] is None, 'CI_AUTHORITY_CHANGED')
+        runs = github(f'actions/workflows/ci.yml/runs?head_sha={sha}&event=push&status=success&per_page=100', env)
+        candidates = runs.get('workflow_runs', [])
+        require(type(candidates) is list and bool(candidates), 'CI_SUCCESS_MISSING')
+        selected = candidates[0]
+        ci_authority(selected, sha)
+        authority = {**authority, 'ciRunId': str(selected['id']), 'ciRunAttempt': str(selected['run_attempt'])}
+    require(authority['ciRunId'] is not None and authority['ciRunAttempt'] is not None, 'CI_SOURCE_UNPROVEN')
+    ci_id, attempt = authority['ciRunId'], authority['ciRunAttempt']
+    # Fixed repository + numeric identifiers only; never follow payload URLs or
+    # reselect another successful run after initial manual discovery.
+    run = github(f'actions/runs/{ci_id}', env)
     ci_authority(run, sha)
-    jobs = github(f"actions/runs/{run['id']}/jobs?filter=latest&per_page=100", env)
-    require(jobs.get('total_count') == 1 and len(jobs.get('jobs', [])) == 1 and
-            jobs['jobs'][0].get('name') == 'Lint, build, and test baseline' and
-            jobs['jobs'][0].get('conclusion') == 'success', 'REQUIRED_CI_NOT_SUCCESSFUL')
-    return str(run['id'])
+    require(str(run['id']) == ci_id and str(run['run_attempt']) == attempt, 'CI_AUTHORITY_CHANGED')
+    jobs = github(f'actions/runs/{ci_id}/attempts/{attempt}/jobs?per_page=100', env)
+    require(type(jobs) is dict and jobs.get('total_count') == 1 and
+            type(jobs.get('jobs')) is list and len(jobs['jobs']) == 1, 'REQUIRED_CI_NOT_SUCCESSFUL')
+    job = jobs['jobs'][0]
+    require(type(job) is dict and job.get('name') == 'Lint, build, and test baseline' and
+            job.get('status') == 'completed' and job.get('conclusion') == 'success' and
+            job.get('head_sha') == sha and type(job.get('run_id')) is int and str(job['run_id']) == ci_id and
+            type(job.get('run_attempt')) is int and str(job['run_attempt']) == attempt, 'REQUIRED_CI_NOT_SUCCESSFUL')
+    return authority
 
 
 def validate_manifest(m, env=None):
@@ -214,8 +208,13 @@ def validate_manifest(m, env=None):
         raise proof.GateError('MANIFEST_VALIDATION_FAILED') from None
     require(result.returncode == 0, 'MANIFEST_VALIDATION_FAILED')
     if env is not None:
-        require(identity(env) == m['sourceSha'] and m['run']['id'] == env['GITHUB_RUN_ID'] and
-                m['run']['attempt'] == env['GITHUB_RUN_ATTEMPT'], 'MANIFEST_RUN_MISMATCH')
+        a = proof.release_context(env)
+        require(a['sourceSha'] == m['sourceSha'] and m['run']['id'] == env['GITHUB_RUN_ID'] and
+                m['run']['attempt'] == env['GITHUB_RUN_ATTEMPT'] and m['run']['event'] == a['event'] and
+                m['run']['workflowRef'] == env['GITHUB_WORKFLOW_REF'] and
+                m['run']['workflowSha'] == env['GITHUB_WORKFLOW_SHA'] and
+                m['run']['ciRunId'] == a['ciRunId'] and m['run']['ciRunAttempt'] == a['ciRunAttempt'] and
+                m['e2eSecret']['version'] == a['e2eSecretVersion'], 'MANIFEST_RUN_MISMATCH')
     return m
 
 
@@ -228,7 +227,8 @@ def input_manifest(env):
 
 def emit(env, name, value):
     # Only public metadata / hashes / fixed status codes reach job outputs.
-    require(name in {'manifest', 'manifest_hash', 'e2e_hash', 'source_sha', 'ci_run_id'}, 'OUTPUT_REFUSED')
+    require(name in {'manifest', 'manifest_hash', 'e2e_hash', 'source_sha', 'ci_run_id',
+                     'ci_run_attempt', 'mode', 'e2e_secret_version'}, 'OUTPUT_REFUSED')
     require('\n' not in value and '\r' not in value, 'OUTPUT_REFUSED')
     with Path(env['GITHUB_OUTPUT']).open('a') as output:
         output.write(f'{name}={value}\n')
@@ -357,16 +357,17 @@ def revision_fields(part, revision, rows, candidate_id, expected_digest):
     return c
 
 
-def make_manifest(before, after, build, env, ci_run_id):
-    sha = env['GITHUB_SHA']
+def make_manifest(before, after, build, env, authority):
+    sha = authority['sourceSha']
     candidate_id = f"cd-{env['GITHUB_RUN_ID']}-{env['GITHUB_RUN_ATTEMPT']}"
     m = {'version': 2, 'e2eIdentityVersion': 2, 'repository': proof.REPOSITORY, 'project': proof.PROJECT, 'region': proof.REGION,
          'sourceSha': sha, 'candidateId': candidate_id, 'capturedAt': datetime.now(timezone.utc).isoformat(),
          'ttlMs': TTL_MS, 'supabase': {'projectRef': SUPABASE_REF, 'url': SUPABASE_URL},
          'run': {'id': env['GITHUB_RUN_ID'], 'attempt': env['GITHUB_RUN_ATTEMPT'],
-                 'event': 'workflow_dispatch', 'workflowRef': CALLER, 'workflowSha': sha,
-                 'repositoryId': '790375516', 'ownerId': '95160728', 'ciRunId': ci_run_id},
-         'e2eSecret': {'project': proof.PROJECT, 'name': E2E_SECRET, 'version': env['E2E_SECRET_VERSION']},
+                 'event': authority['event'], 'workflowRef': env['GITHUB_WORKFLOW_REF'],
+                 'workflowSha': env['GITHUB_WORKFLOW_SHA'], 'repositoryId': '790375516',
+                 'ownerId': '95160728', 'ciRunId': authority['ciRunId'], 'ciRunAttempt': authority['ciRunAttempt']},
+         'e2eSecret': {'project': proof.PROJECT, 'name': E2E_SECRET, 'version': authority['e2eSecretVersion']},
          'build': {'id': build['buildId'], 'status': build['buildResult'], 'sourceSha': sha,
                    'serviceAccount': build['actualBuildServiceAccount'],
                    'digests': {p: build['digests']['workout-journal-' + p] for p in PARTS}},
@@ -392,7 +393,7 @@ def make_manifest(before, after, build, env, ci_run_id):
 def pair_record(m):
     # Explicit allowlist: never serialize arbitrary manifest extension fields.
     return {'sourceSha': m['sourceSha'], 'candidateId': m['candidateId'],
-            'run': {k: m['run'][k] for k in ('id', 'attempt', 'workflowRef', 'workflowSha', 'ciRunId')},
+            'run': {k: m['run'][k] for k in ('id', 'attempt', 'event', 'workflowRef', 'workflowSha', 'ciRunId', 'ciRunAttempt')},
             'buildId': m['build']['id'], 'buildServiceAccount': m['build']['serviceAccount'],
             'candidate': {p: {k: m[p][k] for k in ('revision', 'tag', 'url', 'digest')} for p in PARTS},
             'previous': {p: {k: m['production'][p][k] for k in ('revision', 'digest', 'configHash')} for p in PARTS},
@@ -403,7 +404,7 @@ def pair_record(m):
 
 
 def candidate(env, record):
-    ci_run_id = preflight(env)
+    authority = preflight(env)
     require(matches(r'[1-9][0-9]{0,19}', env.get('E2E_SECRET_VERSION')), 'E2E_SECRET_VERSION_REQUIRED')
     require(env.get('NEXT_PUBLIC_SUPABASE_URL') == SUPABASE_URL, 'SUPABASE_PROJECT_MISMATCH')
     proof.check_credentials(env)
@@ -413,7 +414,7 @@ def candidate(env, record):
     capacity(before, candidate_id)
     build = {}
     record['phase'] = 'build'
-    proof.prove(env, build)
+    proof.prove(env, build, authority=authority)
     record['buildId'] = build['buildId']
     try:
         record['phase'] = 'candidate-creation'
@@ -429,7 +430,7 @@ def candidate(env, record):
                 require(len(new_tag) == 1 and new_tag[0]['percent'] == 0, 'BACKEND_CANDIDATE_UNPROVEN')
                 args += ['--update-env-vars=BACKEND_INTERNAL_URL=' + new_tag[0]['url']]
             proof.cloud(args, 'CANDIDATE_DEPLOY_FAILED', timeout=600)
-        m = make_manifest(before, read_state(), build, env, ci_run_id)
+        m = make_manifest(before, read_state(), build, env, authority)
         record['pair'] = pair_record(m)
         raw = canonical(m)
         emit(env, 'manifest', raw)
@@ -517,7 +518,9 @@ def promote(env, record):
                   runApiFailureKind=None, runApiFailureStage=None, runApiHttpStatus=None)
     m = input_manifest(env)
     require(env.get('CD_E2E_HASH') == env['CD_MANIFEST_HASH'], 'E2E_CLEANUP_PROOF_MISSING')
-    require(preflight(env) == m['run']['ciRunId'], 'CI_AUTHORITY_CHANGED')
+    authority = preflight(env)
+    require(authority['ciRunId'] == m['run']['ciRunId'] and
+            authority['ciRunAttempt'] == m['run']['ciRunAttempt'], 'CI_AUTHORITY_CHANGED')
     proof.check_credentials(env)
     record['pair'] = pair_record(m)
     prior = {p: m['production'][p]['revision'] for p in PARTS}
@@ -594,13 +597,14 @@ def main():
         require(len(sys.argv) == 2, 'COMMAND_INVALID')
         action = sys.argv[1]
         if action == 'preflight':
-            require(matches(r'[1-9][0-9]{0,19}', env.get('E2E_SECRET_VERSION')), 'E2E_SECRET_VERSION_REQUIRED')
-            ci = preflight(env)
-            emit(env, 'source_sha', env['GITHUB_SHA'])
-            emit(env, 'ci_run_id', ci)
+            authority = preflight(env, discover=True)
+            for output, field in [('mode', 'mode'), ('source_sha', 'sourceSha'), ('ci_run_id', 'ciRunId'),
+                                  ('ci_run_attempt', 'ciRunAttempt'), ('e2e_secret_version', 'e2eSecretVersion')]:
+                emit(env, output, authority[field])
+            record['authority'] = authority
         elif action == 'prepare':
-            preflight(env)
-            proof.prepare(env)
+            authority = preflight(env)
+            proof.prepare(env, authority=authority)
         elif action == 'candidate':
             candidate(env, record)
         elif action == 'verify':

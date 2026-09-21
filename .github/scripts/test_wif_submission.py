@@ -65,6 +65,22 @@ class ContractTests(unittest.TestCase):
     def test_context_valid(self):
         self.assertEqual(proof.context(environment()), SHA)
 
+    def test_release_build_context_is_explicit_and_keeps_build_input_guards(self):
+        from test_cd_trigger import context
+        with context() as event_env:
+            env = {**environment(), **event_env}
+            authority = proof.release_context(env)
+            self.assertEqual(proof.release_build_context(env, authority), SHA)
+            self.assertGate('EVENT_MISMATCH', lambda: proof.context(env))
+            for key in ('GCP_PROJECT', 'WIF_PROVIDER', 'DEPLOY_SERVICE_ACCOUNT',
+                        'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'):
+                with self.subTest(key=key), self.assertRaises(proof.GateError):
+                    proof.release_build_context({**env, key: 'wrong'}, authority)
+            with self.assertRaises(proof.GateError):
+                proof.release_build_context(env, {**authority, 'ciRunId': '100'})
+            with self.assertRaises(proof.GateError):
+                proof.release_build_context(env, {**authority, 'ciRunAttempt': None})
+
     def test_context_rejects_each_untrusted_or_missing_input(self):
         cases = {"GITHUB_REPOSITORY": ("fork/Workout-Journal", "REPOSITORY_MISMATCH"),
                  "GITHUB_REF": ("refs/heads/feature", "REF_MISMATCH"),

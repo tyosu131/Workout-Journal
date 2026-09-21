@@ -20,8 +20,12 @@ verified; R6's fixed-path failure remains Historical. R8 proves only the specifi
 Deploy positive, same-STS-token Deploy-to-E2E denial and E2E positive paths.
 The [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
 now proves the manually dispatched production path; C3 runtime chain is CLOSED.
-Must 3 stays In progress and Must 4 Open for automatic triggering;
-`CD_C1_ACTIVATION` is currently UNCONFIGURED. R9 changed no IAM/WIF
+Must 3 stays In progress and Must 4 Open for automatic trigger runtime proof.
+[C4B source](./cd-c1-candidate-delivery.md#activation-and-source-authority) is implemented /
+offline verified; automatic OIDC/WIF runtime is NOT YET. No infrastructure ownership,
+provider condition or IAM change is needed. `CD_C1_ACTIVATION` is UNCONFIGURED and
+now gates manual release only; qualified automatic release still requires production
+Environment Human approval. R9 changed no IAM/WIF
 configuration and performs no runtime execution or new cloud metadata check.
 C3A later proved Build and paired 0% candidate creation but failed E2E cleanup proof.
 [C3C](./cd-c3-e2e-recovery-contract.md) returned activation to UNCONFIGURED and adds
@@ -195,7 +199,7 @@ Current status of that sequence:
 | Automated candidate E2E | Implemented and runtime-verified: P2A local foundation plus P2B HTTPS 0% candidate `p2b-081adb25`; all required browser steps, exact cleanup and unchanged production traffic verified |
 | GitHub production Environment | Implemented and configuration-verified; C3V runtime approval integration and production job SUCCESS |
 | Keyless WIF/CD integration | CD-B2 and R8 proofs retained; C3U least-privilege IAM remediation PROVEN; C3V manually dispatched full production delivery SUCCESS. Automatic main-merge + required-CI-success triggering remains Open |
-| Production CD activation | C3V was separately activated and approved; current `CD_C1_ACTIVATION` UNCONFIGURED. Any future activation/release needs its own Human Gate |
+| Production CD activation | C3V was separately activated and approved; current `CD_C1_ACTIVATION` UNCONFIGURED. Manual activation/release needs its Human Gate. C4B automatic start instead requires exact successful main CI; production Environment approval remains Human-gated, automatic runtime NOT YET |
 
 The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof).
 The production Environment configuration prerequisite is also satisfied. The next
@@ -321,5 +325,5 @@ PE-1 is Closed by the successful eight-resource import and post-import zero-drif
 | CD-B2 provider activation and Deploy-SA/WIF submission | High | Complete: exact saved-plan apply, post-apply zero-change, one successful workflow/Build, Human-confirmed Summary and independent read-back; PE-P1C-01B Closed |
 | Compute default SA role removal | High | P1C-D2 complete: dedicated build succeeded, P1C-D returned `SAFE_CANDIDATE` with zero current active dependencies, separate Human Gate approved, and only the project-level `roles/editor` binding was removed |
 | Prevent future automatic default-SA grants through Organization Policy | High | Backlog / separate hardening: `constraints/iam.automaticIamGrantsForDefaultServiceAccounts` is currently not enforced; this did not block P1C-D2 |
-| Production CD activation | High | C3V verified the manually dispatched candidate/E2E/approval/promotion/post-deploy path; existing rollback evidence and its limits are recorded in the C3U/C3V closure. Must 4 remains Open for automatic main-merge + required-CI-success triggering. Current activation UNCONFIGURED; a future activation/release requires a separate Human Gate |
+| Production CD activation | High | C3V verified the manually dispatched candidate/E2E/approval/promotion/post-deploy path; existing rollback evidence and its limits are recorded in the C3U/C3V closure. Must 4 remains Open for automatic main-merge + required-CI-success triggering. Manual activation UNCONFIGURED; manual release retains its Human Gate. C4B automatic start uses exact successful main CI authority without the latch; production Environment approval remains mandatory and automatic runtime is NOT YET |
 | Cloud Run ownership change | High | Not approved; would require a new owner decision |
