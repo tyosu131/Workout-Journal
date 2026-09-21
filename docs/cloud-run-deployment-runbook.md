@@ -8,8 +8,10 @@ existing-service candidate/E2E/approval/promotion path. The latest
 records successful release `35545739898`: current production pair
 `cd-35545739898-1` at 100% each, prior pair at 0%, production approval and
 post-deploy verification PASS. C3 runtime chain is CLOSED. Must 4 remains Open
-for automatic main-merge + required-CI-success runtime proof. C4B implements the
-`workflow_run` source and offline contracts; automatic runtime is **NOT YET**.
+for full automatic delivery proof. [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
+records automatic run `35557989507`: trigger through E2E WIF PROVEN, scenario failed
+before step 1, cleanup PROVEN_ZERO, production skipped. Failed candidates remain 0%.
+Do not rerun/reuse that pair; the source fix needs a fresh merged-source CI/CD run.
 `CD_C1_ACTIVATION` remains UNCONFIGURED and gates manual release only.
 The [C3C fail-closed record](./cd-c3-e2e-recovery-contract.md) preserves C3A's
 historical cleanup failure and unchanged traffic at that phase. Before Build the

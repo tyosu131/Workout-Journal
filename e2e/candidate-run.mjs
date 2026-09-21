@@ -78,7 +78,8 @@ try {
     scenarioStarted = true;
     await quietExec(process.execPath, [path.join(ROOT, 'node_modules/playwright/cli.js'),
       'test', '--config', 'e2e/playwright.config.ts'], { timeout: 270_000, signal: abort.signal,
-      env: cleanEnv({ ...Object.fromEntries(['GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_REF',
+      env: cleanEnv({ ...Object.fromEntries(['CD_MODE', 'CD_SOURCE_SHA', 'CD_CI_RUN_ID',
+        'CD_CI_RUN_ATTEMPT', 'E2E_SECRET_VERSION', 'GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_REF',
         'GITHUB_SHA', 'GITHUB_WORKFLOW_SHA', 'GITHUB_WORKFLOW_REF', 'GITHUB_EVENT_NAME',
         'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT'].filter(k => process.env[k]).map(k => [k, process.env[k]])),
         E2E_TARGET: process.env.E2E_TARGET,
