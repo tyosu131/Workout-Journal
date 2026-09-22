@@ -25,7 +25,8 @@ This project has been improved with cloud migration, production operation, and c
 
 - Added a GitHub Actions CI workflow for push and pull request checks.
 - CI installs root, frontend, and backend dependencies separately.
-- CI runs frontend lint, frontend build, backend build, and root Jest tests.
+- CI runs frontend lint/build, backend syntax build, root Jest, offline E2E and Python/Terraform delivery/IAM/Monitoring contracts.
+- [Must 6 closure](./portfolio-finalization.md#must-6-durable-closure) adds verified CodeQL Default setup, Dependabot version/security automation and secret controls while retaining protected main and required CI.
 
 ### Testing
 
@@ -46,7 +47,7 @@ This project has been improved with cloud migration, production operation, and c
 - Added build-context exclusions for environment files, credentials, Git data, dependencies, coverage, and temporary artifacts.
 - Added Cloud Build configuration for two git-SHA-tagged Artifact Registry images.
 - Added a digest-based deployment, known-good revision-pair, redeploy, and rollback runbook.
-- Completed the approved Cloud Run/Supabase production deployment, major-workflow browser smoke, and synthetic-data cleanup. The known-good artifact and revision pair are recorded in the [v1 production release record](./releases/workout-journal-v1.md).
+- Completed the approved Cloud Run/Supabase production deployment, major-workflow browser smoke, and synthetic-data cleanup. The original artifact and revision pair are Historical evidence in the [v1 production release record](./releases/workout-journal-v1.md); [PF-F1](./portfolio-finalization.md#current-production) records current production.
 
 ### Bug Fix
 
@@ -60,6 +61,9 @@ npm run lint --prefix frontend
 npm run build --prefix frontend
 npm run build --prefix backend
 npm test
+npm run e2e:test
+terraform -chdir=infra/terraform init -backend=false -input=false -lockfile=readonly
+python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 ```
 
 ## Remaining Work

@@ -9,7 +9,7 @@ Every claim below is labelled as one of the following:
 - **Current / Implemented**: confirmed in the current repository code.
 - **Verified Infrastructure Fact**: confirmed by the reviewed Supabase backup, rather than inferred from application code.
 - **Verified Hosted Isolated Fact**: confirmed against the isolated Hosted Supabase verification project; this does not claim production configuration, deployment, or cutover.
-- **Current Production Evidence**: the current pair and final observability evidence are owned by [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure). The [v1 release record](./releases/workout-journal-v1.md) retains the original release artifact, production smoke and cleanup proof.
+- **Current Production Evidence**: the current pair is owned by [PF-F1](./portfolio-finalization.md#current-production); dated observability closure evidence remains in [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure). The [v1 release record](./releases/workout-journal-v1.md) retains the original release artifact, production smoke and cleanup proof.
 - **Current Design Decision**: an explicit current boundary or policy reflected in code and supporting design material.
 - **Future Direction**: a proposed next step, not an implemented capability.
 - **Open Question**: not verified from this repository, the reviewed backup, or the isolated Hosted evidence, as applicable.
@@ -246,7 +246,7 @@ flowchart TD
 | Supabase Auth | **Current / Implemented** | Request-local backend Auth-client sign-up, password sign-in, and password-reset email requests; plus temporary browser recovery-client session establishment and password updates. These are separate from the backend-only Admin/DB secret client. | Application analytics derivation, frontend routing, weekly-summary generation, or Admin/DB secret-client operations. |
 | Supabase PostgreSQL | **Current / Implemented** | Persisted application records accessed by the backend, including notes, users, and the user tag catalog. | On-demand analytics, Growth Signals, or initial weekly-summary persistence. |
 | Exercise metadata | **Current / Implemented** | Static canonical names, aliases, muscle metadata, and BIG3 lift classification used by deterministic analytics. | User-defined exercise catalog persistence, fuzzy matching, or user goal inference. |
-| CI verification boundary | **Current / Implemented** | Independent dependency installation plus frontend lint/build, backend syntax checking, and root Jest verification on push and pull request. | Deployment, production health monitoring, or runtime authorization. |
+| CI verification boundary | **Current / Implemented** | Independent dependency installation plus frontend lint/build, backend syntax checking, root Jest, offline E2E and Python/Terraform contract verification on push and pull request. | Deployment, production health monitoring, or runtime authorization. |
 
 **Current Design Decision:** Frontend code does not receive a backend Supabase key or an AI-provider secret. The current provider adapter is local and mocked; external provider configuration remains outside this implementation.
 
@@ -388,7 +388,7 @@ Persisted notes
 
 ### API Status and Open Questions
 
-- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. OBS-D3F owns the current pair and post-deploy PASS; OBS-D2A/B retains the public Frontend host and dated GET `/login` 200 evidence for the portfolio README.
+- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. PF-F1 owns the current pair, post-deploy PASS and stable public Frontend URL with a fresh `/login` 200 check; older release/OBS records remain dated evidence.
 - **Open Question:** API versioning is not present in the inspected route mounts.
 - **Open Question:** A common error-response schema is not present across the current services.
 - **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
@@ -447,7 +447,7 @@ Persisted notes
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
 | Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project and were carried into the v1 production release. Ongoing schema monitoring remains outside the repository evidence; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
-| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | OBS-D3F records the current exact pair/post-deploy PASS; OBS-D2A/B retains the public Frontend host. Future candidates still require deployment-time verification. |
+| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | PF-F1 records the current exact pair/post-deploy PASS and stable public Frontend host. Future candidates still require deployment-time verification. |
 
 ### Current Recovery Behavior
 
@@ -493,7 +493,7 @@ Persisted notes
 - **Verified Hosted Isolated Fact:** The composite daily-note key, [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end behavior passed in the isolated Hosted project; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
 - **Current Production Evidence:** Legacy test data was not imported. The v1 production release used the approved clean-start data policy.
 - **Current Production Evidence:** Production configuration, final release verification, deployment, major-workflow smoke, and cleanup are complete for v1; see the [v1 production release record](./releases/workout-journal-v1.md).
-- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. OBS-D3F supplies the current exact pair/post-deploy PASS; OBS-D2A/B retains the public Frontend host and dated GET `/login` 200 evidence for the portfolio README.
+- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. PF-F1 supplies the current exact pair/post-deploy PASS, public Frontend host and fresh GET `/login` 200 evidence for the portfolio README.
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
 - **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
@@ -509,8 +509,8 @@ Persisted notes
 | Backend service failures | **Current / runtime PROVEN** | HTTP 5xx boundaries use one JSON `server_failure` event on stderr, fixed operation names, finite error names and optional integer status 400–599. | OBS-D3D attempt 2 proved two safe server_handler events and Backend alert runtime; OBS-D3E confirmed Human firing/recovery email delivery. This does not prove failures at every handler. Expected token rejection is not a server failure. |
 | Frontend diagnostics | **Current / Implemented** | Selected failures log allow-listed name/code/status summaries. | Client logs are not a production monitoring system. |
 | Weekly-summary boundary | **Current / Implemented** | The service avoids logging prompt messages, provider-response text, tokens, workout payloads, and raw errors. | The boundary is local and mocked, so it does not demonstrate production provider monitoring. |
-| CI verification output | **Current / Implemented** | GitHub Actions emits build, lint, backend syntax, and Jest output on push and pull request. | CI output is pre-merge verification, not runtime application observability. |
-| Automated tests | **Current / Implemented** | The repository's CI baseline runs the root Jest suite alongside frontend lint/build and backend build checks. | Tests do not provide runtime metrics, alerts, or live dependency health. |
+| CI verification output | **Current / Implemented** | GitHub Actions emits build, lint, backend syntax, Jest and offline E2E/Python/Terraform contract output on push and pull request. | CI output is pre-merge verification, not runtime application observability. |
+| Automated tests | **Current / Implemented** | The repository's CI baseline runs root Jest, offline E2E and Python/Terraform contracts alongside frontend lint/build and backend build checks. | Tests do not provide runtime metrics, alerts, or live dependency health. |
 
 ### Logging and Privacy
 
@@ -528,8 +528,9 @@ ingestion and safe schema for two server_handler events, as recorded in OBS-D3F.
 
 ### Production Signals and Runtime Evidence
 
-**Current / runtime verified:** [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
-records the fresh post-promotion pair `cd-35684518093-2`, both services at 100%,
+**Current production:** [PF-F1](./portfolio-finalization.md#current-production) records `cd-35737278328-1`, both services at 100%.
+**Dated observability runtime proof:** [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
+records its then-promoted pair `cd-35684518093-2`,
 Backend health/startup/liveness PROVEN, Frontend availability PROVEN, two safe
 structured events and two candidate 5xx from attempt 2. Backend incident
 `0.ocx5ovcnnr5d` opened at `2026-09-22T05:35:20Z` and closed at
@@ -588,8 +589,8 @@ remain Future Direction, not additional Must 5 acceptance conditions.
 
 1. Preserve the separate [P2A/P2B Must 2 proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) and [C4D automatic delivery closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure); Must 2 and Must 4 are Closed.
 2. Preserve the approved Terraform/CD ownership boundary and keyless WIF foundation; Must 3 is Closed by OBS-D1/D2A/B Monitoring apply/read-back/no-drift evidence.
-3. Preserve [OBS-D3F Must 5 closure](./verification.md#obs-d3f-final-observability-documentation-closure) and follow the documented final-docs merge plan; the intended production pair stays `cd-35684518093-2`.
-4. Add static security scanning and dependency/security automation.
+3. Preserve [OBS-D3F Must 5 closure](./verification.md#obs-d3f-final-observability-documentation-closure); current production is recorded in [PF-F1](./portfolio-finalization.md#current-production). Future documentation merges require their own operational scope.
+4. Preserve [Must 6 security closure](./portfolio-finalization.md#must-6-durable-closure); complete the accepted portfolio branch merge and repository-maturity post-merge verification.
 5. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
 6. Define common API error envelopes only if a separate accepted scope requires them.
 7. Add external-provider timeout, rate-limit, and observability design only before real provider integration; external AI integration is not a Portfolio Must.

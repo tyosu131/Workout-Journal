@@ -4,7 +4,7 @@
 
 This directory contains the target schema migrations for a new Supabase project. The two migrations have been applied to and validated against an isolated Hosted Supabase project running PostgreSQL 17.
 
-The isolated verification covered the read-only schema validation, Auth flows, browser password recovery, the backend-only database boundary, direct browser Data API denial, and two-user application isolation. The synthetic Auth users and application rows created for verification have been removed, and the isolated project has been retained with zero Auth users, profiles, notes, and tags.
+The isolated verification covered the read-only schema validation, Auth flows, browser password recovery, the backend-only database boundary, direct browser Data API denial, and two-user application isolation. At that isolated verification checkpoint, the synthetic Auth users and application rows were removed, leaving zero Auth users, profiles, notes, and tags. This is Historical cleanup evidence, not a claim about present-day application data.
 
 **Current Project Decision:** the legacy environment contained only disposable test data. Legacy Auth users and application data were not imported; the v1 production release used the approved clean-start policy.
 

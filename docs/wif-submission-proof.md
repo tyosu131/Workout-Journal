@@ -48,7 +48,7 @@ exact main SHA -> GitHub OIDC / WIF -> Deploy SA
 
 The historical CD-A submission proof was not full CD: it had no automatic trigger,
 candidate deployment, E2E job, Environment approval job, promotion, post-deploy
-smoke or rollback automation. Current production evidence is owned by [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure); the current delivery
+smoke or rollback automation. Current production evidence is owned by [PF-F1](./portfolio-finalization.md#current-production); the current delivery
 contract is in the [runbook](./cloud-run-deployment-runbook.md).
 The required [CI workflow](../.github/workflows/ci.yml) was unchanged by CD-A.
 

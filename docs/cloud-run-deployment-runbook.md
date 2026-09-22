@@ -3,14 +3,14 @@
 This runbook starts at the Human Gate. It does not authorize resource creation or deployment by itself.
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
-existing-service candidate/E2E/approval/promotion path. [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
-records fresh post-promotion production `cd-35684518093-2`, both services at 100%,
-after successful main CI `35684377945` (attempt 1) and automatic CD `35684518093`
-(attempt 2), production SUCCESS and post-deploy PASS. Must 3, Must 4 and Must 5
-are Closed. Health/probes, Frontend uptime, safe structured failure runtime,
-Backend incident OPEN/CLOSED and Human firing/recovery email delivery are PROVEN. [C4D automatic delivery proof](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
-retains the Historical `cd-35573153822-1` release, E2E 8/8 PASS, cleanup
-PROVEN_ZERO, Human approval and post-deploy PASS that closed Must 4.
+existing-service candidate/E2E/approval/promotion path. [PF-F1 current production](./portfolio-finalization.md#current-production)
+records `cd-35737278328-1`, both services at 100%, source
+`2d9ec91d8f11a83c0904de770cc8df436139325b`, main CI `35736936685` and automatic
+CD `35737278328` SUCCESS / attempt 1, production/post-deploy PASS.
+Must 3–6 are Closed. [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
+retains the Historical previous pair and durable health/probe, uptime, structured
+failure, Backend incident and Human notification proof. [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+retains the Historical automatic release that closed Must 4.
 C3 runtime chain remains CLOSED.
 The [C4B failure/C4C remediation](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
 is Historical; do not rerun or reuse its failed candidate identity.
@@ -318,7 +318,7 @@ After promotion, perform the required production browser smoke for the major v1 
 
 **Current: Must 3, Must 4 and Must 5 Closed; remaining Must 5 gap None.**
 [OBS-D3F accepted evidence and exact identities](./verification.md#obs-d3f-final-observability-documentation-closure)
-record current production `cd-35684518093-2`, 100% on both services, deployed
+record the Historical OBS-D3F production pair `cd-35684518093-2`, then 100% on both services, deployed
 startup/liveness probes, two safe structured failures, Backend incident OPEN/CLOSED
 and Human firing/recovery email delivery. [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
 retains 42-resource no-drift/Monitoring apply evidence and the previous production
@@ -386,10 +386,7 @@ preserves the IDs, times, safe-schema results and exact requirement mapping.
 Record channel/incident IDs and available receipt times, not the private destination;
 never substitute incident times for missing receipt timestamps.
 
-**Future final-docs merge plan:** allow main CI / candidate / E2E / verify to run,
-**DO NOT approve production, and cancel at the production approval wait** during
-the later merge phase. Keep current production `cd-35684518093-2` at 100%/100%.
-Do not change workflow behavior. This plan is not executed in OBS-D3F.
+**Historical OBS-D3F docs-merge plan:** that phase planned to run CI/candidate/E2E/verify, cancel at production approval wait, and retain `cd-35684518093-2`. The later Must 6 release superseded that production identity; [PF-F1](./portfolio-finalization.md#current-production) owns current read-back. A future documentation merge requires its own operational authorization. PF-F1 authorizes no merge, cancellation, approval or deployment; workflow behavior is unchanged.
 
 **Future verification procedure, only if separately requested:** Must 5 is already
 Closed, so no additional failure request is required. Any repeat needs a new
