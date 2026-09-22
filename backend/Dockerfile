@@ -1,16 +1,16 @@
-FROM node:24-bookworm-slim AS dependencies
+FROM node:26-bookworm-slim AS dependencies
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-bookworm-slim AS builder
+FROM node:26-bookworm-slim AS builder
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 COPY backend ./
 RUN npm run build
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 WORKDIR /app/backend
 ENV NODE_ENV=production
 ENV PORT=8080
