@@ -12,18 +12,30 @@ This root manages the approved Terraform foundation for project `workout-journal
 - **P1C-D2 Compute default SA Editor cleanup (Current / Complete):** P1C-D found zero current active dependencies and returned `SAFE_CANDIDATE`; after a separate Human Gate, P1C-D2 removed only the legacy project-level `roles/editor` binding outside Terraform. The Compute default Service Account still exists, remains enabled, and is not Terraform-managed.
 - **CD-B1 / CD-B2 WIF activation (Current / Complete):** CD-B1 prepared the provider desired state. On 2026-09-06, CD-B2 applied exactly one in-place update to `disabled = false` and the reviewed neutral description; actual provider is `ACTIVE` / `disabled = false`, and the normally locked post-apply plan reported `0 add / 0 change / 0 destroy`.
 
-PE-1 (provider refresh/import zero-drift), PE-2 (state bucket bootstrap, read-back, import block, and backend initialization), PE-P1C-01A (dedicated Build execution), and PE-P1C-01B (Deploy-SA submission under WIF) are Closed. Portfolio Must 3 remains In progress: OBS-B/C monitoring and alert desired state is implemented/offline verified but NOT APPLIED; runtime read-back and no-drift remain under the [ownership matrix](../../docs/portfolio-infra-ownership.md#approved-ownership-matrix). C3U applied and runtime-verified the two-resource C3S IAM remediation; current state is **37 resources**. C3V manual production release succeeded. Must 4 is **Closed** by [C4D automatic delivery proof](../../docs/cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure): run `35573153822`, E2E 8/8 PASS, PROVEN_ZERO cleanup, Human production approval and promotion/post-deploy PASS. Current production pair is `cd-35573153822-1`. C4C remediation is runtime PROVEN. No Terraform/IAM change or fresh Terraform operation occurred in C4D; the 37-resource record retains its C3U evidence owner. Manual release activation remains UNCONFIGURED; automatic qualification does not require that latch.
+PE-1, PE-2, PE-P1C-01A and PE-P1C-01B remain Closed. **Portfolio Must 3 is
+Closed** by [OBS-D1/D2A/B](../../docs/verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure):
+reviewed merged-source plan, Human apply (1 import / 4 add / 0 change / 0 destroy),
+Monitoring read-back, uptime PASS and no-drift. Current state is **42 resources /
+42 instances**, serial **10**, lineage `66945691-ab92-e20a-4bc1-badb121e7ab4`,
+GCS generation `1790044105183280`; all 42 planned actions are no-op. Must 5 remains
+Open for structured failure runtime observation and Backend incident/email receipt.
+Must 4 remains Closed by [C4D automatic delivery proof](../../docs/cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
+Current production is `cd-35675050740-1`, both services at 100%; the C4D pair
+`cd-35573153822-1` is Historical. C3U's 37-resource and C4D release records below
+retain their own evidence dates. Manual activation remains UNCONFIGURED; automatic
+qualification does not require that latch.
 
 This root intentionally contains no Cloud Run service bodies, Secret Manager versions or payloads, Service Account keys, authoritative IAM policy/binding resources. OBS-B/C adds only the approved Monitoring desired state described below. P1C-B owns only exact additive IAM members on approved project/resource scopes. The P1C-A deploy/build identities and Workload Identity Federation resources are protected by `prevent_destroy`; actual and desired **Deploy** provider state agree on `disabled = false`. The separate E2E provider's current/desired distinction is below. Cloud Run services and their mutable delivery state remain CD-owned; see [the ownership decision](../../docs/portfolio-infra-ownership.md).
 
-## OBS-B/C Monitoring desired state — not applied
+## OBS Monitoring applied and runtime verified
 
-OBS-A and the subsequent Human decision select exactly these additions:
+OBS-A and the subsequent Human decision selected exactly these additions;
+OBS-D1/D2A applied and verified them:
 
-| Resource | Later action |
+| Resource | Completed action / configuration |
 | --- | --- |
-| `google_project_service.monitoring` | Import existing enabled `monitoring.googleapis.com`; `disable_on_destroy=false`, `prevent_destroy=true` |
-| `google_monitoring_notification_channel.email` | Create one email channel |
+| `google_project_service.monitoring` | Imported existing enabled `monitoring.googleapis.com`; `disable_on_destroy=false`, `prevent_destroy=true` |
+| `google_monitoring_notification_channel.email` | Created one enabled email channel; private destination match YES |
 | `google_monitoring_uptime_check_config.frontend` | HTTPS GET `/login`, exact public Frontend host, 200 only, SSL validation, 300s period, 10s timeout, USA's three checkers |
 | `google_monitoring_alert_policy.frontend_availability` | Two failed checkers, 600s alignment and 300s retest |
 | `google_monitoring_alert_policy.backend_server_errors` | Backend service-wide 5xx sum over 300s, greater than 1 for 60s, WARNING |
@@ -35,18 +47,22 @@ Logging API stays externally enabled; there is no Cloud Run service resource,
 logs-based metric, new IAM grant or automatic rollback.
 
 `monitoring_notification_email` has no default and is sensitive. The Human supplies
-the real destination privately through the execution-time Terraform variable at a
-later plan/apply Gate. Never commit a tfvars value or put the address in outputs.
+the real destination privately through the execution-time Terraform variable;
+OBS-D1's reviewed Human apply is complete. Never commit a tfvars value or put the address in outputs.
 **The email address is stored in Terraform state.** Human explicitly accepted this
 personal-metadata persistence; sensitive variables do not remove values from state.
 Mock tests use only synthetic destinations. Outputs expose resource names only.
 
-Current remote state remains **37 resources**. Later expected result: **1 import,
-4 add, 0 change, 0 destroy**, producing **42 resources**. Any source-validation
-plan is AUDIT EVIDENCE ONLY and cannot be applied. A new merged-source/current-state
-saved plan and explicit Human approval are mandatory. Monitoring is **NOT APPLIED**;
-uptime/alert runtime and notification receipt are **NOT YET**. Must 3 remains
-In progress; Must 5 remains Open; Must 4 remains Closed.
+Current remote state is **42 resources / 42 instances**. OBS-D1's reviewed
+merged-source Human apply completed **1 import / 4 add / 0 change / 0 destroy**;
+OBS-D2A read-back verified the existing API adoption, channel, uptime check and
+both policies. Uptime returned 36 true samples across all three USA locations;
+the refresh-enabled, normally locked post-apply plan returned **0/0/0 / exit 0**,
+all 42 actions no-op. Four `user_labels` refresh representation differences
+introduced no semantic drift. Monitoring desired/actual and no-drift are PROVEN;
+Must 3 is Closed. Must 5 remains Open only for safe structured failure observation
+and Backend alert incident/notification receipt. Historical source-validation
+plans remain AUDIT EVIDENCE ONLY and must never be applied.
 
 The existing Python CI discover runs `test_monitoring.py`: locked provider 7.45.0,
 Terraform 1.16.0, disposable backend/import-free root and mock `command=plan`.
@@ -78,10 +94,10 @@ be distinguished from planned changes. Existing Deploy WIF remains enabled/prove
 See the [current runtime record and isolated proof contract](../../docs/cd-c1-candidate-delivery.md).
 The subsequent [C3U/C3V runtime closure](../../docs/cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
 proves the manually dispatched production release path. `CD_C1_ACTIVATION` is
-currently **UNCONFIGURED**; Must 3 remains In progress and Must 4 is Closed by C4D full automatic delivery.
+currently **UNCONFIGURED**; Must 3 is Closed by OBS-D2A/B and Must 4 is Closed by C4D full automatic delivery.
 R9 performs no Terraform or cloud operation; the provider/resource/no-op statements
-above retain their existing evidence owners. OBS-B/C Monitoring desired state is
-now implemented, not applied; no new identity/build hardening requirement is inferred from R8.
+above retain their existing evidence owners. OBS-D1/D2A completed Monitoring
+apply/read-back/no-drift; no new identity/build hardening requirement is inferred from R8.
 The completed CD-B2 evidence below remains historical evidence for Deploy WIF.
 [C3A/C3C](../../docs/cd-c3-e2e-recovery-contract.md) subsequently recorded successful
 Build and 0% candidates but failed E2E cleanup proof. Historical scenario remains
@@ -136,7 +152,7 @@ difference is separately classified in the [C3S validation record](../../docs/ve
 **Current: applied and runtime PROVEN; authorization defect CLOSED.** C3T generated
 a new saved plan from merged exact source `cc608aa5f2edbd81952024d497bdc5838b796599`.
 C3U's separately authorized single apply completed on 2026-09-20 with **2 added /
-0 changed / 0 destroyed**; current state is **37 resources**, serial **9**, lineage
+0 changed / 0 destroyed**; state at C3U was **37 resources**, serial **9**, lineage
 `66945691-ab92-e20a-4bc1-badb121e7ab4`, GCS generation `1789947297225011`.
 The fresh post-apply plan was **0 add / 0 change / 0 destroy** with 37 no-op
 resources. Three existing project IAM member `etag` refresh differences were
@@ -151,7 +167,8 @@ member. Policy Troubleshooter granted the service `run.services.update` control
 and both exact historical promotion/rollback Operations' `run.operations.get`,
 with deny NOT_DENIED. C3V then completed production release `35545739898`.
 See [C3U/C3V evidence and classification](../../docs/cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure).
-The 30/35-resource records elsewhere remain historical phase evidence.
+The 30/35/37-resource records remain Historical phase evidence; OBS-D2A owns
+the current 42-resource state.
 
 `policytroubleshooter.googleapis.com` was enabled once in C3R2 and remains
 temporary diagnostic infrastructure, **not Terraform-owned**. C3S neither adds
@@ -196,8 +213,8 @@ CD-B2 also configured exactly the two repository public-config variables and
 executed the manual workflow once. The [durable runtime proof and mutation
 accounting](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof) records
 the Human-confirmed Job Summary and independent Build/digest/Cloud Run read-back.
-**PE-P1C-01B is Closed; Must 3 remains In progress; Must 4 remains Open; production
-CD is inactive.** Its images are submission-proof artifacts, not deployed images.
+**At the Historical CD-B2 checkpoint: PE-P1C-01B Closed; Must 3 In progress;
+Must 4 Open; production CD inactive.** Its images are submission-proof artifacts, not deployed images.
 
 ## Toolchain decision
 
@@ -249,8 +266,13 @@ Official references: [Terraform installation and current release](https://develo
 | `google_secret_manager_secret_iam_member.e2e_supabase_secret_accessor` | E2E SA Accessor on that exact secret |
 | `google_iam_workload_identity_pool_provider.workout_journal_e2e` | Dedicated E2E provider: actual ACTIVE / disabled=false; activation COMPLETE, isolated A/B/C WIF proof CLOSED / PASS for R8's exact run/source |
 | `google_service_account_iam_member.e2e_workload_identity_user` | Exact `attribute.e2e_boundary/candidate-e2e-v1` impersonation member |
+| `google_project_service.monitoring` | Existing ENABLED Monitoring API adopted by import |
+| `google_monitoring_notification_channel.email` | One enabled email channel; private destination excluded from docs |
+| `google_monitoring_uptime_check_config.frontend` | Frontend HTTPS `/login` uptime; three USA locations PASS |
+| `google_monitoring_alert_policy.frontend_availability` | ERROR policy bound to managed uptime ID and channel |
+| `google_monitoring_alert_policy.backend_server_errors` | WARNING service-wide Backend 5xx policy, including tagged 0% candidates |
 
-Remote state contains exactly these **37 resources**: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer, five-resource CD-C2A E2E boundary and two-resource C3S Operation IAM remediation applied in C3U.
+Remote state contains exactly these **42 resources**: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer, five-resource CD-C2A E2E boundary, two-resource C3S Operation IAM remediation applied in C3U, and five OBS state addresses adopted/created in OBS-D1 and verified in OBS-D2A.
 
 The repository description, Service Account display names, automatic secret replication, and the two IAM members were rechecked against read-only GCP metadata before encoding them. The import IDs use the fully qualified formats documented for [Artifact Registry repositories](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/artifact_registry_repository), [Service Accounts](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/google_service_account), [Secret Manager secrets](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret), and [Secret Manager IAM](https://registry.terraform.io/providers/hashicorp/google/7.45.0/docs/resources/secret_manager_secret_iam).
 

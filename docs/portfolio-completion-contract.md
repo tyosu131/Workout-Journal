@@ -39,7 +39,7 @@ Portfolio Finish does not apply one priority chain to every kind of evidence. Us
 | Historical design / past decisions | ADR / PR / commit history / explicitly historical design documents |
 | External technology behavior | Official primary documentation |
 
-The current production pair and latest successful release are recorded in the [C4D automatic runtime closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure). The [v1 production release record](./releases/workout-journal-v1.md) remains the original known-good v1 evidence. The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
+The current production pair `cd-35675050740-1` (100% each) and latest accepted runtime evidence are recorded in [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure). [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure) retains the Historical automatic-delivery proof that closed Must 4. The [v1 production release record](./releases/workout-journal-v1.md) remains the original known-good v1 evidence. The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
 
 Claims must distinguish:
 
@@ -214,8 +214,9 @@ owns **CLOSED / PASS** isolated WIF proof: A/B/C **PASS**, exact source
 verification is **PASS**; R2/R4/R6 failures remain Historical. This closes only
 the specified Deploy positive, Deploy-provider-to-E2E negative and E2E positive
 authentication/isolation contracts. At that R8/R9 checkpoint, full automatic CD
-proof and Must 4 remained Open. C4D below closes that delivery gap; Must 3 stays
-In progress and existing CD-B2 Deploy WIF / PE-P1C-01B remains Closed.
+proof and Must 4 remained Open. C4D below closed that delivery gap; Must 3 was
+still In progress at C4D. OBS-D2A/B below closes Must 3; existing CD-B2 Deploy
+WIF / PE-P1C-01B remains Closed.
 
 [C3F/G/H incident evidence](./cd-c3-e2e-recovery-contract.md#c3f--c3g-incident-and-c3h-diagnosis)
 subsequently proves candidate delivery, E2E/cleanup and verify-candidate PASS for
@@ -247,7 +248,7 @@ missing effective allow PROVEN, exact one-permission remediation applied and
 runtime PROVEN, authorization defect CLOSED, then fresh production release
 `35545739898` SUCCESS at `cc608aa5f2edbd81952024d497bdc5838b796599` (required CI
 `35507087914` SUCCESS / attempt 1). C3U added 2 resources with 0 changes/destroys;
-current Terraform state is **37** and the post-apply plan was **0/0/0**. C3V proves
+Terraform state at C3U was **37** and its post-apply plan was **0/0/0**. C3V proves
 the manually dispatched path through production approval, Backend then Frontend
 promotion and post-deploy verification. At C3W closure, pair `cd-35545739898-1` was
 100% on both services and activation was again UNCONFIGURED. The diagnosed missing effective
@@ -277,7 +278,7 @@ SUCCESS / attempt 1, with exact CI ID/attempt/source binding. Build
 receipt PERSISTED and evidence PASS. Manifest/E2E hashes matched; verify succeeded.
 GitHub's review-history API confirmed Human approval by `tyosu131` for the
 `production` Environment. Backend then Frontend promotion and post-deploy verification
-passed. Fresh Current production is `cd-35573153822-1`, both services at 100%,
+passed. At the Historical C4D checkpoint, production was `cd-35573153822-1`, both services at 100%,
 with exact manifest digests and Backend tagged URL. Activation is UNCONFIGURED;
 the automatic path succeeded without the manual latch. The [one-to-one requirement mapping](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
 records PASS for every Must 4 requirement. **Remaining gap: None.**
@@ -292,20 +293,26 @@ sufficient; C4D did not execute rollback or induce a failure. Other Must statuse
 are unchanged, and the separate C4D Fresh Result Audit/Portfolio final audit is not
 claimed by this documentation closure.
 
-OBS-B/C implements the monitoring/alert desired state approved in OBS-A and the
-Human decision: Terraform-owned email channel, address supplied only through a
-sensitive execution-time variable, with address persistence in state accepted.
+**Must 3 Closed — OBS-D1/D2A/B.** The [durable runtime record](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
+closes the exact remaining Monitoring scope after reviewed merged-source plan,
+Human apply, read-back and no-drift verification. Terraform now owns **42 resources**,
+including the existing enabled Monitoring API adopted by import, one uptime check,
+two alert policies and one enabled email channel. All 42 planned actions are no-op.
 The [ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix)
-keeps Cloud Run services/probes CD-owned. **Must 3 remains In progress** pending a
-fresh merged-source plan, Human apply, runtime read-back and no-drift verification.
-Current state is still 37 resources; the approved target is 42 (one existing API
-import and four new Monitoring resources). **Must 5 remains Open**: health, safe
-structured logging, CD probes and Monitoring source are implemented/offline
-verified; deployed health/probe/log, uptime, alert and notification receipt evidence
-are NOT YET established. See [OBS verification](./verification.md#obs-bc-health-and-monitoring-implementation).
-R8's identity evidence does not close this remaining runtime scope. No new
-identity/build hardening requirement is inferred; automatic default-SA-grant
-prevention remains the existing Backlog / separate hardening item.
+keeps Cloud Run services/probes CD-owned and Logging API externally owned.
+The privately supplied notification destination is personal metadata persisted in
+state by explicit Human decision; credentials and Secret Manager payloads remain
+excluded. **Remaining Must 3 gap: None.**
+
+**Must 5 remains Open.** Health inspection, Backend HTTP probes and three-location
+Frontend uptime are PROVEN. Safe structured failure logging is implemented and
+deployed; natural Cloud Logging `server_failure` count was 0, so runtime failure
+event proof is NOT YET. Backend alert configuration and channel wiring are PROVEN;
+Backend incident and actual notification email receipt are NOT YET. The two
+remaining gaps are safe structured failure observation and Backend incident/email
+receipt proof. The inspection/recovery procedure is implemented; no additional
+Must 5 gap or identity/build hardening requirement is inferred. Automatic
+default-SA-grant prevention remains Backlog / separate hardening.
 
 `Closed` requires implemented and reviewed evidence. A plan, design, partial implementation, or unverified external setting is not sufficient.
 
@@ -313,9 +320,9 @@ prevention remains the existing Backlog / separate hardening item.
 | --- | --- | --- | --- | --- |
 | 1. Documentation consistency | In progress | Current code, release record, deployment runbook, and P0 documentation sync | Complete P0 sync, keep later docs current, and pass final stale-claim audit | P0 + Final Portfolio Audit |
 | 2. Automated production-like E2E smoke | Closed | P2A local isolated foundation plus P2B actual HTTPS 0% candidate proof: run `p2b-1788593776629-9943a84c9ea7c644` passed login, note create/autosave/read, tag create/use/delete, Calendar, Analytics and logout on exact paired candidate `p2b-081adb25`; production traffic stayed 100%, Auth/profile/notes/user_tags residuals were zero and sanitized evidence passed leak inspection. Implementation and proof were freshly reviewed on 2026-09-05; the [durable E2E evidence record](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) does not depend on local JSON availability | None for Must 2; CD integration and production promotion remain separately gated under Must 4 | P2A + P2B |
-| 3. Infrastructure as Code / Identity | In progress | P1B imported the eight-resource existing GCP foundation without cloud resource mutation; P1C-A added the disabled keyless WIF foundation; P1C-B added and verified the exact 13-member operational least-privilege IAM layer; P1C-C verified dedicated Build execution from exact commit `709c55a934783917184d09831facc085e7bc19c9`, including both immutable image digests and Cloud Logging, without Cloud Run mutation; P1C-D found zero current active Compute default SA dependencies; after a separate Human Gate, P1C-D2 removed only its legacy project-level `roles/editor` binding outside Terraform; post-removal lightweight production verification passed. CD-B2 applied the exact provider update, confirmed actual `ACTIVE` / `disabled = false`, and closed [PE-P1C-01B with runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof) on 2026-09-06. At CD-B2 closure Terraform had 30 resources with a no-op post-plan. CD-C2A provisioned five E2E resources, giving 35; CD-C2B verified the no-op baseline and dedicated key/version 1. CD-C2C provider activation is COMPLETE; R8 run `35411846680` at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1` closes isolated A/B/C WIF proof with all checks PASS and runtime-verifies R7 remediation. C3U added the two C3S Operation IAM resources: current state 37, post-plan 0/0/0, remediation runtime PROVEN | OBS-B/C Monitoring desired state implemented/offline verified; fresh merged-source plan, Human apply, runtime read-back and no-drift remain | P1 + IaC phase |
-| 4. Continuous Delivery | Closed | [C4D automatic runtime closure and requirement mapping](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure): PR #114 / main `03f45f3b7ba2d48040cffcb2130318717a1e9d09` → CI `35572912520` SUCCESS / attempt 1 → automatic workflow_run CD `35573153822` SUCCESS / attempt 1. Exact CI/source binding, OIDC/WIF, Build `b53e2ad8-8e66-4f98-a3f6-f4a380f383c8`, immutable paired 0% candidates, 8/8 E2E, PROVEN_ZERO cleanup, matching hashes, Human production Environment approval, Backend then Frontend promotion and post-deploy PASS. Current pair `cd-35573153822-1` at 100% each; activation UNCONFIGURED. C3 bounded rollback evidence retained; no C4 rollback claimed | None | CD phase / C4D closure |
-| 5. Observability | Open | OBS-B/C implements process-only health, safe JSON failure logging, CD-owned Backend probes, uptime/alert desired state and inspection/recovery documentation; offline verified | Runtime health/probe/log, uptime, alert and notification receipt evidence NOT YET; Monitoring NOT APPLIED | OBS-B/C + runtime closure |
+| 3. Infrastructure as Code / Identity | Closed | P1B imported the eight-resource existing GCP foundation without cloud resource mutation; P1C-A added the disabled keyless WIF foundation; P1C-B added and verified the exact 13-member operational least-privilege IAM layer; P1C-C verified dedicated Build execution from exact commit `709c55a934783917184d09831facc085e7bc19c9`, including both immutable image digests and Cloud Logging, without Cloud Run mutation; P1C-D found zero current active Compute default SA dependencies; after a separate Human Gate, P1C-D2 removed only its legacy project-level `roles/editor` binding outside Terraform; post-removal lightweight production verification passed. CD-B2 applied the exact provider update, confirmed actual `ACTIVE` / `disabled = false`, and closed [PE-P1C-01B with runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof) on 2026-09-06. At CD-B2 closure Terraform had 30 resources with a no-op post-plan. CD-C2A provisioned five E2E resources, giving 35; CD-C2B verified the no-op baseline and dedicated key/version 1. CD-C2C provider activation is COMPLETE; R8 run `35411846680` at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1` closes isolated A/B/C WIF proof with all checks PASS and runtime-verifies R7 remediation. C3U added the two C3S Operation IAM resources: then-state 37, post-plan 0/0/0, remediation runtime PROVEN. [OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) completes reviewed merged-source plan, Human apply (1 import / 4 add), Monitoring API adoption, uptime/channel/two-policy read-back and three-location uptime PASS; current state 42, serial 10, all 42 planned actions no-op, no Terraform/CD ownership conflict | None | P1 + IaC + OBS-D1/D2A/B |
+| 4. Continuous Delivery | Closed | [C4D automatic runtime closure and requirement mapping](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure): PR #114 / main `03f45f3b7ba2d48040cffcb2130318717a1e9d09` → CI `35572912520` SUCCESS / attempt 1 → automatic workflow_run CD `35573153822` SUCCESS / attempt 1. Exact CI/source binding, OIDC/WIF, Build `b53e2ad8-8e66-4f98-a3f6-f4a380f383c8`, immutable paired 0% candidates, 8/8 E2E, PROVEN_ZERO cleanup, matching hashes, Human production Environment approval, Backend then Frontend promotion and post-deploy PASS. Historical C4D pair `cd-35573153822-1` at 100% each; activation UNCONFIGURED at that checkpoint. C3 bounded rollback evidence retained; no C4 rollback claimed | None | CD phase / C4D closure |
+| 5. Observability | Open | [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure): health/probes and frontend uptime PROVEN; safe structured logger source/deployment PROVEN; Backend alert configuration and channel wiring PROVEN; inspection/recovery procedure IMPLEMENTED | Observe a safe structured server_failure in Cloud Logging; prove Backend alert incident and notification email receipt | OBS runtime closure |
 | 6. Security / Repository Governance | Open | Existing CI and secret-safety boundaries exist; `main` is protected by a strict, GitHub-Actions-pinned required check; temporary PR #91 proved merge blocking with no CI result and availability after the required CI succeeded | Add static security scanning and dependency/security automation | Security / Governance phase |
 | 7. Portfolio presentation | Open | Current READMEs and technical documents provide partial product and architecture coverage | Complete the P6 README and repository-surface rewrite, including a verified live URL and bilingual consistency | P6 |
 | 8. Repository maturity / final evidence | Open | Known-good v1 production release record exists | Set metadata/topics, publish a GitHub Release, decide license policy, eliminate stale docs, and pass final audit with zero Must findings | Repository Maturity + Final Portfolio Audit |

@@ -1,8 +1,10 @@
 # CD-C3: candidate incident and E2E recovery contract
 
-Current status (C4D): **C3 runtime chain CLOSED; authorization defect CLOSED;
+Current status (OBS-D2A/B): **C3 runtime chain CLOSED; authorization defect CLOSED;
 Must 4 Closed; `CD_C1_ACTIVATION` UNCONFIGURED**. The current production pair is
-`cd-35573153822-1`, each at 100%. The [C4D closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+`cd-35675050740-1`, each at 100%, as recorded by [OBS-D2A](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
+Must 3 is Closed; Must 5 remains Open for safe structured failure observation
+and Backend incident/email receipt. The Historical [C4D closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
 records automatic CI/CD, E2E 8/8 PASS, PROVEN_ZERO cleanup, Human production approval
 and post-deploy PASS. The previous C3V and failed C4B pairs remain 0%.
 [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
@@ -306,8 +308,8 @@ generic discovery or destructive fallback is added.
 
 C3C improves recovery safety; C3D closes the historical incident
 for current residual/data-hygiene concerns only. Scenario NOT PROVEN and cleanup
-execution UNPROVEN remain historical limitations. Must 3 remains In progress
-(OBS-B/C Monitoring source implemented, apply/runtime verification pending);
+execution UNPROVEN remain historical limitations. Must 3 is now Closed
+(OBS-D1/D2A/B Monitoring apply, read-back, uptime and no-drift PROVEN);
 Must 4 is now Closed by C4D. C3F closes the successful candidate
 E2E/cleanup/re-verification portion; C3G proves approval integration and actual
 previous-pair restoration after failed promotion. C3K supplies observed failure
