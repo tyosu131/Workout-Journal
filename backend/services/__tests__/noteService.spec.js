@@ -341,16 +341,11 @@ describe("noteService", () => {
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         error: "Failed to create tag",
-        details: "database unavailable",
       });
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to create tag:",
-        {
-          name: "UnknownError",
-          code: "XX000",
-          status: undefined,
-        }
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(JSON.stringify({
+        severity: "ERROR", event: "server_failure", operation: "tag_create",
+        error: { name: "UnknownError" },
+      }));
       consoleErrorSpy.mockRestore();
     });
   });

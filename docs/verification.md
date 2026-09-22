@@ -11,6 +11,95 @@ and [C4B offline validation](#cd-c4b-automatic-trigger-offline-validation) remai
 Dated source-validation sections retain their
 phase-local NOT-YET results and do not override the latest runtime record.
 
+## OBS-B/C health and monitoring implementation
+
+2026-09-22 source/offline verification, based on main
+`518104a5c5c788b1f1e73de3e77b59024870d2a3`, branch
+`feat/obs-health-monitoring`. OBS-A's design and the subsequent Human decision
+authorize a Terraform-owned email channel. The real destination is supplied only
+through the sensitive, no-default `monitoring_notification_email` variable at a
+later Human plan/apply Gate. It is **stored in Terraform state**, an accepted
+privacy tradeoff; it is not committed, returned in outputs or needed for mock tests.
+
+| Source contract | Offline result / boundary |
+| --- | --- |
+| Backend health | GET `/health` returns exactly `{"status":"ok"}`; HEAD 200; POST/PUT/PATCH/DELETE 405. Routing precedes JSON/cookie/auth/application middleware; poisoned-body health tests prove zero Supabase calls |
+| Failure logs | One JSON stderr line, fixed ERROR/server_failure, 16 finite operations (otherwise unknown_operation), finite error names and optional integer status 400–599; no arbitrary code/message/stack/request/dependency values |
+| Public failures | One signup and seven note 500 responses no longer expose internal messages; fixed status/success/validation behavior retained, including weekly-summary validation.errors |
+| Backend probes | HTTP `/health`:8080 startup 0/2/5/24 and liveness 0/2/30/3 (delay/timeout/period/failures); Frontend existing/default TCP unchanged |
+| Configuration | Only old Backend TCP → exact approved HTTP probes is an allowed transition; capacity and manifest reject unrelated differences. Full actual spec configHash includes probes. Candidate health check does not change old-revision rollback smoke |
+| Monitoring | Existing API import, email channel, Frontend HTTPS `/login` 200-only uptime, two-checker availability alert, service-wide Backend 5xx alert; no Cloud Run Terraform service or Logging API ownership change |
+
+Runtime failure inventory: Backend handlers now use the shared logger. Expected
+token rejection is not logged by the token utility; a caller returning 500 logs
+once at its boundary. Normal startup info and build-time syntax-check output stay.
+The only remaining `details` response is the safe weekly-summary validation list.
+No notification address or privileged payload is introduced. The authUtils unit
+mock drops its old virtual-module flag so importing the real Express app cannot
+make installed-jsonwebtoken mock resolution depend on test order.
+
+Validation used Node 24, Terraform 1.16.0 and locked google provider 7.45.0:
+
+| Check | Result |
+| --- | --- |
+| Full root Jest (`npm test -- --runInBand`) | 49 suites / 435 tests PASS, including 13 Backend suites / 131 tests |
+| Backend syntax build | PASS (34 runtime files) |
+| Python unittest discovery, bytecode disabled | 159 PASS; real workflow semantics, provider-mocked HCL/graph and detection suites included |
+| `npm run e2e:test` | 69 PASS; existing two-hop and cleanup contracts unchanged |
+| Terraform fmt / validate / mock tests | PASS; existing IAM and new Monitoring contracts evaluated without applying/importing |
+| actionlint 1.7.12 | ci.yml, cd.yml and candidate-e2e.yml PASS; workflow sources unchanged |
+| Health/logger detection | 8 required / 8 detected / 8 semantic |
+| CD/probe detection | 7 required / 7 detected / 7 semantic |
+| Monitoring detection | 10 required / 10 detected / 10 semantic |
+| Detection credit | 0 schema-only; 0 syntax/import/runtime-only; every valid-source mutant follows a passing baseline |
+| Documentation validation | 197 relative links (165 outgoing / 32 inbound), 117 anchors PASS; diff whitespace and sensitive-pattern checks PASS |
+
+Detection uses disposable copies and actual Jest handlers, Python candidate
+contracts, or evaluated Terraform mock plans/dependency graphs. It covers removed
+health isolation, unsafe log/response values, missing/arbitrary/ignored probes,
+unrelated config allowance, hash omission, incorrect uptime/filter/threshold,
+disconnected channel/API, a literal destination and added Cloud Run ownership.
+Existing C4B 19/19 and C4C 6/6 semantic detection remain passing.
+Thirty existing CD functions are AST-identical to baseline, including authority,
+CI pinning, traffic parsing, CAS, Operation polling, promotion/rollback, existing
+smoke, TTL rechecks and diagnostics. Build submission, E2E/cleanup implementation,
+workflow permissions and production Environment source are unchanged. The eight
+documentation updates correct source/runtime status and safe-error claims; the
+C3 recovery document only updates its Current Must 3 remaining gap.
+
+**Source-validation plan: AUDIT EVIDENCE ONLY, never apply.** A fresh normal-refresh,
+normally locked plan at `2026-09-22T00:24:30Z` used only a synthetic destination from
+the mock fixture. It reported **1 import / 4 add / 0 change / 0 destroy / 0 replace**.
+The import is `workout-journal-506909/monitoring.googleapis.com`; the four additions
+are the channel, uptime check and two policies. Existing resources remain no-op.
+Plan SHA-256: `085d483ab1c81162234ce12f2ed7b5a5119f6882f629463338ba0884f5387a9c`.
+
+Refresh reported Artifact Registry `update_time` and three existing project IAM
+member `etag` changes. Both fields were independently verified in provider schema
+as computed=true, optional=false, required=false; all four planned actions are
+no-op. No unrelated semantic drift was found. Remote state stays **37 resources,
+serial 9**, lineage `66945691-ab92-e20a-4bc1-badb121e7ab4`, GCS generation
+`1789947297225011`. Repeated pulls differed only in check_results ordering; the
+state object was last updated `2026-09-20T23:34:57Z`, before this plan. The later
+approved target is 42 resources, not the current state.
+
+Monitoring is **NOT APPLIED**. Deployed health/probes/structured logs, uptime,
+alert runtime and notification receipt are **NOT YET**. Must 3 remains **In progress**;
+Must 5 remains **Open**. C4D's **Must 4 Closed**, current production
+`cd-35573153822-1`, and Historical C3/C4 evidence are preserved. A fresh merged-source
+plan with the privately supplied real destination, exact Human apply approval,
+separately approved deployment and notification receipt evidence are still needed.
+No runtime mutation, apply, dispatch, production approval, secret payload access,
+Supabase mutation, commit, push or PR occurred in OBS-B/C.
+
+Operational details: [Observability inspection/recovery](./cloud-run-deployment-runbook.md#observability),
+[Terraform state privacy](../infra/terraform/README.md#obs-bc-monitoring-desired-state--not-applied),
+and [CD probe provenance](./cd-c1-candidate-delivery.md#obs-bc-probe-rollout-source-contract).
+External behavior was checked against Google's [Cloud Run health checks](https://docs.cloud.google.com/run/docs/configuring/healthchecks),
+[structured logging](https://docs.cloud.google.com/run/docs/logging#write-structured-logs),
+[uptime alert example](https://docs.cloud.google.com/monitoring/alerts/policies-in-json#uptime-check-policy),
+and [uptime region API](https://docs.cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.uptimeCheckConfigs#UptimeCheckRegion).
+
 ## Local Commands
 
 ```bash

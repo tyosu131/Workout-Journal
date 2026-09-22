@@ -312,6 +312,88 @@ Update the candidate record with the promotion result and preserve it as the new
 
 After promotion, perform the required production browser smoke for the major v1 workflows in the Human-approved production browser and record the browser used. Broader supported-browser validation across Safari, iOS Safari, Chrome, Firefox, and Edge is a separate compatibility activity, not a v1 release gate unless the Project owner explicitly adds it to the current Completion Contract. When that broader validation is performed, pay particular attention to refresh and logout cookie behavior.
 
+## Observability
+
+**OBS-B/C source implemented / offline verified; runtime NOT YET.** Monitoring is
+NOT APPLIED. The OBS-A runtime baseline still has 37 Terraform resources, default
+TCP startup probes and production pair `cd-35573153822-1`; its Backend `/health`
+returns 404. Do not report the source contracts below as deployed evidence.
+
+After a separately approved merge, automatic CD builds the health endpoint and
+probe configuration into the same new candidate revision. Backend `GET /health`
+returns exactly `{"status":"ok"}` with status 200; HEAD returns 200 without a body.
+POST/PUT/PATCH/DELETE return 405 before body/cookie parsing and application routes.
+It needs no auth and makes no Supabase call. Frontend availability uses `/login`.
+
+Backend HTTP startup and liveness both use `/health`, port 8080, initial delay 0,
+timeout 2s. Startup uses period 5s / failure threshold 24; liveness uses period
+30s / failure threshold 3. Frontend retains its TCP startup configuration. CD
+accepts only the exact old-TCP-to-approved-HTTP Backend transition, including when
+a non-promoted HTTP candidate is latest-ready. All other compared spec fields stay
+equivalent; full actual spec hashes still include probes. New candidates receive
+a separate health check. Previous rollback revisions need not expose `/health`;
+the existing Backend `/` = 404 rollback smoke remains unchanged.
+
+Inspection and diagnosis:
+
+1. Read Cloud Run traffic to identify the exact 100% revision pair; latest-ready
+   can be a 0% candidate. Confirm Frontend's recorded Backend tagged URL and the
+   immutable Backend tag target. Inspect revision Ready status and container
+   startup/liveness settings, without printing secret environment values.
+2. Check Frontend `/login` and, once OBS is deployed, Backend `/health`. In
+   Monitoring, inspect the Frontend uptime check and alert incident timeline.
+   The check is HTTPS/200-only every 300s, with 10s timeout and three USA checkers.
+   Two failed checkers sustained for 300s trigger availability alerting; missing
+   samples are not a PASS.
+3. For Backend alerts, inspect Cloud Logging with the following safe filter and
+   narrow the time range/revision to the incident. The operation field is a fixed
+   name such as `note_save`; no request body, token, URL, user identity or raw
+   dependency message is needed.
+
+   ```text
+   resource.type="cloud_run_revision"
+   resource.labels.service_name="workout-journal-backend"
+   severity=ERROR
+   jsonPayload.event="server_failure"
+   ```
+
+4. The Backend policy sums `run.googleapis.com/request_count` with `5xx` over
+   300s and requires more than one error for 60s. It includes **all Backend
+   revisions, including tagged 0% candidates**. Determine whether the affected
+   revision serves production before treating the alert as a production regression.
+   Metric sampling/ingestion delays mean notification is not instantaneous.
+5. If a production regression is established, use the existing Human-gated
+   [paired rollback](#rollback): Frontend then Backend, only to a recorded
+   compatible pair. Never reassign or casually delete Backend tags. Repeat the
+   post-rollback smoke and record the restored pair, operator, time and result.
+   Alerts never change traffic automatically.
+
+Runtime acceptance is separate from configuration inspection. Require applied
+resource read-back, uptime PASS samples, healthy new revision probes, safe JSON
+ingestion, and Human-confirmed email receipt. Record channel/incident IDs and
+receipt time, not the private destination. Cloud Monitoring has no generic email
+test-send option; see [official notification testing](https://docs.cloud.google.com/monitoring/support/notification-options#test-notification-channel).
+A controlled failure test is **NOT EXECUTED** and requires a later explicit Human
+Gate naming the exact fresh Backend candidate revision and immutable tagged URL.
+Read back that the candidate still has 0% production traffic and the production
+pair is unchanged before sending anything. Permit **at most two requests total,
+with no retries**, within one minute: POST malformed JSON (for example `{`) with
+`Content-Type: application/json` to `/not-an-application-route` on that exact
+candidate URL. Do not use `/health`, the stable production URL, credentials or
+application data. The local real-app test proves parsing reaches the fixed global
+500 handler before auth/DB access, with zero Supabase calls; no Supabase mutation
+is part of this test. Stop on an unexpected response, timeout, identity/traffic
+change or evidence of dependency access. After the request budget is exhausted,
+only read metrics/logs/incidents and await Human receipt confirmation; absence of
+an alert does not authorize more requests. Never inject a failure into production
+or add a test-only production endpoint.
+Do not modify real policy thresholds merely to claim delivery evidence.
+
+Merge, Terraform apply, and controlled alert verification have separate Human
+boundaries. A merge naturally starts automatic CD; Terraform is not applied by CD.
+Preserve manifest TTL/current-main checks and production Environment approval.
+An expired candidate cannot be promoted to finish an observability exercise.
+
 ## Rollback
 
 Rollback is always to a recorded compatible pair. Before changing traffic, verify from the pair record and revision configuration that the known-good Frontend revision's `BACKEND_INTERNAL_URL` equals its recorded Backend tagged URL and that this tag still points to the paired known-good Backend revision. Do not move a tag during rollback to reconstruct a pair.

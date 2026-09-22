@@ -17,8 +17,7 @@ jest.mock(
         throw new Error("jwt malformed");
       }
     }),
-  }),
-  { virtual: true }
+  })
 );
 
 const jwt = require("jsonwebtoken");

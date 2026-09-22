@@ -306,8 +306,9 @@ generic discovery or destructive fallback is added.
 
 C3C improves recovery safety; C3D closes the historical incident
 for current residual/data-hygiene concerns only. Scenario NOT PROVEN and cleanup
-execution UNPROVEN remain historical limitations. Must 3 remains In progress (monitoring/alert resources deferred
-to Must 5 design); Must 4 is now Closed by C4D. C3F closes the successful candidate
+execution UNPROVEN remain historical limitations. Must 3 remains In progress
+(OBS-B/C Monitoring source implemented, apply/runtime verification pending);
+Must 4 is now Closed by C4D. C3F closes the successful candidate
 E2E/cleanup/re-verification portion; C3G proves approval integration and actual
 previous-pair restoration after failed promotion. C3K supplies observed failure
 diagnostics, C3P proves numeric 403, C3U closes the IAM defect, and C3V proves

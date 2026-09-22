@@ -37,3 +37,12 @@ output "workout_journal_workload_identity_provider_name" {
   description = "Canonical name of the current Deploy OIDC provider."
   value       = google_iam_workload_identity_pool_provider.workout_journal.name
 }
+output "monitoring_resource_names" {
+  description = "Safe Monitoring resource identifiers, without notification destination values."
+  value = {
+    frontend_uptime      = google_monitoring_uptime_check_config.frontend.name
+    frontend_alert       = google_monitoring_alert_policy.frontend_availability.name
+    backend_alert        = google_monitoring_alert_policy.backend_server_errors.name
+    notification_channel = google_monitoring_notification_channel.email.name
+  }
+}

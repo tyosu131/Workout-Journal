@@ -267,15 +267,48 @@ def env_values(revision):
     return {e['name']: e for e in rows}
 
 
+BACKEND_STARTUP_PROBE = {'httpGet': {'path': '/health', 'port': 8080},
+                         'initialDelaySeconds': 0, 'timeoutSeconds': 2,
+                         'periodSeconds': 5, 'failureThreshold': 24}
+BACKEND_LIVENESS_PROBE = {'httpGet': {'path': '/health', 'port': 8080},
+                          'initialDelaySeconds': 0, 'timeoutSeconds': 2,
+                          'periodSeconds': 30, 'failureThreshold': 3}
+PREVIOUS_TCP_STARTUP_PROBE = {'tcpSocket': {'port': 8080}, 'initialDelaySeconds': 0,
+                             'timeoutSeconds': 240, 'periodSeconds': 240, 'failureThreshold': 1}
+BACKEND_PROBE_ARGS = [
+    '--startup-probe=httpGet.path=/health,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=2,periodSeconds=5,failureThreshold=24',
+    '--liveness-probe=httpGet.path=/health,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=2,periodSeconds=30,failureThreshold=3',
+]
+
+
 def normalized_spec(revision, part):
     spec = deepcopy(revision['spec'])
     values = env_values(revision)
     spec['containers'][0]['image'] = '[IMAGE]'
+    # The read API can omit this zero-valued default. Normalize only this known
+    # representation difference; actual full-spec hashes below remain untouched.
+    for key in ('startupProbe', 'livenessProbe'):
+        probe = spec['containers'][0].get(key)
+        if isinstance(probe, dict):
+            probe.setdefault('initialDelaySeconds', 0)
     if part == 'frontend':
         require(bool(values.get('BACKEND_INTERNAL_URL', {}).get('value')), 'PAIR_MISSING')
         for e in spec['containers'][0]['env']:
             if e['name'] == 'BACKEND_INTERNAL_URL':
                 e['value'] = '[PAIR]'
+    return spec
+
+
+def expected_candidate_spec(previous, part):
+    spec = normalized_spec(previous, part)
+    if part == 'backend':
+        container = spec['containers'][0]
+        startup, liveness = container.get('startupProbe'), container.get('livenessProbe')
+        require((startup == PREVIOUS_TCP_STARTUP_PROBE and liveness is None) or
+                (startup == BACKEND_STARTUP_PROBE and liveness == BACKEND_LIVENESS_PROBE),
+                'PREVIOUS_PROBE_CONFIGURATION_UNAPPROVED')
+        container['startupProbe'] = deepcopy(BACKEND_STARTUP_PROBE)
+        container['livenessProbe'] = deepcopy(BACKEND_LIVENESS_PROBE)
     return spec
 
 
@@ -327,7 +360,11 @@ def capacity(state, candidate_id):
         require(not any(r.get('name', '').endswith(suffix) for r in revisions) and
                 not any(t['tag'] == candidate_id for t in rows), 'CANDIDATE_REUSE_REFUSED')
         latest = read_revision(state[part]['service']['status']['latestReadyRevisionName'])
-        require(normalized_spec(latest, part) == normalized_spec(state[part]['production'], part),
+        previous = state[part]['production']
+        expected = expected_candidate_spec(previous, part)
+        require(normalized_spec(latest, part) in (normalized_spec(previous, part), expected) and
+                latest['metadata']['annotations'].get('autoscaling.knative.dev/maxScale') ==
+                previous['metadata']['annotations'].get('autoscaling.knative.dev/maxScale'),
                 'LATEST_TEMPLATE_DIFFERS_FROM_PRODUCTION')
 
 
@@ -375,7 +412,7 @@ def make_manifest(before, after, build, env, authority):
     for part in PARTS:
         prior, current = before[part], after[part]
         revision = read_revision('workout-journal-' + part + '-' + candidate_id)
-        require(normalized_spec(revision, part) == normalized_spec(prior['production'], part),
+        require(normalized_spec(revision, part) == expected_candidate_spec(prior['production'], part),
                 'RUNTIME_CONFIGURATION_CHANGED')
         require(policy_hash(prior['service']) == policy_hash(current['service']), 'SERVICE_POLICY_CHANGED')
         m[part] = revision_fields(part, revision, current['traffic'], candidate_id, m['build']['digests'][part])
@@ -424,6 +461,8 @@ def candidate(env, record):
                     f"--image={proof.IMAGE_ROOT}/{service}@{build['digests'][service]}",
                     '--no-traffic', '--tag=' + candidate_id,
                     '--revision-suffix=' + candidate_id, '--max-instances=2']
+            if part == 'backend':
+                args += BACKEND_PROBE_ARGS
             if part == 'frontend':
                 backend = read_state()['backend']
                 new_tag = [t for t in backend['traffic'] if t['tag'] == candidate_id]
@@ -431,6 +470,7 @@ def candidate(env, record):
                 args += ['--update-env-vars=BACKEND_INTERNAL_URL=' + new_tag[0]['url']]
             proof.cloud(args, 'CANDIDATE_DEPLOY_FAILED', timeout=600)
         m = make_manifest(before, read_state(), build, env, authority)
+        candidate_health(m)
         record['pair'] = pair_record(m)
         raw = canonical(m)
         emit(env, 'manifest', raw)
@@ -443,6 +483,16 @@ def candidate(env, record):
             require(after[part]['production']['metadata']['name'] == before[part]['production']['metadata']['name'] and
                     digest(after[part]['production']['spec']) == digest(before[part]['production']['spec']),
                     'PRODUCTION_CHANGED_BEFORE_APPROVAL')
+
+
+def candidate_health(m):
+    # New candidate only. Previous rollback revisions need not expose /health.
+    try:
+        with build_opener(NoRedirect()).open(m['backend']['url'] + '/health', timeout=20) as response:
+            require(response.status == 200 and response.read(128) == b'{"status":"ok"}',
+                    'CANDIDATE_HEALTH_FAILED')
+    except Exception:
+        raise proof.GateError('CANDIDATE_HEALTH_FAILED') from None
 
 
 def expected_traffic(m, part, serving_revision):
@@ -613,6 +663,7 @@ def main():
             require(env.get('CD_E2E_HASH') == env['CD_MANIFEST_HASH'], 'E2E_CLEANUP_PROOF_MISSING')
             proof.check_credentials(env)
             recheck(m, {p: m['production'][p]['revision'] for p in PARTS})
+            candidate_health(m)
             emit(env, 'e2e_hash', env['CD_MANIFEST_HASH'])
         elif action == 'promote':
             promote(env, record)

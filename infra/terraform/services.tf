@@ -41,3 +41,14 @@ resource "google_project_service" "security_token_service" {
     prevent_destroy = true
   }
 }
+
+resource "google_project_service" "monitoring" {
+  project = var.project_id
+  service = "monitoring.googleapis.com"
+
+  disable_on_destroy = false
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
