@@ -59,7 +59,8 @@ def revision(part, suffix, image_digest=None, backend_url=None):
     return {'metadata': {'name': service + '-' + suffix, 'namespace': cd.proof.PROJECT_NUMBER,
                          'annotations': {'autoscaling.knative.dev/maxScale': '2'}},
             'spec': {'serviceAccountName': service + '-run@' + cd.proof.PROJECT + '.iam.gserviceaccount.com',
-                     'containers': [{'image': image, 'env': values}]},
+                     'containers': [{'image': image, 'env': values, 'startupProbe': {
+                         'tcpSocket': {'port': 8080}, 'timeoutSeconds': 240, 'periodSeconds': 240, 'failureThreshold': 1}}]},
             'status': {'imageDigest': image, 'conditions': [{'type': 'Ready', 'status': 'True'}]}}
 
 
@@ -69,6 +70,12 @@ def fixture():
         service = 'workout-journal-' + part
         previous = revision(part, 'arbitrary-production')
         next_revision = revision(part, 'cd-12345-1', BUILD['digests'][service], tagged('backend', 'cd-12345-1'))
+        if part == 'backend':
+            next_revision['spec']['containers'][0].update(
+                startupProbe={'httpGet': {'path': '/health', 'port': 8080}, 'timeoutSeconds': 2,
+                              'periodSeconds': 5, 'failureThreshold': 24},
+                livenessProbe={'httpGet': {'path': '/health', 'port': 8080}, 'timeoutSeconds': 2,
+                               'periodSeconds': 30, 'failureThreshold': 3})
         revisions[next_revision['metadata']['name']] = next_revision
         revisions[previous['metadata']['name']] = previous
         rows = [{'revisionName': previous['metadata']['name'], 'tag': 'retained-good', 'percent': 100,
@@ -209,7 +216,7 @@ class ProvenanceTests(unittest.TestCase):
              patch.object(cd, 'read_revision', side_effect=lambda name: revisions[name]), \
              patch.object(cd, 'cloud_run', return_value={'revisions': []}), \
              patch.object(cd.proof, 'prove', side_effect=lambda env, build, **kwargs: build.update(BUILD)) as build, \
-             patch.object(cd.proof, 'cloud', side_effect=deploy), \
+             patch.object(cd.proof, 'cloud', side_effect=deploy), patch.object(cd, 'candidate_health'), \
              patch.object(cd, 'emit', side_effect=lambda env, name, value: outputs.update({name: value})):
             record = {}
             cd.candidate({**ENV, 'NEXT_PUBLIC_SUPABASE_URL': cd.SUPABASE_URL}, record)

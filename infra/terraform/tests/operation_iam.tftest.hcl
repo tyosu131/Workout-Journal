@@ -2,6 +2,10 @@
 # Python assertions inspect the evaluated resource changes, including extra grants.
 mock_provider "google" {}
 
+variables {
+  monitoring_notification_email = "fixture@example.invalid"
+}
+
 override_resource {
   target          = google_service_account.deploy
   override_during = plan

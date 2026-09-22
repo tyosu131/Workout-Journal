@@ -72,11 +72,18 @@ Terraform and CD must not compete for the same mutable production state.
 | Compute default Service Account | Do Not Manage | The Service Account body still exists and remains enabled. Its former project-level `roles/editor` grant was removed outside Terraform after the P1C-D dependency audit and a separate P1C-D2 Human Gate; neither the Service Account nor that former binding is Terraform-owned |
 | Legacy Cloud Build Service Account | Do Not Manage | Not an adoption target |
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
-| Monitoring and alert resources | Future / Pending | Not implemented; deferred to Must 5 design |
+| Monitoring API, uptime, two alert policies and email channel | Terraform Owns / desired state implemented | OBS-B/C source/offline verified; existing Monitoring API imported at later apply; NOT APPLIED, runtime NOT YET |
+| Cloud Run revision health probes | CD Owns | Backend HTTP startup/liveness transition is verified in candidate configuration; no Terraform service body |
+| Logging API | External prerequisite | OBS-A read-back ENABLED; no ownership change |
 
 Monitoring and alert resources are the concrete remaining Must 3 resource gap
 under the [Completion Contract](./portfolio-completion-contract.md#must-3-infrastructure-as-code--identity).
-Their approved IaC scope must be implemented and verified with Must 5 design.
+OBS-B/C implements that scope. Fresh merged-source plan, Human apply, read-back
+and no-drift remain. Human selected a Terraform-owned email channel: the address
+is supplied through `monitoring_notification_email` with no default and is never
+committed or output. It is personal destination metadata stored in Terraform state,
+an explicitly accepted design; secret payloads remain excluded. Applied state stays
+37 resources until the separately approved one-import/four-add plan produces 42.
 R8 closes the isolated WIF prerequisite only. No new identity/build hardening
 requirement is inferred; automatic default-SA-grant prevention remains the
 Backlog / separate hardening item recorded below.

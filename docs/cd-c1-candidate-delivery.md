@@ -145,7 +145,7 @@ traffic promotion. Proof authentication API calls were R8's intended action.
 `CD_C1_ACTIVATION` was freshly read back **UNCONFIGURED** in R9. Existing provider,
 IAM, Terraform and secret metadata records are not new R9 cloud read-backs.
 
-**Future / remaining scope:** Must 3 stays **In progress**. Its concrete remaining
+**Historical R9 remaining scope:** Must 3 stayed **In progress**. Its concrete remaining
 gap is monitoring and alert resources, explicitly unimplemented and deferred to
 Must 5 design in the [ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix)
 and required where applicable by the [Completion Contract](./portfolio-completion-contract.md#must-3-infrastructure-as-code--identity).
@@ -1404,3 +1404,20 @@ Contract. Other Musts are unchanged: 1 In progress, 2 Closed, 3 In progress,
 C4D performs read-only evidence collection and docs synchronization only: no
 dispatch/rerun/approval, cloud/traffic/IAM/Terraform/variable mutation, secret payload
 access, Supabase mutation, commit, push or PR. Fresh Result Audit is next.
+
+## OBS-B/C probe rollout source contract
+
+OBS-B/C implements Backend process-only HTTP startup/liveness and a candidate-only
+`/health` verification, with runtime proof **NOT YET**. Frontend keeps its existing
+TCP startup probe. The old TCP production spec may transition only to the exact
+approved HTTP probe configuration; this also permits a non-promoted approved
+candidate to remain latest-ready. Unrelated spec changes remain rejected, and
+actual full revision spec hashes retain probe fields. Manifest version remains 2.
+
+Backend then Frontend promotion, Frontend then Backend rollback, original rollback
+smoke, TTL, CAS, Operation polling, exact CI authority and Environment approval
+remain unchanged. Old rollback revisions are not required to implement `/health`.
+Monitoring Terraform is separately gated and NOT APPLIED; Must 3 remains In progress
+and Must 5 Open. C4D's Must 4 closure and all earlier Historical C3/C4 evidence remain
+unchanged. See [OBS verification](./verification.md#obs-bc-health-and-monitoring-implementation)
+and [probe/inspection operations](./cloud-run-deployment-runbook.md#observability).

@@ -1,4 +1,4 @@
-# These import blocks target only resources verified to exist during P1.
+# These import blocks target existing resources verified during P1 or OBS-A.
 # The state bucket block was added only after the P1B bootstrap read-back passed.
 
 import {
@@ -39,4 +39,8 @@ import {
 import {
   to = google_secret_manager_secret_iam_member.backend_jwt_secret_accessor
   id = "projects/workout-journal-506909/secrets/workout-journal-jwt-secret roles/secretmanager.secretAccessor serviceAccount:workout-journal-backend-run@workout-journal-506909.iam.gserviceaccount.com"
+}
+import {
+  to = google_project_service.monitoring
+  id = "workout-journal-506909/monitoring.googleapis.com"
 }

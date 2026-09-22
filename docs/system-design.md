@@ -55,7 +55,7 @@ Every claim below is labelled as one of the following:
 | Authentication and user isolation | **Current / Implemented** | Protected note and weekly-summary paths extract a Bearer token, verify the backend JWT, and scope note/tag database queries by the verified user ID. |
 | Secret management | **Current / Implemented** | Backend Supabase credentials and `JWT_SECRET` are server-only runtime values. The deployment contract injects secret values from Secret Manager; browser-visible configuration is limited to the two publishable Supabase values used for password recovery. |
 | Sensitive logging | **Current / Implemented** | Backend and frontend failure logs use allow-listed summaries rather than tokens, user IDs, profiles, raw URLs/queries, raw Axios objects, or raw Supabase objects. The weekly-summary boundary also excludes prompts, provider response text, and workout payloads. |
-| Logging policy completeness | **Future Direction** | Structured logging, collection, retention, access control, and monitoring remain post-v1 operational work. |
+| Logging policy completeness | **Current source / runtime pending** | OBS-B/C adds safe structured Backend failures and Monitoring desired state for Must 5. Deployed log/alert/notification proof is NOT YET; broader tracing/retention policy is separate scope. |
 | Backward compatibility | **Current / Implemented** | Missing `rpe`, `rir`, and `failure` normalize to `null`; old nested sets remain readable. The backend only adds valid effort fields and otherwise keeps the surrounding exercise/set payload shape. |
 | Defensive parsing and validation | **Current / Implemented** | Nested exercises are parsed defensively, numeric metrics require finite values, effort values are range-normalized, and weekly-summary requests and responses are validated before use. |
 | CI verification | **Current / Implemented** | GitHub Actions installs root, frontend, and backend dependencies, then runs frontend lint/build, backend syntax checks, and the root Jest suite on pushes and pull requests. |
@@ -441,7 +441,7 @@ Persisted notes
 | Frontend and network | **Current / Implemented** | Browser Axios calls same-origin `/api/*`. The proxy times out Backend calls after 30 seconds, returning sanitized `504`; other Backend network failures return sanitized `502`. Frontend error logs use allow-listed summaries. | Network failures are not retried. |
 | Authentication and token refresh | **Current / Implemented** | A `401` can trigger one retry for the original request after refresh; refresh failures or an exhausted module-level refresh-attempt limit remove the local token. AuthContext redirects to login when no token exists and logs out after failed refresh during session lookup. | No server-side revocation, rotation, or invalidation mechanism is confirmed; see [Authentication and Token Lifecycle](#authentication-and-token-lifecycle). |
 | Request validation | **Current / Implemented** | Auth handlers, tag handlers, and the weekly-summary validator return `400` for selected invalid inputs. Invalid weekly-summary range or raw-note-content fields do not reach the provider boundary. | Notes date/range values do not have a dedicated service-side format validator; see [Request Validation](#request-validation). |
-| Note and tag persistence | **Current / Implemented** | Note and tag service handlers catch Supabase errors, log an error message, and generally return `500`. Note saving is one normalized-payload upsert. | The note service includes `error.message` in some client responses. Tag deletion performs two writes without a visible transaction; see [Partial Failure and Consistency Risks](#partial-failure-and-consistency-risks). |
+| Note and tag persistence | **Current source / runtime pending** | Note and tag handlers catch Supabase errors, emit safe structured failure events and return fixed public `500` messages. Note saving remains one normalized-payload upsert. | OBS-B/C removes internal message details; deployed behavior is not yet verified. Tag deletion still performs two writes without a visible transaction; see [Partial Failure and Consistency Risks](#partial-failure-and-consistency-risks). |
 | Malformed historical exercise data | **Current / Implemented** | Backend save normalization accepts an array or JSON string, converts invalid or non-array exercise input to an empty array, and omits invalid optional effort values. Shared analytics normalization likewise treats missing or invalid numeric values as unavailable. | A malformed exercise payload submitted to save can be serialized as `[]`; no rejected-payload response or original-payload preservation is implemented at that boundary. |
 | Deterministic analytics | **Current / Implemented** | Numeric derivation requires finite values; missing effort is unknown, and sparse or empty range data renders data-quality or unknown states rather than an effort conclusion. | The Analytics page reports a range-load error, but no separate diagnostics distinguish fetch, parsing, and individual metric-derivation failures. |
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
@@ -506,7 +506,7 @@ Persisted notes
 | --- | --- | --- | --- |
 | Express route activity | **Current Design Decision** | Raw request URLs and queries are not logged. | Structured route metrics and correlation IDs remain post-v1. |
 | Configuration presence | **Current / Implemented** | Runtime configuration is consumed without logging values. | This is not secret rotation or production health monitoring. |
-| Backend service failures | **Current / Implemented** | Auth, note, token, and weekly-summary handlers use `console.error` in caught failure paths. | Logs are endpoint-specific console output with no common schema, level policy, or centralized destination in the repository. |
+| Backend service failures | **Current source / runtime pending** | HTTP 5xx boundaries use one JSON `server_failure` event on stderr, fixed operation names, finite error names and integer status 400–599. | Actual deployed JSON ingestion and notification receipt remain NOT YET. Expected token rejection is not a server failure. |
 | Frontend diagnostics | **Current / Implemented** | Selected failures log allow-listed name/code/status summaries. | Client logs are not a production monitoring system. |
 | Weekly-summary boundary | **Current / Implemented** | The service avoids logging prompt messages, provider-response text, tokens, workout payloads, and raw errors. | The boundary is local and mocked, so it does not demonstrate production provider monitoring. |
 | CI verification output | **Current / Implemented** | GitHub Actions emits build, lint, backend syntax, and Jest output on push and pull request. | CI output is pre-merge verification, not runtime application observability. |
@@ -514,34 +514,49 @@ Persisted notes
 
 ### Logging and Privacy
 
-**Current / Implemented:** Backend logging excludes raw request URLs/queries, Authorization values, JWTs, emails, user IDs, profiles, raw Supabase errors, and secret/config values. Caught failures use allow-listed `name`, `code`, and `status` fields.
+**Current / Implemented:** Backend logging excludes raw request URLs/queries, Authorization values, JWTs, emails, user IDs, profiles, raw Supabase errors, and secret/config values. OBS-B/C caught failures use finite allow-listed `name` values and optional integer
+`status` 400–599; arbitrary `code`, message, stack and dependency objects are omitted.
+Eight internal-message 500 responses now use fixed public messages. This is source
+implementation/offline evidence; the deployed logging change is not yet proven.
 
-**Current / Implemented:** Frontend API and feature failure logs use the same allow-listed summary shape instead of raw Axios response data or raw error objects. Token utilities do not log token values or presence.
+**Current / Implemented:** Frontend API and feature failure logs retain their existing name/code/status summaries instead of raw Axios response data or raw error objects. OBS-B/C changes only the Backend summary to finite values and omits code. Token utilities do not log token values or presence.
 
 **Current Design Decision:** The weekly-summary request validator rejects named raw-note-content fields, and its service boundary does not log prompt messages, provider response text, tokens, or workout payloads. This narrow boundary does not establish a repository-wide logging policy.
 
-**Open Question:** Production log collection, access control, retention, redaction validation, and audit practices are not represented in this repository.
+**Current / runtime pending:** Cloud Run collects container stdout/stderr. The OBS-B/C runbook defines safe failure inspection; deployed structured-event ingestion and leak inspection remain unverified. A broader access/retention/audit policy is outside this implementation.
 
 ### Missing Production Signals
 
-**Open Question:** The repository does not show structured logs, standardized log levels, request or correlation IDs, centralized log storage, metrics, distributed tracing, health or readiness endpoints, dashboards, alerting, error tracking, audit logs, or a log-retention policy. A hosting platform may provide some of these capabilities, but that is not verifiable here.
+**Current source / runtime pending:** OBS-B/C implements process-only Backend
+`GET`/`HEAD /health`, HTTP startup/liveness in CD, safe structured failure logs,
+Frontend `/login` uptime, and Backend built-in 5xx alerting. OBS-A verified that
+Cloud Run request metrics and Monitoring/Logging APIs exist; no Monitoring
+resources are applied by OBS-B/C. Health/probe/log/uptime/notification runtime proof
+remains NOT YET. Correlation IDs, tracing, dashboards and a broader retention/audit
+policy are not added to Must 5 by this implementation.
 
 **Current / Implemented:** Analytics request IDs exist only as in-browser stale-update guards. They do not create backend request correlation or tracing.
 
 ### Future Metrics
 
-**Future Direction:** Before Portfolio Done, define useful operational metrics without assigning unsupported SLO values. Candidate signals include API request count and latency by route, `4xx` and `5xx` rates, authentication and refresh failures, Supabase query failures, note-save failures, weekly-summary fallback and invalid-provider-response rates, weekly-summary validation failures, and analytics data-quality warning counts.
+**Future Direction:** Beyond the selected uptime and Backend request-count signals, possible metrics include route latency, authentication failures, dependency failures and analytics data quality. These are not additional Portfolio Must conditions, and no unsupported SLO values are assigned.
 
 ### Alerting Boundary
 
-**Future Direction:** Alerts should identify sustained operational conditions rather than routine user input errors. Candidates include sustained server `5xx` responses, persistent Supabase connectivity failures, repeated note-save failures, abnormal refresh failures, and, only after an external provider is integrated, provider outages or a fallback-rate spike. A single local validation failure is not a production alert condition.
+**Current source / runtime pending:** The approved minimal policies are sustained
+Frontend uptime failure (two checkers) and two Backend 5xx in a five-minute
+aggregate, retested for 60 seconds. The Backend service filter includes tagged 0%
+candidate requests. Structured operation logs support diagnosis; no custom
+logs-based metric or automatic rollback is introduced. Email delivery requires
+a later Human-confirmed receipt. Broader dependency/provider-specific alerts
+remain Future Direction, not additional Must 5 acceptance conditions.
 
 ### Operational Open Questions
 
 - **Current Design Decision:** Frontend and Backend run as separate Cloud Run services built from repository Dockerfiles.
-- **Open Question:** Where are runtime logs collected, who can access them, and how long are they retained?
-- **Open Question:** Who owns alerts, on-call response, escalation, and deployment rollback?
-- **Open Question:** How will health checks, readiness checks, secret rotation, and backup/restore verification be integrated?
+- **Current / runtime pending:** Verify safe Cloud Run log ingestion, health/probes, uptime/alert behavior and Human notification receipt using the [Observability runbook](./cloud-run-deployment-runbook.md#observability).
+- **Current Design Decision:** Terraform owns the approved email channel/policies; Human owns the destination, apply, incident response and production recovery approval. No automatic rollback is added.
+- **Open Question:** Broader log retention/access, escalation, secret rotation and backup/restore policy remain separate scope.
 - **Open Question:** How will the applied new-project schema, RLS configuration, and daily-note key be monitored and verified over time?
 
 ## References
@@ -565,11 +580,10 @@ Persisted notes
 
 **Future Direction:** The completed v1 production release is not reopened. Prioritize only work required by the [Portfolio Finish Completion Contract](./portfolio-completion-contract.md) or a separately approved product task:
 
-1. Integrate the [verified P2A/P2B automated candidate E2E](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) into the separately gated future CD path; Must 2 runtime coverage is complete, not CD activation.
-2. Define the Terraform/CD ownership boundary, then implement the approved GCP foundation and keyless GitHub OIDC/WIF identity.
-3. Implement the continuous-delivery path while preserving immutable digests, exact Backend tagged URLs, revision pairing, approval, promotion, and rollback behavior.
-4. Define production log collection, retention, access control, health inspection, metrics, actionable alerts, and recovery procedures required for Portfolio Done.
-5. Add static security scanning and dependency/security automation.
-6. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
-7. Define common API error envelopes only if a separate accepted scope requires them.
-8. Add external-provider timeout, rate-limit, and observability design only before real provider integration; external AI integration is not a Portfolio Must.
+1. Preserve the separate [P2A/P2B Must 2 proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) and [C4D automatic delivery closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure); Must 2 and Must 4 are Closed.
+2. Preserve the approved Terraform/CD ownership boundary and keyless WIF foundation; Monitoring apply/runtime evidence remains for Must 3.
+3. Obtain Human-gated runtime evidence for OBS-B/C health/probes/logging, uptime/alerts and notification receipt. Must 5 remains Open.
+4. Add static security scanning and dependency/security automation.
+5. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
+6. Define common API error envelopes only if a separate accepted scope requires them.
+7. Add external-provider timeout, rate-limit, and observability design only before real provider integration; external AI integration is not a Portfolio Must.

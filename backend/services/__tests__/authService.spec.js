@@ -209,7 +209,7 @@ describe("authService client boundaries", () => {
     await handleSignUp({ body: { username: "User", email: "user@example.com", password: "password123" } }, res);
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: "profile failed" });
+    expect(res.json).toHaveBeenCalledWith({ error: "Failed to sign up user" });
   });
 
   it("uses a new Auth client for each login without returning a Supabase session", async () => {

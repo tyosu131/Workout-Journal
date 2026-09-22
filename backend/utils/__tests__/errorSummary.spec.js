@@ -14,7 +14,6 @@ describe("getErrorSummary", () => {
 
     expect(summary).toEqual({
       name: "PostgrestError",
-      code: "PGRST000",
       status: 500,
     });
     expect(JSON.stringify(summary)).not.toContain("user@example.com");

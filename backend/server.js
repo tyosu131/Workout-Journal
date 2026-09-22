@@ -9,7 +9,7 @@ const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 const notesRoutes = require("./routes/noteRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
-const { getErrorSummary } = require("./utils/errorSummary");
+const { logFailure } = require("./utils/structuredLogger");
 
 const app = express();
 
@@ -22,6 +22,12 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+
+// Process-only: before body/cookie parsing and all auth/application handlers.
+// Express serves HEAD through GET with the same status and no response body.
+app.route("/health")
+  .get((req, res) => res.set("Cache-Control", "no-store").status(200).json({ status: "ok" }))
+  .all((req, res) => res.set("Allow", "GET, HEAD").status(405).json({ error: "Method Not Allowed" }));
 
 // Middleware
 app.use(express.json());
@@ -40,12 +46,16 @@ app.use((req, res, next) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error("Server error:", getErrorSummary(err));
+  logFailure("server_handler", err);
   res.status(500).json({ error: "Internal Server Error" });
 });
 
 // Start server
-const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+if (require.main === module) {
+  const port = process.env.PORT || 3001;
+  app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+  });
+}
+
+module.exports = app;

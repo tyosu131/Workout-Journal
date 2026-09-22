@@ -19,3 +19,13 @@ variable "region" {
     error_message = "This import baseline is intentionally limited to region asia-northeast1."
   }
 }
+variable "monitoring_notification_email" {
+  description = "Human-supplied alert destination. Never commit its value; the email channel persists it in Terraform state."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", var.monitoring_notification_email))
+    error_message = "Supply a non-empty email address without whitespace or newlines."
+  }
+}
