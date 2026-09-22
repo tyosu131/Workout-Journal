@@ -9,7 +9,7 @@ Every claim below is labelled as one of the following:
 - **Current / Implemented**: confirmed in the current repository code.
 - **Verified Infrastructure Fact**: confirmed by the reviewed Supabase backup, rather than inferred from application code.
 - **Verified Hosted Isolated Fact**: confirmed against the isolated Hosted Supabase verification project; this does not claim production configuration, deployment, or cutover.
-- **Current Production Evidence**: confirmed by the [v1 production release record](./releases/workout-journal-v1.md), including the recorded release artifact, deployed revision pair, production smoke, and cleanup result.
+- **Current Production Evidence**: the current pair and observability evidence are owned by [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure). The [v1 release record](./releases/workout-journal-v1.md) retains the original release artifact, production smoke and cleanup proof.
 - **Current Design Decision**: an explicit current boundary or policy reflected in code and supporting design material.
 - **Future Direction**: a proposed next step, not an implemented capability.
 - **Open Question**: not verified from this repository, the reviewed backup, or the isolated Hosted evidence, as applicable.
@@ -55,7 +55,7 @@ Every claim below is labelled as one of the following:
 | Authentication and user isolation | **Current / Implemented** | Protected note and weekly-summary paths extract a Bearer token, verify the backend JWT, and scope note/tag database queries by the verified user ID. |
 | Secret management | **Current / Implemented** | Backend Supabase credentials and `JWT_SECRET` are server-only runtime values. The deployment contract injects secret values from Secret Manager; browser-visible configuration is limited to the two publishable Supabase values used for password recovery. |
 | Sensitive logging | **Current / Implemented** | Backend and frontend failure logs use allow-listed summaries rather than tokens, user IDs, profiles, raw URLs/queries, raw Axios objects, or raw Supabase objects. The weekly-summary boundary also excludes prompts, provider response text, and workout payloads. |
-| Logging policy completeness | **Current source / runtime pending** | OBS-B/C adds safe structured Backend failures and Monitoring desired state for Must 5. Deployed log/alert/notification proof is NOT YET; broader tracing/retention policy is separate scope. |
+| Logging policy completeness | **Current / deployed; failure observation pending** | OBS-D2A proves health/probes, uptime and alert configuration. The structured logger is deployed; a safe runtime failure event and Backend incident/email receipt remain NOT YET. Broader tracing/retention policy is separate scope. |
 | Backward compatibility | **Current / Implemented** | Missing `rpe`, `rir`, and `failure` normalize to `null`; old nested sets remain readable. The backend only adds valid effort fields and otherwise keeps the surrounding exercise/set payload shape. |
 | Defensive parsing and validation | **Current / Implemented** | Nested exercises are parsed defensively, numeric metrics require finite values, effort values are range-normalized, and weekly-summary requests and responses are validated before use. |
 | CI verification | **Current / Implemented** | GitHub Actions installs root, frontend, and backend dependencies, then runs frontend lint/build, backend syntax checks, and the root Jest suite on pushes and pull requests. |
@@ -388,7 +388,7 @@ Persisted notes
 
 ### API Status and Open Questions
 
-- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. The exact public Frontend URL is not recorded in repository documentation and remains a separate verified input for the final portfolio README.
+- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. The current public Frontend host and GET `/login` 200 are recorded in OBS-D2A/B; the final portfolio README can use that evidence.
 - **Open Question:** API versioning is not present in the inspected route mounts.
 - **Open Question:** A common error-response schema is not present across the current services.
 - **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
@@ -441,13 +441,13 @@ Persisted notes
 | Frontend and network | **Current / Implemented** | Browser Axios calls same-origin `/api/*`. The proxy times out Backend calls after 30 seconds, returning sanitized `504`; other Backend network failures return sanitized `502`. Frontend error logs use allow-listed summaries. | Network failures are not retried. |
 | Authentication and token refresh | **Current / Implemented** | A `401` can trigger one retry for the original request after refresh; refresh failures or an exhausted module-level refresh-attempt limit remove the local token. AuthContext redirects to login when no token exists and logs out after failed refresh during session lookup. | No server-side revocation, rotation, or invalidation mechanism is confirmed; see [Authentication and Token Lifecycle](#authentication-and-token-lifecycle). |
 | Request validation | **Current / Implemented** | Auth handlers, tag handlers, and the weekly-summary validator return `400` for selected invalid inputs. Invalid weekly-summary range or raw-note-content fields do not reach the provider boundary. | Notes date/range values do not have a dedicated service-side format validator; see [Request Validation](#request-validation). |
-| Note and tag persistence | **Current source / runtime pending** | Note and tag handlers catch Supabase errors, emit safe structured failure events and return fixed public `500` messages. Note saving remains one normalized-payload upsert. | OBS-B/C removes internal message details; deployed behavior is not yet verified. Tag deletion still performs two writes without a visible transaction; see [Partial Failure and Consistency Risks](#partial-failure-and-consistency-risks). |
+| Note and tag persistence | **Current / deployed; failure observation pending** | Note and tag handlers catch Supabase errors, emit safe structured failure events and return fixed public `500` messages. Note saving remains one normalized-payload upsert. | OBS-B/C removes internal message details and is deployed; a structured runtime failure event remains NOT YET. Tag deletion still performs two writes without a visible transaction; see [Partial Failure and Consistency Risks](#partial-failure-and-consistency-risks). |
 | Malformed historical exercise data | **Current / Implemented** | Backend save normalization accepts an array or JSON string, converts invalid or non-array exercise input to an empty array, and omits invalid optional effort values. Shared analytics normalization likewise treats missing or invalid numeric values as unavailable. | A malformed exercise payload submitted to save can be serialized as `[]`; no rejected-payload response or original-payload preservation is implemented at that boundary. |
 | Deterministic analytics | **Current / Implemented** | Numeric derivation requires finite values; missing effort is unknown, and sparse or empty range data renders data-quality or unknown states rather than an effort conclusion. | The Analytics page reports a range-load error, but no separate diagnostics distinguish fetch, parsing, and individual metric-derivation failures. |
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
 | Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project and were carried into the v1 production release. Ongoing schema monitoring remains outside the repository evidence; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
-| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | The exact public Frontend URL is not recorded in repository documentation; future candidates still require deployment-time verification. |
+| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | The current public Frontend host is recorded in OBS-D2A/B; future candidates still require deployment-time verification. |
 
 ### Current Recovery Behavior
 
@@ -493,7 +493,7 @@ Persisted notes
 - **Verified Hosted Isolated Fact:** The composite daily-note key, [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end behavior passed in the isolated Hosted project; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
 - **Current Production Evidence:** Legacy test data was not imported. The v1 production release used the approved clean-start data policy.
 - **Current Production Evidence:** Production configuration, final release verification, deployment, major-workflow smoke, and cleanup are complete for v1; see the [v1 production release record](./releases/workout-journal-v1.md).
-- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. The exact public Frontend URL still requires verified evidence before it is added to the portfolio README.
+- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. OBS-D2A/B supplies the current public Frontend host and GET `/login` 200 evidence for the portfolio README.
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
 - **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
@@ -506,7 +506,7 @@ Persisted notes
 | --- | --- | --- | --- |
 | Express route activity | **Current Design Decision** | Raw request URLs and queries are not logged. | Structured route metrics and correlation IDs remain post-v1. |
 | Configuration presence | **Current / Implemented** | Runtime configuration is consumed without logging values. | This is not secret rotation or production health monitoring. |
-| Backend service failures | **Current source / runtime pending** | HTTP 5xx boundaries use one JSON `server_failure` event on stderr, fixed operation names, finite error names and integer status 400–599. | Actual deployed JSON ingestion and notification receipt remain NOT YET. Expected token rejection is not a server failure. |
+| Backend service failures | **Current / deployed; failure observation pending** | HTTP 5xx boundaries use one JSON `server_failure` event on stderr, fixed operation names, finite error names and integer status 400–599. | OBS-D2A found 0 natural server_failure events; runtime event proof and Backend incident/email receipt remain NOT YET. Expected token rejection is not a server failure. |
 | Frontend diagnostics | **Current / Implemented** | Selected failures log allow-listed name/code/status summaries. | Client logs are not a production monitoring system. |
 | Weekly-summary boundary | **Current / Implemented** | The service avoids logging prompt messages, provider-response text, tokens, workout payloads, and raw errors. | The boundary is local and mocked, so it does not demonstrate production provider monitoring. |
 | CI verification output | **Current / Implemented** | GitHub Actions emits build, lint, backend syntax, and Jest output on push and pull request. | CI output is pre-merge verification, not runtime application observability. |
@@ -517,23 +517,28 @@ Persisted notes
 **Current / Implemented:** Backend logging excludes raw request URLs/queries, Authorization values, JWTs, emails, user IDs, profiles, raw Supabase errors, and secret/config values. OBS-B/C caught failures use finite allow-listed `name` values and optional integer
 `status` 400–599; arbitrary `code`, message, stack and dependency objects are omitted.
 Eight internal-message 500 responses now use fixed public messages. This is source
-implementation/offline evidence; the deployed logging change is not yet proven.
+implementation/offline evidence, with deployment established by OBS-D2A; zero
+natural events do not prove runtime ingestion or schema safety.
 
 **Current / Implemented:** Frontend API and feature failure logs retain their existing name/code/status summaries instead of raw Axios response data or raw error objects. OBS-B/C changes only the Backend summary to finite values and omits code. Token utilities do not log token values or presence.
 
 **Current Design Decision:** The weekly-summary request validator rejects named raw-note-content fields, and its service boundary does not log prompt messages, provider response text, tokens, or workout payloads. This narrow boundary does not establish a repository-wide logging policy.
 
-**Current / runtime pending:** Cloud Run collects container stdout/stderr. The OBS-B/C runbook defines safe failure inspection; deployed structured-event ingestion and leak inspection remain unverified. A broader access/retention/audit policy is outside this implementation.
+**Current / deployed; failure observation pending:** Cloud Run collects container stdout/stderr. OBS-D2A found zero natural structured failure events in the current Backend revision. The runbook defines safe failure inspection; actual structured-event ingestion/schema proof remains NOT YET. A broader access/retention/audit policy is outside this implementation.
 
-### Missing Production Signals
+### Production Signals and Remaining Runtime Evidence
 
-**Current source / runtime pending:** OBS-B/C implements process-only Backend
-`GET`/`HEAD /health`, HTTP startup/liveness in CD, safe structured failure logs,
-Frontend `/login` uptime, and Backend built-in 5xx alerting. OBS-A verified that
-Cloud Run request metrics and Monitoring/Logging APIs exist; no Monitoring
-resources are applied by OBS-B/C. Health/probe/log/uptime/notification runtime proof
-remains NOT YET. Correlation IDs, tracing, dashboards and a broader retention/audit
-policy are not added to Must 5 by this implementation.
+**Current / runtime verified:** [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
+records Backend GET `/health` 200, exact HTTP startup/liveness probes, retained
+Frontend TCP startup, three-location Frontend uptime PASS, and applied/read-back
+Monitoring configuration. Current production is `cd-35675050740-1`, both services
+at 100%. Terraform owns 42 resources with no semantic drift; Must 3 is Closed.
+The Backend 5xx policy covers all Backend revisions, including tagged zero-traffic
+candidates. The channel is enabled and both policies are wired to it; no active
+incident was observed. Must 5 remains Open only for safe structured failure
+observation in Cloud Logging and Backend alert incident/email receipt. The
+inspection/recovery procedure is implemented. Correlation IDs, tracing, dashboards
+and broader retention/audit policy are not additional Must 5 gaps.
 
 **Current / Implemented:** Analytics request IDs exist only as in-browser stale-update guards. They do not create backend request correlation or tracing.
 
@@ -543,7 +548,7 @@ policy are not added to Must 5 by this implementation.
 
 ### Alerting Boundary
 
-**Current source / runtime pending:** The approved minimal policies are sustained
+**Current / configuration PROVEN:** The applied/read-back policies are sustained
 Frontend uptime failure (two checkers) and two Backend 5xx in a five-minute
 aggregate, retested for 60 seconds. The Backend service filter includes tagged 0%
 candidate requests. Structured operation logs support diagnosis; no custom
@@ -554,7 +559,7 @@ remain Future Direction, not additional Must 5 acceptance conditions.
 ### Operational Open Questions
 
 - **Current Design Decision:** Frontend and Backend run as separate Cloud Run services built from repository Dockerfiles.
-- **Current / runtime pending:** Verify safe Cloud Run log ingestion, health/probes, uptime/alert behavior and Human notification receipt using the [Observability runbook](./cloud-run-deployment-runbook.md#observability).
+- **Current / remaining runtime proof:** Observe a safe structured failure in Cloud Logging and prove the Backend alert incident/email receipt under the separate Human Gate in the [Observability runbook](./cloud-run-deployment-runbook.md#observability). Health/probes, uptime and alert configuration are already PROVEN.
 - **Current Design Decision:** Terraform owns the approved email channel/policies; Human owns the destination, apply, incident response and production recovery approval. No automatic rollback is added.
 - **Open Question:** Broader log retention/access, escalation, secret rotation and backup/restore policy remain separate scope.
 - **Open Question:** How will the applied new-project schema, RLS configuration, and daily-note key be monitored and verified over time?
@@ -581,8 +586,8 @@ remain Future Direction, not additional Must 5 acceptance conditions.
 **Future Direction:** The completed v1 production release is not reopened. Prioritize only work required by the [Portfolio Finish Completion Contract](./portfolio-completion-contract.md) or a separately approved product task:
 
 1. Preserve the separate [P2A/P2B Must 2 proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) and [C4D automatic delivery closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure); Must 2 and Must 4 are Closed.
-2. Preserve the approved Terraform/CD ownership boundary and keyless WIF foundation; Monitoring apply/runtime evidence remains for Must 3.
-3. Obtain Human-gated runtime evidence for OBS-B/C health/probes/logging, uptime/alerts and notification receipt. Must 5 remains Open.
+2. Preserve the approved Terraform/CD ownership boundary and keyless WIF foundation; Must 3 is Closed by OBS-D1/D2A/B Monitoring apply/read-back/no-drift evidence.
+3. Obtain separately Human-gated safe structured failure observation and Backend alert incident/email receipt. These are the remaining Must 5 runtime gaps.
 4. Add static security scanning and dependency/security automation.
 5. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
 6. Define common API error envelopes only if a separate accepted scope requires them.

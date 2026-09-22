@@ -2,16 +2,195 @@
 
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
-Current release closure: [C4D automatic runtime verification](#cd-c4d-automatic-delivery-runtime-verification).
+Current runtime and infrastructure evidence: [OBS-D2A / OBS-D2B closure](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 **Must 4 Closed; C4C remediation runtime PROVEN.** Automatic run `35573153822`
 passed E2E 8/8, PROVEN_ZERO cleanup, verify, Human production approval and
-promotion/post-deploy verification. Current pair `cd-35573153822-1` is 100% each.
+promotion/post-deploy verification at C4D. Current pair is `cd-35675050740-1`,
+100% each; Must 3 is Closed and Must 5 remains Open under OBS-D2A/B.
 C3 runtime chain remains CLOSED. [C4C remediation](#cd-c4c-nested-e2e-authority-propagation)
 and [C4B offline validation](#cd-c4b-automatic-trigger-offline-validation) remain Historical phase records.
 Dated source-validation sections retain their
 phase-local NOT-YET results and do not override the latest runtime record.
 
+## OBS-D2A post-apply runtime evidence and OBS-D2B closure
+
+**Current evidence owner: OBS-D2A, 2026-09-22, final read-back at
+02:44:39 UTC.** OBS-D2B records the accepted evidence below and closes the
+remaining Must 3 documentation gap. This documentation phase performs only
+local edits and offline validation; it does not repeat Terraform operations,
+cloud reads, deployment, alert tests or notification tests. The earlier OBS-B/C,
+C3 and C4 records retain their phase-local evidence and limitations.
+
+### Authority and production identity
+
+| Evidence | Accepted value |
+| --- | --- |
+| Main / HEAD / origin/main | `c7848a566aeff35f7424f745086b3c969dd3f881`; clean at OBS-D2A |
+| Required CI | [35674841432](https://github.com/tyosu131/Workout-Journal/actions/runs/35674841432), SUCCESS, attempt 1 |
+| Automatic CD | [35675050740](https://github.com/tyosu131/Workout-Journal/actions/runs/35675050740), `workflow_run`, SUCCESS, attempt 1 |
+| Production candidate ID | `cd-35675050740-1` |
+| Backend production revision / traffic | `workout-journal-backend-cd-35675050740-1` / 100% |
+| Frontend production revision / traffic | `workout-journal-frontend-cd-35675050740-1` / 100% |
+| Build | `bdf6b3ef-00b3-4f2d-9577-1e5c97782f48` |
+| Backend digest | `sha256:f0af556c30f5dacc09d9f2aafd736f72ce40bf44aaf6455666ebe18ebb61b374` |
+| Frontend digest | `sha256:f90a65723fc497036007ce8b6bd82d0996a2c5933a78ead738c51eb3b033543c` |
+
+Main, CI/CD and the 100% production pair were freshly verified in OBS-D2A;
+Build/digest identity is supplied by the Human for OBS-D2B. C4D's
+`cd-35573153822-1` remains Historical previous-production and Must 4 proof,
+not the current pair. No new production approval is claimed by this docs pass.
+
+### Terraform apply, state and ownership
+
+The Human applied the reviewed OBS-D1 saved plan from exact merged main:
+**1 imported / 4 added / 0 changed / 0 destroyed**. OBS-D2A freshly pulled
+remote state and matched the GCS object: **42 managed resources / 42 instances**,
+serial **10** (advanced from pre-apply 9), lineage
+`66945691-ab92-e20a-4bc1-badb121e7ab4`, generation **`1790044105183280`**,
+last modified `2026-09-22T02:28:25.195Z`. All prior 37 resources remained;
+there were no unexpected resources. State generation and serial were unchanged
+by OBS-D2A verification.
+
+| Added state address | Actual resource ID / ownership |
+| --- | --- |
+| `google_project_service.monitoring` | `workout-journal-506909/monitoring.googleapis.com`; adoption/import of an already-enabled API |
+| `google_monitoring_notification_channel.email` | `projects/workout-journal-506909/notificationChannels/15537125297799228363` |
+| `google_monitoring_uptime_check_config.frontend` | `projects/workout-journal-506909/uptimeCheckConfigs/workout-journal-frontend-availability-7P9o3fVTdC0` |
+| `google_monitoring_alert_policy.frontend_availability` | `projects/workout-journal-506909/alertPolicies/4008158550272286687` |
+| `google_monitoring_alert_policy.backend_server_errors` | `projects/workout-journal-506909/alertPolicies/16194106629321602210` |
+
+`monitoring.googleapis.com` is ENABLED and Terraform-owned by adoption, not a
+newly created API. The reviewed import action was no-op; Service Usage change
+Audit Logs in the inspected apply window contained zero events.
+`logging.googleapis.com` remains ENABLED / externally owned. Cloud Run services,
+revisions, probes, images, tags and traffic remain **CD-owned**; there is no
+`google_cloud_run_v2_service` in state and no ownership conflict.
+
+A normal post-apply plan with **refresh enabled and locking enabled** returned
+**0 add / 0 change / 0 destroy, exit 0**. Detailed machine JSON showed all
+**42 resources `actions=["no-op"]`**. The four Monitoring resources had only
+`user_labels` representation differences during refresh; each planned action
+remained no-op. **Semantic drift: NONE.** No change plan was saved or applied;
+the temporary no-op archive used for JSON inspection was removed. Terraform
+monitoring desired/actual agreement and post-apply no-drift are **PROVEN**.
+
+### Monitoring configuration and uptime runtime
+
+Fresh API inventory: **1 uptime check, 2 alert policies, 1 notification channel**.
+The channel above has display name `Workout Journal Alerts`, type `email`,
+`enabled=true`, and **destination match: YES** against the privately supplied
+execution variable. `verificationStatus` was absent from the API response and
+is not treated as a failure. Both policies reference this exact channel.
+The private destination is never reproduced here. Its presence in Terraform
+state is the explicitly accepted personal-metadata design; it is not a secret
+payload and does not relax the exclusion of credentials or Secret Manager values.
+
+The managed uptime check uses `uptime_url`, host
+`workout-journal-frontend-cpbzb7lqza-an.a.run.app`, **HTTPS / port 443 / GET
+`/login` / 200 only / SSL validation true / period 300s / timeout 10s / USA**.
+A direct GET `/login` returned 200. Monitoring query
+`monitoring.googleapis.com/uptime_check/check_passed`, filtered by the actual
+managed `check_id` and `resource.type="uptime_url"`, inspected
+**2026-09-22 02:20:57–02:40:57 UTC**: **36 samples, all boolean true**.
+
+| Emitted checker location | Latest observed PASS on 2026-09-22 (UTC) |
+| --- | --- |
+| `usa-iowa` | 02:38:10 |
+| `usa-oregon` | 02:40:40 |
+| `usa-virginia` | 02:38:30 |
+
+All three currently emitted USA locations had recent PASS evidence; no polling
+extension was needed. **Frontend availability monitoring: PROVEN.**
+
+| Policy read-back | Frontend availability | Backend server errors |
+| --- | --- | --- |
+| Enabled / severity | true / ERROR | true / WARNING |
+| Metric | `monitoring.googleapis.com/uptime_check/check_passed` | `run.googleapis.com/request_count` |
+| Exact resource scope | `uptime_url`, project `workout-journal-506909`, managed `check_id=workout-journal-frontend-availability-7P9o3fVTdC0` | `cloud_run_revision`, project `workout-journal-506909`, location `asia-northeast1`, service `workout-journal-backend`, `response_code_class=5xx` |
+| Aggregation | 600s / `ALIGN_NEXT_OLDER` / `REDUCE_COUNT_FALSE` | 300s / `ALIGN_SUM` / `REDUCE_SUM` |
+| Condition | `COMPARISON_GT` 1 / duration 300s | `COMPARISON_GT` 1 / duration 60s |
+| Missing data | INACTIVE | INACTIVE |
+| Managed notification channel binding | YES | YES |
+| Active incident at read-back | NONE | NONE |
+
+The Backend filter includes **all Backend revisions, including tagged
+zero-traffic candidates**. It is not production-only. Project-wide active
+incident count was zero. Healthy-state configuration and wiring do not prove
+incident creation or notification delivery.
+
+### Application health and remaining Must 5 evidence
+
+Backend production `GET /health` returned **200**, with exact body
+`{"status":"ok"}`. Both HTTP probes target `/health` on port 8080:
+startup **delay 0 / timeout 2 / period 5 / failureThreshold 24**, liveness
+**delay 0 / timeout 2 / period 30 / failureThreshold 3**. API-omitted initial
+delay uses the default 0. Frontend retains its existing TCP startup on port
+8080 (timeout 240 / period 240 / failureThreshold 1), equal to the prior revision.
+
+| Must 5 requirement | Current classification |
+| --- | --- |
+| Application/service health inspection | PROVEN |
+| Cloud Run health probe | PROVEN |
+| Sanitized structured failure logging | Source implementation and deployment PROVEN; Cloud Logging structured failure event NOT YET |
+| Frontend availability monitoring | PROVEN, three-location uptime PASS |
+| Actionable server-side failure alert | Configuration PROVEN; end-to-end Backend incident/notification NOT YET |
+| Inspection/recovery procedure | IMPLEMENTED in the [runbook](./cloud-run-deployment-runbook.md#observability) |
+
+Cloud Logging inspection of the current Backend revision from creation
+`2026-09-22T01:20:55.067485Z` through `02:40:24Z` found **0** natural
+`jsonPayload.event="server_failure"` events. No private payload was printed;
+zero events do not establish runtime ingestion or schema proof. A future observed
+event must contain only `severity`, `event`, `operation`, `error.name`, and
+optional `error.status`, with the finite values defined by the deployed logger.
+
+**Must 3: Closed. Remaining gap: None.** Existing Artifact Registry, Service
+Accounts, IAM, WIF and Secret Manager metadata evidence plus OBS-D1/D2A now
+satisfies the exact remaining Monitoring scope; this durable record closes its
+documentation requirement. **Must 5: Open**, with exactly two runtime gaps:
+
+1. Observe a safe structured `server_failure` event in Cloud Logging.
+2. Prove a Backend alert incident and actual notification email receipt.
+
+The email channel and policy wiring are PROVEN; actual email receipt is **NOT
+YET**. No alert/failure injection or notification test occurred in OBS-D2A/B.
+The later separate Human Gate and fresh-candidate preconditions are defined in
+[Observability](./cloud-run-deployment-runbook.md#observability). Merging this
+documentation later is expected to trigger automatic CD after successful main
+CI; CD trigger rules are unchanged and no dispatch or approval occurs in OBS-D2B.
+
+### Sensitive evidence retention
+
+`/private/tmp/obs-d1-fresh-wre47nvq` remains retained. It contains the actual
+notification destination in saved plan/JSON and must not be copied into docs,
+logs or review output. Delete it only after this durable evidence is merged
+**and** local saved-plan re-read is no longer required for audit. OBS-D2B neither
+reads private values from that directory nor deletes it. The durable evidence
+above does not require access to those private values.
+
+### OBS-D2B offline documentation validation
+
+| Closure check | Result |
+| --- | --- |
+| `git diff --check` | PASS |
+| Existing relative-link validation | 224 PASS: 207 outgoing + 17 inbound |
+| Existing anchor validation | 139 PASS |
+| Existing added-content sensitive-pattern validation | PASS; 0 sensitive-pattern hits, 0 personal email addresses added |
+| Current/Historical review | 34 local technical Markdown documents searched; 40 residual legacy-value matches classified as Historical; stale Current claims 0 |
+| Completion and ownership preservation | Original Must requirements unchanged; current inventory exactly matches 42 source resource addresses; all prior 37 table rows retained |
+| Historical proof preservation | C4D literal evidence identities retained; P2B and R1–R7 proof bodies unchanged; deployment/rollback command blocks unchanged |
+| Scope | 10 documentation files only; application, Terraform desired state, workflow/CD and tests unchanged; no staged files |
+
+These are local documentation checks, not fresh runtime verification or the
+separate Fresh Result Audit. OBS-D2B performs no Terraform plan/apply/import,
+GCP/runtime mutation, alert/failure/notification test, dispatch or production
+approval. Commit/push/PR are NOT EXECUTED. Handoff: **READY_FOR_FRESH_RESULT_AUDIT**.
+
 ## OBS-B/C health and monitoring implementation
+
+**Historical OBS-B/C source/offline checkpoint**, superseded for current runtime
+by [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
+All NOT-YET statuses, state counts and production identities in this section
+belong to the source-validation phase.
 
 2026-09-22 source/offline verification, based on main
 `518104a5c5c788b1f1e73de3e77b59024870d2a3`, branch
@@ -77,23 +256,22 @@ Plan SHA-256: `085d483ab1c81162234ce12f2ed7b5a5119f6882f629463338ba0884f5387a9c`
 Refresh reported Artifact Registry `update_time` and three existing project IAM
 member `etag` changes. Both fields were independently verified in provider schema
 as computed=true, optional=false, required=false; all four planned actions are
-no-op. No unrelated semantic drift was found. Remote state stays **37 resources,
+no-op. No unrelated semantic drift was found. At OBS-B/C, remote state stayed **37 resources,
 serial 9**, lineage `66945691-ab92-e20a-4bc1-badb121e7ab4`, GCS generation
 `1789947297225011`. Repeated pulls differed only in check_results ordering; the
-state object was last updated `2026-09-20T23:34:57Z`, before this plan. The later
-approved target is 42 resources, not the current state.
+state object was last updated `2026-09-20T23:34:57Z`, before this plan. The then-approved target was 42 resources; OBS-D1/D2A later applied and verified it.
 
-Monitoring is **NOT APPLIED**. Deployed health/probes/structured logs, uptime,
-alert runtime and notification receipt are **NOT YET**. Must 3 remains **In progress**;
-Must 5 remains **Open**. C4D's **Must 4 Closed**, current production
+At OBS-B/C, Monitoring was **NOT APPLIED**. Deployed health/probes/structured logs, uptime,
+alert runtime and notification receipt were **NOT YET**. Must 3 was **In progress**;
+Must 5 remained **Open**. C4D's **Must 4 Closed**, then-current production
 `cd-35573153822-1`, and Historical C3/C4 evidence are preserved. A fresh merged-source
 plan with the privately supplied real destination, exact Human apply approval,
-separately approved deployment and notification receipt evidence are still needed.
+separately approved deployment and notification receipt evidence were still needed at that checkpoint.
 No runtime mutation, apply, dispatch, production approval, secret payload access,
 Supabase mutation, commit, push or PR occurred in OBS-B/C.
 
 Operational details: [Observability inspection/recovery](./cloud-run-deployment-runbook.md#observability),
-[Terraform state privacy](../infra/terraform/README.md#obs-bc-monitoring-desired-state--not-applied),
+[Terraform state privacy](../infra/terraform/README.md#obs-monitoring-applied-and-runtime-verified),
 and [CD probe provenance](./cd-c1-candidate-delivery.md#obs-bc-probe-rollout-source-contract).
 External behavior was checked against Google's [Cloud Run health checks](https://docs.cloud.google.com/run/docs/configuring/healthchecks),
 [structured logging](https://docs.cloud.google.com/run/docs/logging#write-structured-logs),
@@ -248,8 +426,8 @@ GitHub main / activation read-backs (same SHA / UNCONFIGURED). The
 preserves candidate delivery PASS, C3G promotion FAIL, actual previous-pair
 restoration and post-rollback smoke PASS. **Technical root cause: NOT PROVEN.**
 The original promotion GateError was lost after rollback; that independent Must
-source defect is the sole implementation target. Must 3 stays In progress;
-Must 4 stays Open; production CD stays inactive/fail-closed.
+source defect was the sole C3I implementation target. At that Historical C3I
+checkpoint, Must 3 was In progress, Must 4 Open and production CD inactive/fail-closed.
 
 The [controller](../.github/scripts/cd_release.py) now retains separate allowlisted
 promotion and rollback failure codes/stages in the step summary and a fixed-field
@@ -514,7 +692,7 @@ it does not claim that the separate audit or production runtime verification pas
 ## CD-C3S Least-Privilege IAM Validation
 
 Historical source-validation record. Its 35-resource / apply-NOT-YET statements
-describe C3S before merge and are preserved below. Current state is **37 resources**
+describe C3S before merge and are preserved below. At C3U, state was **37 resources**
 after C3U; remediation is runtime PROVEN and C3V production succeeded. See
 [C3W closure verification](#cd-c3w-runtime-closure-documentation-validation).
 
@@ -752,7 +930,8 @@ or saved; no destructive operation occurred.
 Current residual Pending Evidence is **CLOSED**. Historical scenario **NOT PROVEN**
 and cleanup execution **UNPROVEN** remain unchanged. C3D used no retroactive UUIDv5
 recovery and did not verify C3C runtime. Activation stayed UNCONFIGURED, candidates
-0%, production 100%; Must 3 stays In progress and Must 4 Open.
+0%, production 100%; at that Historical C3D checkpoint, Must 3 was In progress
+and Must 4 Open.
 
 C3E reflects this evidence through documentation only. Validation is limited to
 diff/whitespace checks, local links, Current/Historical/Future consistency and
@@ -1018,7 +1197,7 @@ so unrelated application builds/tests were not repeated.
 The four canonical CD/completion/verification/runbook docs were updated, with minimal
 Current cross-reference corrections in E2E, WIF, recovery and infrastructure docs.
 Historical C3 evidence, P2B/R8 proof scope and 30/35-resource snapshots remain historical.
-Current production remains the C3V pair from prior runtime evidence, Terraform 37,
+At C4B source validation, production remained the C3V pair from prior runtime evidence, Terraform 37,
 C3 runtime chain CLOSED, current authorization defect CLOSED; historical C3N/C3P
 root cause remains STRONGLY_SUPPORTED_NOT_PROVEN and C3G/C3K NOT PROVEN.
 
@@ -1131,6 +1310,10 @@ must create fresh main CI, automatic CD and a new candidate ID. C4C performed no
 commit/push/PR, dispatch, rerun, approval, secret payload access or runtime mutation.
 
 ## CD-C4D Automatic Delivery Runtime Verification
+
+**Historical C4D proof, 2026-09-21.** Production, Terraform and Must status
+statements in this section describe that checkpoint. Current production and
+Monitoring evidence are owned by [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 
 Recorded 2026-09-21. **Must 4 Closed; remaining gap None.** This is fresh read-only
 verification of an already successful release, followed by documentation closure.

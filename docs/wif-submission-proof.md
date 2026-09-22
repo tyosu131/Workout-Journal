@@ -19,7 +19,7 @@ secret payload consumption ran in R8. C3V later completed production delivery;
 current `CD_C1_ACTIVATION` is UNCONFIGURED. R9 added no runtime execution or authorization.
 
 Status: **PE-P1C-01B Closed by CD-B2 runtime proof on 2026-09-06; Must 4 Closed;
-Must 3 In progress; WIF `ACTIVE` / `disabled = false`.** C3 runtime chain remains
+Must 3 Closed by OBS-D2A/B; WIF `ACTIVE` / `disabled = false`.** C3 runtime chain remains
 CLOSED. [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
 records automatic `workflow_run` `35573153822`: Deploy/E2E WIF, E2E 8/8, cleanup
 PROVEN_ZERO, Human production approval and complete delivery **PROVEN**.
@@ -48,7 +48,8 @@ exact main SHA -> GitHub OIDC / WIF -> Deploy SA
 
 The historical CD-A submission proof was not full CD: it had no automatic trigger,
 candidate deployment, E2E job, Environment approval job, promotion, post-deploy
-smoke or rollback automation. Current delivery behavior is owned by the C3V record.
+smoke or rollback automation. Current production evidence is owned by [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure); the current delivery
+contract is in the [runbook](./cloud-run-deployment-runbook.md).
 The required [CI workflow](../.github/workflows/ci.yml) was unchanged by CD-A.
 
 ## CD-B2 verified runtime proof
@@ -105,10 +106,11 @@ and production application state were not changed. Publishing this documentation
 is a separate Git commit/push/PR operation; it does not repeat provider activation,
 repository-variable updates, workflow dispatch, Build submission or Cloud Run operations.
 
-PE-P1C-01B is Closed. Must 3 stays In progress: monitoring and alert resources
-remain unimplemented, deferred to Must 5 design in the
-[ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix).
-R8 adds isolated WIF evidence without closing that remaining scope.
+PE-P1C-01B remains Closed. At CD-B2, Must 3 was In progress with Monitoring
+resources deferred. [OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) now closes that final resource scope:
+42-resource applied state, Monitoring read-back and no-drift PROVEN. The
+[ownership matrix](./portfolio-infra-ownership.md#approved-ownership-matrix)
+keeps Cloud Run CD-owned. R8's isolated WIF evidence is unchanged.
 At CD-B2 closure, Must 4 stayed Open: automatic main-merge + CI-success delivery,
 candidate deployment and exact pairing, E2E integration, runtime Environment
 approval, promotion, post-deploy verification and rollback/failure behavior were

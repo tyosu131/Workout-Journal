@@ -3,13 +3,15 @@
 This runbook starts at the Human Gate. It does not authorize resource creation or deployment by itself.
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
-existing-service candidate/E2E/approval/promotion path. The latest
-[C4D automatic runtime closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
-records successful automatic release `35573153822`: current production pair
-`cd-35573153822-1` at 100% each, exact digests/pairing, E2E 8/8 PASS, cleanup
-PROVEN_ZERO, Human production approval and post-deploy verification PASS.
-Must 4 is Closed. C3 runtime chain remains CLOSED; the previous C3V pair
-`cd-35545739898-1` and failed C4B pair `cd-35557989507-1` are 0% on both services.
+existing-service candidate/E2E/approval/promotion path. [OBS-D2A](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
+records current production `cd-35675050740-1`, both services at 100%, after
+successful main CI `35674841432` and automatic CD `35675050740` (attempt 1).
+Backend health/probes and Frontend uptime are PROVEN; Must 3 is Closed and
+Must 5 remains Open for structured failure runtime observation and Backend
+incident/notification receipt. [C4D automatic delivery proof](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+retains the Historical `cd-35573153822-1` release, E2E 8/8 PASS, cleanup
+PROVEN_ZERO, Human approval and post-deploy PASS that closed Must 4.
+C3 runtime chain remains CLOSED.
 The [C4B failure/C4C remediation](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
 is Historical; do not rerun or reuse its failed candidate identity.
 `CD_C1_ACTIVATION` remains UNCONFIGURED and gates manual release only.
@@ -314,16 +316,19 @@ After promotion, perform the required production browser smoke for the major v1 
 
 ## Observability
 
-**OBS-B/C source implemented / offline verified; runtime NOT YET.** Monitoring is
-NOT APPLIED. The OBS-A runtime baseline still has 37 Terraform resources, default
-TCP startup probes and production pair `cd-35573153822-1`; its Backend `/health`
-returns 404. Do not report the source contracts below as deployed evidence.
+**Current: OBS-D2A runtime read-back PROVEN; Must 3 Closed, Must 5 Open.**
+[Accepted evidence and exact identities](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) record 42 Terraform resources,
+Monitoring API adoption, one uptime check, two policies and one enabled/wired
+email channel, plus a no-drift post-apply plan. Current production is
+`cd-35675050740-1`, both services at 100%. Backend `GET /health` returned 200
+with exact body `{"status":"ok"}`; Frontend `/login` returned 200 and all three
+USA uptime locations emitted PASS. The OBS-A baseline of 37 resources, TCP
+Backend startup and `/health` 404 is Historical previous-production evidence.
 
-After a separately approved merge, automatic CD builds the health endpoint and
-probe configuration into the same new candidate revision. Backend `GET /health`
-returns exactly `{"status":"ok"}` with status 200; HEAD returns 200 without a body.
-POST/PUT/PATCH/DELETE return 405 before body/cookie parsing and application routes.
-It needs no auth and makes no Supabase call. Frontend availability uses `/login`.
+The deployed source also defines HEAD `/health` 200 without a body and
+POST/PUT/PATCH/DELETE 405 before body/cookie parsing and application routes.
+These method/isolation contracts retain OBS-B/C offline proof; OBS-D2A directly
+checked GET only. Health needs no auth and makes no Supabase call.
 
 Backend HTTP startup and liveness both use `/health`, port 8080, initial delay 0,
 timeout 2s. Startup uses period 5s / failure threshold 24; liveness uses period
@@ -340,7 +345,7 @@ Inspection and diagnosis:
    can be a 0% candidate. Confirm Frontend's recorded Backend tagged URL and the
    immutable Backend tag target. Inspect revision Ready status and container
    startup/liveness settings, without printing secret environment values.
-2. Check Frontend `/login` and, once OBS is deployed, Backend `/health`. In
+2. Check Frontend `/login` and Backend `/health`. In
    Monitoring, inspect the Frontend uptime check and alert incident timeline.
    The check is HTTPS/200-only every 300s, with 10s timeout and three USA checkers.
    Two failed checkers sustained for 300s trigger availability alerting; missing
@@ -368,15 +373,31 @@ Inspection and diagnosis:
    post-rollback smoke and record the restored pair, operator, time and result.
    Alerts never change traffic automatically.
 
-Runtime acceptance is separate from configuration inspection. Require applied
-resource read-back, uptime PASS samples, healthy new revision probes, safe JSON
-ingestion, and Human-confirmed email receipt. Record channel/incident IDs and
+Runtime acceptance is separate from configuration inspection. OBS-D2A proves
+applied resource read-back, uptime PASS and healthy revision probes. The deployed
+structured logger had zero natural `server_failure` events; runtime event proof
+is NOT YET. The remaining Must 5 evidence is a safe structured failure in Cloud
+Logging and a Backend alert incident with Human-confirmed email receipt.
+Channel configuration and policy wiring are PROVEN; receipt is NOT YET.
+Record channel/incident IDs and
 receipt time, not the private destination. Cloud Monitoring has no generic email
 test-send option; see [official notification testing](https://docs.cloud.google.com/monitoring/support/notification-options#test-notification-channel).
 A controlled failure test is **NOT EXECUTED** and requires a later explicit Human
 Gate naming the exact fresh Backend candidate revision and immutable tagged URL.
-Read back that the candidate still has 0% production traffic and the production
-pair is unchanged before sending anything. Permit **at most two requests total,
+A later merge of these documentation changes is expected to trigger automatic CD
+after successful main CI, creating a fresh candidate from the same
+observability-capable application source plus docs changes. Do not change CD
+trigger rules to suppress that run. Before seeking the later alert-proof Human
+Gate, prove all of the following from that fresh run:
+
+- Candidate source is current merged main.
+- Backend candidate has 0% production traffic, with its exact immutable tagged URL.
+- Production Backend is a different revision at 100%; the production pair is unchanged.
+- Candidate `/health` is 200, candidate E2E is PASS and verify-candidate is PASS.
+- Production approval is WAITING.
+
+These checks do not authorize requests by themselves. After the separate Human
+Gate, re-read identity and traffic before sending anything. Permit **at most two requests total,
 with no retries**, within one minute: POST malformed JSON (for example `{`) with
 `Content-Type: application/json` to `/not-an-application-route` on that exact
 candidate URL. Do not use `/health`, the stable production URL, credentials or

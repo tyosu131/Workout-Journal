@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: current state 37, post-plan 0/0/0, authorization defect CLOSED. C3V manual release and C4D automatic release succeeded; Must 3 remains In progress, while Must 4 is Closed
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: then-state 37, post-plan 0/0/0, authorization defect CLOSED. [OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) completes Monitoring adoption/apply/read-back: current state 42, serial 10, no-drift 0/0/0. Must 3 and Must 4 are Closed; Must 5 remains Open
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -20,10 +20,11 @@ verified; R6's fixed-path failure remains Historical. R8 proves only the specifi
 Deploy positive, same-STS-token Deploy-to-E2E denial and E2E positive paths.
 The [C3U/C3V closure](./cd-c1-candidate-delivery.md#c3u-and-c3v-runtime-closure)
 now proves the manually dispatched production path; C3 runtime chain is CLOSED.
-Must 3 stays In progress; Must 4 is Closed by [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
+Must 3 is Closed by [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure); Must 4 is Closed by [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
 Automatic run `35573153822` proves the fixed E2E path (8/8 PASS, PROVEN_ZERO cleanup),
-verify, Human production approval and promotion/post-deploy SUCCESS. Current pair
-`cd-35573153822-1` is 100% on both services; C3V and failed C4B pairs are 0%.
+verify, Human production approval and promotion/post-deploy SUCCESS. Its pair
+`cd-35573153822-1` is Historical previous-production evidence. Current pair
+`cd-35675050740-1` is 100% on both services under [OBS-D2A](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation) retains
 the earlier failure and now runtime-proven fix. No infrastructure ownership,
 provider condition or IAM change is needed. `CD_C1_ACTIVATION` is UNCONFIGURED and
@@ -72,23 +73,22 @@ Terraform and CD must not compete for the same mutable production state.
 | Compute default Service Account | Do Not Manage | The Service Account body still exists and remains enabled. Its former project-level `roles/editor` grant was removed outside Terraform after the P1C-D dependency audit and a separate P1C-D2 Human Gate; neither the Service Account nor that former binding is Terraform-owned |
 | Legacy Cloud Build Service Account | Do Not Manage | Not an adoption target |
 | Service Account keys and long-lived GCP JSON credentials | Do Not Manage | Keyless federation is required |
-| Monitoring API, uptime, two alert policies and email channel | Terraform Owns / desired state implemented | OBS-B/C source/offline verified; existing Monitoring API imported at later apply; NOT APPLIED, runtime NOT YET |
-| Cloud Run revision health probes | CD Owns | Backend HTTP startup/liveness transition is verified in candidate configuration; no Terraform service body |
-| Logging API | External prerequisite | OBS-A read-back ENABLED; no ownership change |
+| Monitoring API, uptime, two alert policies and email channel | Terraform Owns / applied and verified | OBS-D1/D2A: existing enabled API adopted, four Monitoring resources created/read-back; three-location uptime PASS, both policies wired to the enabled channel; no-drift PASS |
+| Cloud Run revision health probes | CD Owns | OBS-D2A production HTTP startup/liveness read-back PASS; Frontend TCP retained; no Terraform service body |
+| Logging API | External prerequisite | OBS-D2A read-back ENABLED; no ownership change |
 
-Monitoring and alert resources are the concrete remaining Must 3 resource gap
-under the [Completion Contract](./portfolio-completion-contract.md#must-3-infrastructure-as-code--identity).
-OBS-B/C implements that scope. Fresh merged-source plan, Human apply, read-back
-and no-drift remain. Human selected a Terraform-owned email channel: the address
-is supplied through `monitoring_notification_email` with no default and is never
-committed or output. It is personal destination metadata stored in Terraform state,
-an explicitly accepted design; secret payloads remain excluded. Applied state stays
-37 resources until the separately approved one-import/four-add plan produces 42.
-R8 closes the isolated WIF prerequisite only. No new identity/build hardening
-requirement is inferred; automatic default-SA-grant prevention remains the
-Backlog / separate hardening item recorded below.
+Monitoring and alert resources were the final Must 3 resource gap under the
+[Completion Contract](./portfolio-completion-contract.md#must-3-infrastructure-as-code--identity).
+[OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) closes it: reviewed merged-source plan, Human apply,
+API/resource read-back, three-location uptime PASS and no-drift all completed.
+Human selected a Terraform-owned email channel; `monitoring_notification_email`
+has no default and its private value is never committed or output. Personal
+destination metadata persists in state by explicit acceptance; secret payloads
+remain excluded. R8's isolated WIF evidence is preserved. No new identity/build
+hardening requirement is inferred; automatic default-SA-grant prevention remains
+Backlog / separate hardening.
 
-The current remote state contains exactly **37 resources**: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer, five-resource CD-C2A E2E boundary and two-resource C3S Operation IAM remediation applied in C3U. C3U's post-apply plan was 0/0/0; existing project bindings and service-level Developer grants were preserved. CD-C2B's historical 35-resource baseline was no-op. Historical P1C-B added 13 without changing existing resources; CD-B2 applied one Deploy-provider update with a zero-change post-plan. See the [historical activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation). CD-C2C activation is complete; R1's historical read-only plan was No changes / exit 0 with no IAM change in that phase.
+The current remote state contains exactly **42 resources**: the eight-resource P1B foundation, nine-resource P1C-A identity foundation, 13-resource P1C-B operational IAM layer, five-resource CD-C2A E2E boundary, two-resource C3S Operation IAM remediation applied in C3U, and five OBS addresses (one API adoption plus four new Monitoring resources). OBS-D2A verified all 42 as no-op. C3U's historical post-apply plan was 0/0/0; existing project bindings and service-level Developer grants were preserved. CD-C2B's historical 35-resource baseline was no-op. Historical P1C-B added 13 without changing existing resources; CD-B2 applied one Deploy-provider update with a zero-change post-plan. See the [historical activation and computed-drift checks](../infra/terraform/README.md#completed-cd-b2-provider-activation). CD-C2C activation is complete; R1's historical read-only plan was No changes / exit 0 with no IAM change in that phase.
 
 ## CD-owned delivery contract
 
@@ -215,7 +215,8 @@ The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](.
 The production Environment prerequisite and full automatic-delivery path are satisfied:
 C4D passed the fixed E2E/verify path, Human production approval, paired promotion
 and post-deploy verification. Must 4 is Closed with no remaining delivery gap;
-Must 3 monitoring/alert resources and Must 5 Observability remain open work.
+Must 3 is Closed by OBS-D2A/B; Must 5 remains Open for safe structured failure
+observation and Backend incident/notification receipt.
 CD-B2 closed the separate `PE-P1C-01B` Deploy-SA/WIF submission evidence. Historically, P2B did not
 activate the provider, create an Environment, implement CD, promote traffic or
 close Must 4; this subsequent Environment setup does not activate WIF/CD or
@@ -228,8 +229,8 @@ revisions `workout-journal-backend-p2b-081adb25` and
 `candidate-p2b-081adb25`. The Frontend points to the exact Backend tagged URL,
 not the production service URL. At P2B, production remained `00003-luc` / `00003-xar`
 at 100%, with the known-good `candidate-0829-923536` pair intact. C3V subsequently
-promoted `cd-35545739898-1`; C4D now serves `cd-35573153822-1` at 100%, with both
-older production pairs at 0%. These revisions,
+promoted `cd-35545739898-1`; C4D later served `cd-35573153822-1` at 100%.
+OBS-D2A now records `cd-35675050740-1` at 100% on both services. These revisions,
 tags, images and configuration remain outside Terraform ownership; keeping this
 proof pair does not authorize tag reassignment or deletion.
 
@@ -264,7 +265,7 @@ Environment settings and Cloud Run were unchanged; full mutation accounting is
 in the linked evidence record. At CD-B2, production CD was inactive and full CD
 credential delivery remained future work. C3V subsequently verified delivery
 with the separate E2E identity/credential boundary; the Deploy SA still has no
-Secret Manager payload access. Must 3 remains In progress and Must 4 is Closed by
+Secret Manager payload access. Must 3 is Closed by OBS-D2A/B and Must 4 is Closed by
 C4D automatic runtime proof; current manual-release activation is UNCONFIGURED.
 
 Compute default Service Account Editor removal was **not** part of initial creation. The approved boundary required all three gates:

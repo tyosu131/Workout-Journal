@@ -1,11 +1,14 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Current runtime status (C4D, 2026-09-21): **Must 4 Closed; automatic production
-delivery SUCCESS; C4C remediation source and runtime PROVEN**. The current
-production pair is `cd-35573153822-1`, each service at 100%; `CD_C1_ACTIVATION`
-is **UNCONFIGURED**. See the [C4D evidence and requirement mapping](#c4d-automatic-production-delivery-runtime-closure).
-Must 3 remains **In progress** for monitoring/alert resources. C3 runtime chain
-and the authorization defect remain CLOSED; historical root-cause boundaries are unchanged.
+Current runtime status (OBS-D2A, 2026-09-22): **Must 3 Closed; Must 4 Closed;
+Must 5 Open**. Current production is `cd-35675050740-1`, both services at 100%,
+from main `c7848a566aeff35f7424f745086b3c969dd3f881`, required CI `35674841432`
+and automatic CD `35675050740`, each SUCCESS / attempt 1.
+[OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) owns health/probes, Monitoring apply/read-back, uptime PASS
+and 42-resource no-drift evidence. `CD_C1_ACTIVATION` remains UNCONFIGURED.
+C3 runtime chain and the authorization defect remain CLOSED; historical
+root-cause boundaries are unchanged. [C4D](#c4d-automatic-production-delivery-runtime-closure)
+retains the automatic-delivery proof that closed Must 4.
 
 PR #114 → main CI `35572912520` → automatic `workflow_run` CD `35573153822`
 proved exact-source Build/candidates, 8/8 E2E, PROVEN_ZERO cleanup, verify,
@@ -72,8 +75,8 @@ read-back on 2026-09-19 confirmed **UNCONFIGURED**. Both C3A candidates are reta
 at 0%; production Backend `workout-journal-backend-00003-luc` and Frontend
 `workout-journal-frontend-00003-xar` remain at 100%, reconfirmed in C3D. C3C
 performed no incident discovery; C3D performed read-only discovery only, with no
-cleanup, new dispatch or promotion. Must 3 stays In progress,
-Must 4 Open, production CD inactive.
+cleanup, new dispatch or promotion. At the Historical C3D checkpoint, Must 3
+was In progress, Must 4 Open and production CD inactive.
 
 The [C3C source contract](./cd-c3-e2e-recovery-contract.md) adds deterministic
 candidate-bound UUIDv5 identity, exact pre-create zero checks, separate read-only
@@ -177,8 +180,8 @@ Needed 0**. It freshly re-acquired R8 run/jobs/safe logs, main source identity,
 PR #104 and required post-merge CI, and `CD_C1_ACTIVATION` UNCONFIGURED. Actual
 A/B/C source semantics and the complete eight-file diff agreed with the runtime
 records. The canonical R1-R7 block was byte-for-byte identical to main; all 64
-local links resolved, and credential checks passed. Must 3's remaining resource
-scope comes from the existing monitoring/alert ownership decision deferred to
+local links resolved, and credential checks passed. At R9, Must 3's remaining
+resource scope came from the monitoring/alert ownership decision deferred to
 Must 5 design; at R9, Must 4 retained full release verification and automatic triggering.
 No remediation was needed. Only this audit record and its verification summary
 were updated after First Pass; Pre-PR rechecks those additions before staging.
@@ -951,7 +954,7 @@ plan and verified authorization; C3V then completed the fresh production release
 C3R2 read-back and C3S authority retain Backend `workout-journal-backend-00003-luc`
 and Frontend `workout-journal-frontend-00003-xar` at 100%, both C3P candidates at
 0%, and `CD_C1_ACTIVATION` UNCONFIGURED. These are historical phase snapshots;
-the current pair is recorded below.
+the current pair is recorded in the OBS-D2A/B summary above.
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
@@ -960,7 +963,8 @@ CD-C1 does not use that builder's fixed SHA, Build ID, digests or pair.
 ## C3U and C3V runtime closure
 
 Historical C3W checkpoint: production/activation/status statements in this section
-describe that closure. The Current production and Must 4 status are in the C4D record below.
+describe that closure. C4D below owns Must 4 closure; the OBS-D2A/B summary
+above owns current production and Must 3 status.
 
 **C3 runtime chain: CLOSED. Must 4: OPEN.** This is the C3W documentation closure
 of C3P → C3R2 → C3S → C3U → C3V, not a new runtime execution.
@@ -1227,8 +1231,9 @@ privileged E2E credential's strict transport boundary.
 ## Validation and runtime boundary
 
 Use the [C3C validation record](./verification.md#cd-c3c-recovery-contract-validation)
-and [offline commands](./verification.md#cd-c1-offline-validation). Current Terraform
-state is **37** at C3U closure; the post-apply plan was **0 add / 0 change / 0 destroy**.
+and [offline commands](./verification.md#cd-c1-offline-validation). At the Historical
+C3U closure, Terraform state was **37** and its post-apply plan was **0 add / 0 change / 0 destroy**.
+Current 42-resource/no-drift evidence is owned by OBS-D2A/B above.
 The historical C3S plan was **+2 / 0 change / 0 destroy**, with all 35 existing
 resources no-op; the earlier post-CD-C2C baseline was **No changes / exit 0**.
 No apply/import/state mutation, Cloud
@@ -1292,6 +1297,10 @@ still requires its own Environment Human approval. No commit/push/PR, dispatch,
 rerun or runtime mutation was performed in C4C implementation.
 
 ## C4D automatic production delivery runtime closure
+
+**Historical C4D checkpoint, 2026-09-21.** The proof below retains its original
+source, run, production pair and then-open Must 3 status. Current production
+and Must 3 closure are in [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 
 On 2026-09-21, read-only GitHub and GCP reacquisition established **Must 4 Closed;
 remaining gap None**. [PR #114](https://github.com/tyosu131/Workout-Journal/pull/114)
@@ -1399,8 +1408,8 @@ root cause remains STRONGLY_SUPPORTED_NOT_PROVEN, and C3G/C3K remain NOT PROVEN.
 Rollback was **NOT EXECUTED** in C4D; no new rollback-success event is manufactured.
 The existing bounded C3G restoration/smoke, C3K durable diagnostics and C3U rollback
 Operation authorization evidence remains sufficient for the unchanged Completion
-Contract. Other Musts are unchanged: 1 In progress, 2 Closed, 3 In progress,
-5–8 Open. Must 3 monitoring/alert resources and Must 5 Observability remain future work.
+Contract. At C4D, other Musts were unchanged: 1 In progress, 2 Closed, 3 In progress,
+5–8 Open. Must 3 Monitoring resources and Must 5 runtime proof were then future work.
 C4D performs read-only evidence collection and docs synchronization only: no
 dispatch/rerun/approval, cloud/traffic/IAM/Terraform/variable mutation, secret payload
 access, Supabase mutation, commit, push or PR. Fresh Result Audit is next.
@@ -1408,8 +1417,8 @@ access, Supabase mutation, commit, push or PR. Fresh Result Audit is next.
 ## OBS-B/C probe rollout source contract
 
 OBS-B/C implements Backend process-only HTTP startup/liveness and a candidate-only
-`/health` verification, with runtime proof **NOT YET**. Frontend keeps its existing
-TCP startup probe. The old TCP production spec may transition only to the exact
+`/health` verification. OBS-D2A now proves the deployed Backend health/probes;
+Frontend retains its existing TCP startup probe. The old TCP production spec may transition only to the exact
 approved HTTP probe configuration; this also permits a non-promoted approved
 candidate to remain latest-ready. Unrelated spec changes remain rejected, and
 actual full revision spec hashes retain probe fields. Manifest version remains 2.
@@ -1417,7 +1426,8 @@ actual full revision spec hashes retain probe fields. Manifest version remains 2
 Backend then Frontend promotion, Frontend then Backend rollback, original rollback
 smoke, TTL, CAS, Operation polling, exact CI authority and Environment approval
 remain unchanged. Old rollback revisions are not required to implement `/health`.
-Monitoring Terraform is separately gated and NOT APPLIED; Must 3 remains In progress
-and Must 5 Open. C4D's Must 4 closure and all earlier Historical C3/C4 evidence remain
-unchanged. See [OBS verification](./verification.md#obs-bc-health-and-monitoring-implementation)
+Monitoring Terraform was separately Human-applied in OBS-D1 and read-back/no-drift
+verified in OBS-D2A. Must 3 is Closed; Must 5 remains Open for a safe structured
+failure observation and Backend incident/email receipt. C4D's Must 4 closure and
+all earlier Historical C3/C4 evidence remain unchanged. See [OBS runtime evidence](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
 and [probe/inspection operations](./cloud-run-deployment-runbook.md#observability).
