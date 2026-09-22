@@ -1,59 +1,78 @@
 # ワークアウト・ジャーナル
 
-日々の筋トレログを記録し、進捗を可視化・管理するための Web アプリケーションです。
+[Live Demo / 本番アプリ](https://workout-journal-frontend-cpbzb7lqza-an.a.run.app) · [English README](./README.md)
 
-## プロジェクト概要
-日ごとに筋トレのログを管理しやすいアプリを作りたいと思い立ちました。  
-前回のトレーニングと比較してどれくらい重量や回数が増えたか（プログレッシブオーバーロード）を把握するためにも、カレンダースタイルで日別に分かりやすく管理できるようにしています。
+筋トレを日付ごとのセッションとして記録し、過去の重量・回数・努力度を見返せるWebアプリです。カレンダーで前回の記録を探し、Analyticsで継続・ボリューム・筋力の傾向を確認して、次のトレーニングにつなげます。
 
-## 機能一覧
-- ユーザー登録・ログイン
-- ワークアウト記録の作成、更新、削除
-- ユーザー情報の更新（ユーザーネームのみ）
-- カレンダースタイルの画面で日付ごとのワークアウトを可視化
+上記は2026-09-22に確認したFrontend Cloud Runの安定URLです。現在のsourceとrevision pairは[本番確認記録](./docs/portfolio-finalization.md#current-production)にあります。v1は完成済みですが、Portfolio Finishにはrepository maturityと最終監査のGateが残っています。
 
-詳しい機能のコード例や解説は [こちらの GitHub リポジトリ](https://github.com/tyosu131/Workout-Journal.git) をご参照ください。
+## 実装済みの機能
 
-## 技術スタック
-- **フロントエンド**: React, TypeScript
-- **バックエンド**: Node.js / Express
-- **データベース**: Supabase (PostgreSQL)
-- **認証**: Supabase Auth (JWT, リフレッシュトークン)
-- **その他**: Chakra UI, Axios, など
+- ユーザー登録・ログイン・session refresh・ログアウト、ユーザーネーム更新、メール経由のpassword recovery。
+- 日付別ノートの作成・保存・再表示。種目、メモ、重量、回数、休憩を記録し、種目やセットを追加・複製・削除。
+- セットごとの任意のRPE・RIR・failure入力。未入力は努力度ゼロとして扱いません。
+- 月別カレンダー、個人用タグの作成・利用・削除、タグによる過去ノート検索。
+- 期間を選択するAnalytics：BIG3推定1RM、筋群別セット数・ボリューム、種目別推移と表、努力度集計、5種類のGrowth Signals。
+- ルールベースの週間サマリー。生成APIはローカルmock providerとfallbackを使用し、外部AIとは未接続です。
 
-## 環境構築
-1. **リポジトリをクローン**:
-   ```bash
-   git clone https://github.com/<your_repo>/Workout-Journal.git
-   cd Workout-Journal
-   ```
+## 構成と技術
 
-## 依存関係をインストール
+Next.js 15.5.24 Pages Router / React 18 / TypeScript / Chakra UI / Recharts、Node.js 24 / Express 5.2.1、Supabase Auth / PostgreSQLを使用しています。
+
+通常の通信は `Browser → Frontend Cloud Run → same-origin /api proxy → Backend Cloud Run → Supabase` です。Frontendのserver-only設定が対応するBackendの不変tag URLを指します。Backendはpublic invocationを許可する設計で、アプリの権限はJWT検証とuser scopeで制御します。proxyをprivate network境界とは扱いません。
+
+Supabase secret keyはBackend専用です。ブラウザはアプリ用DBテーブルへ直接アクセスしません。password recoveryだけは公開設定で一時的なSupabase Auth sessionを作り、更新後に破棄します。email変更とログイン中のpassword変更は未実装です。
+
+## 配信・運用上の判断
+
+- main merge後、対象sourceのrequired CI成功を受けて自動CDを開始。
+- GitHub OIDC / WIFでGCPへkeyless認証し、専用Build identityでCloud Buildを実行。Artifact Registryのimmutable digestからBackend／Frontendの0% candidate pairを作成。
+- Playwright E2E、合成データcleanup、pairの再確認後にHumanのproduction承認を待機。Backend、Frontendの順で昇格し、post-deploy検証。
+- rollbackは記録済みの互換pairへFrontend、Backendの順で戻し、復旧を検証。rollback可能なFrontendが参照するBackend tagは移動・削除しません。
+- Terraformはregistry・identity・IAM/WIF・secret metadata・Monitoringを管理。Cloud Run revision・設定・trafficはCD所有で、secret値はTerraformに保存しません。
+- Secret Managerによるruntime secret注入、protected main／required CI、CodeQL Default setup、Dependabot alerts／security updates／月次version updatesを使用。
+- Backend `/health` のstartup/liveness probes、安全なstructured failure logs、Frontend uptimeと全Backend revisionの5xx監視を実装。alertがtrafficを自動変更することはありません。
+
+現行構成のMermaid図と設計判断は[English README](./README.md#architecture)、操作と復旧条件は[deployment runbook](./docs/cloud-run-deployment-runbook.md)を参照してください。
+
+## テスト
+
+Jestは共通計算・UI・API/proxy・Backend serviceを検証します。`npm run e2e:test`とPython/Terraformのoffline契約テストはcandidate identity・cleanup・配信制御を検証します。required CIは個別install、Frontend lint/build、Backend構文build、Jestとoffline契約テストを実行します。
+
+実candidateのPlaywright E2Eはlogin、ノート作成・保存・再読込、タグ作成・利用・削除、Calendar、Analytics、logoutを対象にし、cleanup残件ゼロも確認します。外部メール依存のpassword recoveryは自動candidate E2Eの対象外です。[検証手順と記録](./docs/verification.md)に責務と実行コマンドがあります。
+
+## ローカル実行
+
+Node.js 24とnpmを使用します。まず[Supabaseのmigration/setup手順](./supabase/README.md#migration-order)に従い、開発専用projectのschema・Authを用意してください。
 
 ```bash
-npm install
-# または
-yarn install
+git clone https://github.com/tyosu131/Workout-Journal.git
+cd Workout-Journal
+npm ci
+npm ci --prefix frontend
+npm ci --prefix backend
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-## 環境変数の設定 
-Supabase のプロジェクトURLや anon/public キーを登録
-JWT シークレットなど、必要な環境変数を設定
-
-## アプリを起動
+exampleの説明に従って開発用の値を設定します。BackendのSupabase URL／publishable key／secret keyとJWT secretを設定し、Frontendの公開Supabase設定は同じprojectに揃えます。`BACKEND_INTERNAL_URL=http://localhost:3001`はserver-onlyです。`http://localhost:3000/reset-password`をSupabaseのredirect allow-listとBackendの`PASSWORD_RESET_REDIRECT_URL`に設定してください。実secretはcommitしません。
 
 ```bash
 npm run dev
-# または
-yarn dev
 ```
 
+`http://localhost:3000`を開きます。詳細は[English READMEのlocal setup](./README.md#run-locally)を参照してください。
 
-ブラウザで http://にアクセスし、アプリケーションを利用開始
+## 技術資料
 
-## 使い方
-ユーザー登録 で新規アカウントを作成
-ログイン して認証
-カレンダー からトレーニングを記録したい日を選択
-種目・重量・回数・休憩時間 などの詳細を入力
-保存 して日々の進捗を記録し、過去のデータと比較
+- [System design](./docs/system-design.md)
+- [Deployment / rollback](./docs/cloud-run-deployment-runbook.md)
+- [Verification / observability](./docs/verification.md)
+- [Terraform ownership](./docs/portfolio-infra-ownership.md)
+- [Supabase strategy](./supabase/README.md)
+- [Portfolio Completion Contract](./docs/portfolio-completion-contract.md)
+- [v1 releaseのHistorical記録](./docs/releases/workout-journal-v1.md)
+
+## ライセンス
+
+MIT Licenseを適用しています。[LICENSE](./LICENSE)を参照してください。

@@ -2,17 +2,17 @@
 
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
-Current production and final Must 5 evidence: [OBS-D3F closure](#obs-d3f-final-observability-documentation-closure).
-**Must 3, Must 4 and Must 5: Closed.** Current production is `cd-35684518093-2`,
-100% on both services. [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
-retains Monitoring apply/no-drift and the Historical previous production pair.
-C4D retains the automatic-delivery proof that closed Must 4; C3 runtime chain
-remains CLOSED. Dated source/runtime sections retain their phase-local NOT-YET
-results and do not override the final runtime record.
+Current production: [PF-F1 read-back](./portfolio-finalization.md#current-production),
+`cd-35737278328-1`, 100% on both services, source
+`2d9ec91d8f11a83c0904de770cc8df436139325b`, automatic CD `35737278328`
+SUCCESS / attempt 1. **Must 3–6: Closed.** [Must 6 security evidence](./portfolio-finalization.md#must-6-durable-closure)
+includes exact-main CI and CodeQL, Dependabot runtime and governance read-back.
+OBS-D3F below remains the durable Must 5 proof. All dated sections retain their
+phase-local identities, traffic and NOT-YET results; they do not override PF-F1.
 
 ## OBS-D3F Final Observability Documentation Closure
 
-**Current evidence owner: OBS-D3F, 2026-09-22. Phase: Final Runtime Evidence
+**Historical production checkpoint / durable Must 5 evidence: OBS-D3F, 2026-09-22. Phase: Final Runtime Evidence
 Documentation Closure.** Source Map v3.1, Core Harness v3.2 and Workflow Router
 v3.2 route production facts to fresh GitHub/Cloud Run read-back, the Must 5
 boundary to the actual Completion Contract, and email receipt to Human evidence.
@@ -20,7 +20,7 @@ OBS-D3D supplies the attempt 2 runtime proof; OBS-D3E establishes incident recov
 both Human email receipts and Must 5 closure. OBS-D3F durably records that evidence
 and the subsequent promoted pair, without executing another failure request.
 
-### Final authority and current production
+### Final authority and production at OBS-D3F
 
 Fresh read-only authority and Cloud Run read-back completed at
 **2026-09-22T06:03:15Z**, after production completed at `2026-09-22T05:53:00Z`.
@@ -33,7 +33,7 @@ Fresh read-only authority and Cloud Run read-back completed at
 | Production job | [106625522700](https://github.com/tyosu131/Workout-Journal/actions/runs/35684518093/job/106625522700), SUCCESS |
 | Post-deploy | PASS; accepted OBS-D3F Human handoff and successful production job/verification step |
 | Rollback | NOT EXECUTED; accepted OBS-D3F Human handoff; no new rollback proof claimed |
-| Candidate ID / current production | `cd-35684518093-2` |
+| Candidate ID / production at this checkpoint | `cd-35684518093-2` |
 | Backend production revision / traffic | `workout-journal-backend-cd-35684518093-2` / 100% / Ready |
 | Frontend production revision / traffic | `workout-journal-frontend-cd-35684518093-2` / 100% / Ready |
 | Backend image digest | `sha256:defec94aac491a731f3035e75a9c92599b90bd79a92b76b43179eba89c847bea` |
@@ -138,7 +138,7 @@ This does not close other Portfolio Musts or claim the separate Final Portfolio 
 
 ### Future final-docs merge and private-evidence retention
 
-**Future operational plan, not executed in OBS-D3F:** merging the final docs-only
+**Historical OBS-D3F phase-specific plan, not executed in that docs pass:** merging the final docs-only
 PR will again trigger automatic CD. Allow main CI, candidate, E2E and verify to
 run; **DO NOT approve production; cancel at the production approval wait** in the
 later merge phase. Preserve workflow behavior. The intended production pair
@@ -469,6 +469,9 @@ GitHub Actions runs the same baseline on push and pull request:
 - Run frontend build with `npm run build --prefix frontend`
 - Run backend JavaScript syntax check with `npm run build --prefix backend`
 - Run the root Jest baseline with `npm test`
+- Run offline E2E/candidate contracts with `npm run e2e:test`
+- Initialize the locked Terraform provider with `terraform -chdir=infra/terraform init -backend=false -input=false -lockfile=readonly`
+- Run offline Python delivery/IAM/Monitoring contracts with `python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v`
 
 ## Current Baseline
 
@@ -1268,7 +1271,7 @@ or Supabase.
 - Expand API client tests for retry limits and non-401 error paths.
 - Expand route/service tests for notes and auth Supabase success/error paths.
 - Resolve or document the remaining Google Fonts download warning if the build environment cannot reach Google Fonts.
-- Add backend unit tests or integration tests; the current backend build checks syntax only.
+- Expand existing Backend unit/service tests where a concrete gap is identified; the Backend build itself checks syntax only, while root Jest already exercises Backend behavior.
 
 ## CD-C4B Automatic Trigger Offline Validation
 
@@ -1478,7 +1481,7 @@ commit/push/PR, dispatch, rerun, approval, secret payload access or runtime muta
 ## CD-C4D Automatic Delivery Runtime Verification
 
 **Historical C4D proof, 2026-09-21.** Production, Terraform and Must status
-statements in this section describe that checkpoint. Current production is owned by [OBS-D3F](#obs-d3f-final-observability-documentation-closure);
+statements in this section describe that checkpoint. Current production is owned by [PF-F1](./portfolio-finalization.md#current-production);
 Monitoring apply/no-drift evidence remains in [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 
 Recorded 2026-09-21. **Must 4 Closed; remaining gap None.** This is fresh read-only

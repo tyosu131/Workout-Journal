@@ -1,90 +1,131 @@
-**[日本語版 README はこちら](./readme_Japanese)**
-
 # Workout Journal
 
-A web application to track daily workout logs, visualize progress, and manage training sessions more effectively.
+[Live Demo / Production](https://workout-journal-frontend-cpbzb7lqza-an.a.run.app) · [日本語](./readme_Japanese)
 
-## Project Overview
-I wanted to build a workout logging app that's easy to manage day by day. By comparing each workout date to the previous sessions, users can see how much they've progressed (progressive overload). This approach led me to design a calendar-style interface for better daily management.
+Workout Journal keeps strength-training sessions organized by date. Record the exercises, sets and effort for a session, revisit an earlier workout, and compare trends before deciding what to do next. The calendar preserves session context; analytics turns those notes into a view of training consistency, volume and strength progression.
 
-## Features
-- User registration & login
-- Create, update, and delete workout logs
-- Update username
-- Calendar-style view to track progress by date
+The live link is the stable Frontend Cloud Run service URL, verified on 2026-09-22. The [production evidence record](./docs/portfolio-finalization.md#current-production) identifies the deployed source and paired revisions. Product v1 is complete; the separate [Portfolio Finish contract](./docs/portfolio-completion-contract.md) still has repository-maturity and final-audit gates.
 
-For a detailed list of features, please see [this GitHub repository](https://github.com/tyosu131/Workout-Journal.git).
+## What you can do
 
-## Tech Stack
-- **Frontend**: Next.js 15 Pages Router, React, TypeScript
-- **Backend**: Node.js 24 / Express
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Auth (JWT, Refresh Tokens)
-- **Others**: Chakra UI, Axios, etc.
+- **Manage a session:** sign up, log in, refresh a session, log out, update a username, or recover a forgotten password by email.
+- **Keep dated workout notes:** create, save and reopen notes with exercise names, exercise notes, weight, reps and rest; add, duplicate or remove exercises and sets. Edits are saved through the authenticated notes API.
+- **Record effort:** optional set-level RPE, RIR and failure inputs feed effort summaries without treating missing values as zero effort.
+- **Navigate your history:** browse the monthly calendar, organize sessions with personal tags, and find previous notes by tag. Create and delete tags from the catalog.
+- **Review progress:** select a date range for BIG3 estimated one-rep-max trends, muscle-group sets/volume, exercise trends with table fallbacks, effort summaries and five deterministic Growth Signals: strength, volume, consistency, effort and exercise progress.
+- **Read a weekly summary:** a rule-based preview explains the recorded data. The optional generation endpoint currently uses a local mock provider with fallback; external AI is not integrated.
 
-## Installation & Setup
-1. **Clone** the repository:
-   ```bash
-   git clone https://github.com/<your_repo>/Workout-Journal.git
-   cd Workout-Journal
-   ```
+## Architecture
 
-2. **Install dependencies:**
-   ```bash
-   npm ci
-   npm ci --prefix frontend
-   npm ci --prefix backend
-   ```
+```mermaid
+flowchart LR
+    Browser[Browser] -->|HTTPS| Frontend["Frontend Cloud Run: Next.js"]
+    Frontend --> Proxy["Same-origin /api proxy"]
+    Proxy -->|Exact paired Backend tag| Backend["Backend Cloud Run: Express"]
+    Backend -->|Request-local publishable-key client| Auth[Supabase Auth]
+    Backend -->|Backend-only secret client and JWT user scope| DB[Supabase PostgreSQL]
+    Browser -.->|Password recovery only: temporary public-key session| Auth
+    Secrets[Secret Manager] -->|Runtime secret injection| Backend
+```
 
-Configure environment variables (e.g., .env):
-Provide your Supabase project credentials (URL, anon/public keys).
-Configure any other environment variables (JWT secrets, etc.) as needed.
+Application requests use the Frontend origin, including refresh cookies. The server-only `BACKEND_INTERNAL_URL` selects the paired Backend revision. The Backend remains publicly invocable by design; the proxy is not a private-network boundary, and application authorization is enforced by Backend JWT verification and user-scoped queries.
 
-## Environment Variables
-Use [backend/.env.example](./backend/.env.example) and [frontend/.env.example](./frontend/.env.example) as templates. Never commit real secrets, tokens, cookie values, or production environment values.
+The browser never receives the Supabase secret key or accesses application tables directly. Password recovery is the explicit exception: it uses a temporary Supabase Auth session with public configuration, updates the password, then clears that session.
 
-### Backend
-| Variable | Required | Secret | Notes |
-| --- | --- | --- | --- |
-| `PORT` | No | No | Express port. Defaults to `3001`. |
-| `CORS_ORIGIN` | No | No | Optional defense-in-depth origin. Browser application traffic uses the Frontend same-origin proxy. |
-| `SUPABASE_URL` | Yes | No | Supabase project URL for backend access. |
-| `SUPABASE_PUBLISHABLE_KEY` | Yes | No | Used only by backend Auth client factories for sign-up, login, and password-reset requests. |
-| `SUPABASE_SECRET_KEY` | Yes | Yes | Used only by the backend Admin/DB client for application tables and RPCs. Never expose it to the browser. |
-| `PASSWORD_RESET_REDIRECT_URL` | Yes | No | Registered browser URL for the Supabase password-recovery redirect. |
-| `JWT_SECRET` | Yes | Yes | JWT signing secret. Must be different per environment. |
-| `ACCESS_TOKEN_EXPIRES` | No | No | Access token lifetime. Defaults to `1h`. |
-| `REFRESH_TOKEN_EXPIRES` | No | No | Refresh token lifetime. Defaults to `7d`. |
+## Stack
 
-### Frontend
-| Variable | Required | Secret | Notes |
-| --- | --- | --- | --- |
-| `BACKEND_INTERNAL_URL` | Yes | No | Server-only Frontend runtime value for the Backend Cloud Run URL. Never expose it through public config or build arguments. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | No | Required by browser password recovery; this Supabase project URL is exposed to the browser. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | No | Public key used only for browser password recovery. Never set a secret or service-role key here. |
+| Area | Technology |
+| --- | --- |
+| Frontend | Next.js 15.5.24 Pages Router, React 18, TypeScript, Chakra UI, Recharts |
+| Backend | Node.js 24, Express 5.2.1, Supabase JavaScript client |
+| Data and identity | Supabase Auth and PostgreSQL; versioned schema migrations |
+| Delivery | GitHub Actions, Google Cloud WIF, Cloud Build, Artifact Registry, Cloud Run |
+| Infrastructure and operations | Terraform 1.16, Secret Manager, Cloud Logging, Cloud Monitoring |
+| Verification and security | Jest, Playwright, offline Node/Python contract tests, CodeQL, Dependabot |
 
-Production runs as `Browser -> Frontend Cloud Run -> /api/* proxy -> Backend Cloud Run -> Supabase`. Browser code never receives the Backend hostname. Configure runtime values and secrets in Cloud Run rather than storing real values in repository files. See [the Cloud Run deployment runbook](./docs/cloud-run-deployment-runbook.md).
+## Engineering decisions
 
-### Supabase Client Boundaries
-The backend uses a request-local Auth client with the publishable key for sign-up, login, and password-reset email requests. A separate singleton Admin/DB client uses the secret key for `public` tables and RPCs. Browser password recovery requires both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, creates a temporary Supabase session only to update the password, then clears that session. Never expose a secret or service-role key to the frontend. Email changes and logged-in password changes are not implemented; they require separate confirmation and security flows.
+- **A same-origin API boundary** keeps browser API calls and refresh cookies on the Frontend origin while allowing Frontend and Backend to deploy as separate services.
+- **Backend-only database authority** separates request-local Supabase Auth clients from the privileged DB client. Application tables have RLS enabled with no browser access policies; Backend authorization owns user isolation.
+- **Paired releases** bind an immutable Frontend image to an exact Backend tagged URL. Tags referenced by production or rollback-eligible Frontends must not move or disappear.
+- **Separate Terraform and delivery ownership** lets Terraform manage the foundation while CD owns Cloud Run images, revisions, runtime configuration, tags and traffic. Terraform does not reconcile mutable release state.
+- **Human production approval** is retained after automated candidate checks. Automation prepares evidence and verifies promotion; it does not approve production on the owner's behalf.
 
-## Verification
-See [docs/verification.md](./docs/verification.md) for local and CI verification commands.
+## CI/CD and recovery
 
-See [docs/quality-improvements.md](./docs/quality-improvements.md) for a summary of operational quality improvements.
+```mermaid
+flowchart TD
+    Merge[Merge to main] --> CI[Required CI succeeds for exact source]
+    CI --> WIF[GitHub Actions OIDC / GCP WIF]
+    WIF --> Build[Cloud Build / dedicated Build identity]
+    Build --> Registry[Artifact Registry: immutable image digests]
+    Registry --> Pair[Paired Backend and Frontend candidates: 0% production traffic]
+    Pair --> E2E[Playwright E2E / synthetic-data cleanup]
+    E2E --> Verify[Re-read pair, hashes and production state]
+    Verify --> Human[Human production Environment approval]
+    Human --> Backend[Promote Backend]
+    Backend --> Frontend[Promote Frontend]
+    Frontend --> Post[Post-deploy verification]
+```
 
-## Run the app:
+The controller binds the CI run and attempt to the exact main source, rejects stale or expired candidates, and rechecks captured production before promotion. WIF provides short-lived credentials instead of a long-lived GCP service-account key. A separate E2E identity accesses only its dedicated credential.
+
+Recovery restores a recorded compatible pair, Frontend first and then Backend, followed by verification. Failed or uncertain rollback is surfaced for Human action. See the [deployment and rollback runbook](./docs/cloud-run-deployment-runbook.md) for authority checks, retention rules and recovery commands.
+
+## Testing strategy
+
+| Layer | Role / command |
+| --- | --- |
+| Jest | Shared calculations, UI behavior, API/proxy contracts, and Backend services with mocked dependencies: `npm test` |
+| Offline E2E contracts | Candidate identity, lifecycle, cleanup and result transport: `npm run e2e:test` |
+| Offline delivery / infrastructure contracts | Python controller tests plus Terraform mock plans; no cloud apply or credentials |
+| Required GitHub CI | Separate installs, Frontend lint/build, Backend syntax build, Jest and both offline contract layers |
+| Candidate Playwright E2E | Login, note create/save/read, tag create/use/delete, Calendar, Analytics and logout on the exact HTTPS pair; cleanup must be proven |
+| Production verification | CD post-deploy checks and Cloud Run read-back; release records retain the executed browser-smoke evidence |
+
+Password recovery depends on external email and is outside the automated candidate E2E gate; its separate verification and setup boundary are documented. No coverage percentage or broad browser matrix is claimed. Exact local/CI commands and dated results live in [Verification](./docs/verification.md) and the [E2E runbook](./docs/e2e-smoke-runbook.md).
+
+## Security, infrastructure and observability
+
+Secret Manager injects Backend secrets at runtime. Real `.env` files are ignored, while example templates remain trackable. Protected `main` requires the strict GitHub Actions quality check. CodeQL Default setup analyzes Actions and JavaScript/TypeScript; Dependabot alerts/security updates are enabled, and monthly version updates cover npm, Actions, Docker and Terraform. These controls do not imply that every dependency advisory is resolved.
+
+Terraform owns the approved registry, service accounts, additive IAM/WIF, secret metadata and Monitoring resources. Secret payloads and versions stay outside Terraform; Supabase is managed separately. The [ownership matrix](./docs/portfolio-infra-ownership.md) defines the boundary.
+
+Backend `/health` is dependency-free and backs Cloud Run startup/liveness probes. Allow-listed structured failure logs avoid raw requests, identities and secrets. Monitoring checks Frontend availability and alerts on sustained Backend 5xx across all revisions, including tagged candidates. Alerts support diagnosis and Human recovery; they do not automatically change traffic. See [observability and recovery](./docs/cloud-run-deployment-runbook.md#observability).
+
+## Technical documentation
+
+- [System design](./docs/system-design.md): features, contracts, data model and design boundaries.
+- [Deployment / rollback runbook](./docs/cloud-run-deployment-runbook.md): candidates, approval, promotion and recovery.
+- [Verification](./docs/verification.md): testing layers and observability evidence.
+- [Terraform ownership](./docs/portfolio-infra-ownership.md) and [Terraform setup](./infra/terraform/README.md): foundation versus delivery state.
+- [Supabase strategy](./supabase/README.md): schema, Auth, RLS and clean-start policy.
+- [Portfolio Completion Contract](./docs/portfolio-completion-contract.md): bounded Must conditions and remaining gates.
+- [Current production and repository maturity](./docs/portfolio-finalization.md): verified production, repository metadata, Release and license status.
+- [Original v1 production release](./docs/releases/workout-journal-v1.md): historical known-good artifact and smoke record.
+
+## Run locally
+
+Use Node.js 24 and npm. Provision a separate development Supabase project following the [schema and setup order](./supabase/README.md#migration-order); the app needs the application tables and RPC as well as Auth.
+
+```bash
+git clone https://github.com/tyosu131/Workout-Journal.git
+cd Workout-Journal
+npm ci
+npm ci --prefix frontend
+npm ci --prefix backend
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Fill the two ignored files using their [Backend](./backend/.env.example) and [Frontend](./frontend/.env.example) templates. Set Backend `SUPABASE_URL`, publishable key, secret key and a development-only `JWT_SECRET`. Use the same Supabase project for the Frontend public URL/key; only those public recovery values belong in `NEXT_PUBLIC_*`. Keep `BACKEND_INTERNAL_URL=http://localhost:3001` server-only. Register `http://localhost:3000/reset-password` in Supabase's allowed redirects and set Backend `PASSWORD_RESET_REDIRECT_URL` to it. Never copy production secrets into tracked files.
+
 ```bash
 npm run dev
 ```
 
-Access the application in your browser. Application API calls go through the frontend origin under `/api/*`:
-- Frontend: http://localhost:3000
-- Backend (server-to-server proxy target and direct local probe only): http://localhost:3001
+Open `http://localhost:3000`. The Frontend proxies `/api/*` to the local Backend on port 3001. Sign in, select a calendar date and record a session. Account email changes and logged-in password changes are not implemented.
 
-## Usage
-Sign up for a new account.
-Log in with your credentials.
-Select a date on the calendar for which you want to record workouts.
-Input details of your exercise: exercise name, weight, reps, rest intervals, etc.
-Save the log to track and compare progress over time.
+## License
+
+MIT licensed. See [LICENSE](./LICENSE).
