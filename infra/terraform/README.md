@@ -17,11 +17,11 @@ Closed** by [OBS-D1/D2A/B](../../docs/verification.md#obs-d2a-post-apply-runtime
 reviewed merged-source plan, Human apply (1 import / 4 add / 0 change / 0 destroy),
 Monitoring read-back, uptime PASS and no-drift. Current state is **42 resources /
 42 instances**, serial **10**, lineage `66945691-ab92-e20a-4bc1-badb121e7ab4`,
-GCS generation `1790044105183280`; all 42 planned actions are no-op. Must 5 remains
-Open for structured failure runtime observation and Backend incident/email receipt.
+GCS generation `1790044105183280`; all 42 planned actions were no-op in OBS-D2A.
+[OBS-D3F](../../docs/verification.md#obs-d3f-final-observability-documentation-closure) records Must 5 Closed: safe structured failure runtime, Backend incident OPEN/CLOSED and Human firing/recovery email delivery PROVEN; remaining gap None.
 Must 4 remains Closed by [C4D automatic delivery proof](../../docs/cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
-Current production is `cd-35675050740-1`, both services at 100%; the C4D pair
-`cd-35573153822-1` is Historical. C3U's 37-resource and C4D release records below
+Current production is `cd-35684518093-2`, both services at 100%; OBS-D2A
+pair `cd-35675050740-1` and C4D pair `cd-35573153822-1` are Historical. C3U's 37-resource and C4D release records below
 retain their own evidence dates. Manual activation remains UNCONFIGURED; automatic
 qualification does not require that latch.
 
@@ -60,8 +60,8 @@ both policies. Uptime returned 36 true samples across all three USA locations;
 the refresh-enabled, normally locked post-apply plan returned **0/0/0 / exit 0**,
 all 42 actions no-op. Four `user_labels` refresh representation differences
 introduced no semantic drift. Monitoring desired/actual and no-drift are PROVEN;
-Must 3 is Closed. Must 5 remains Open only for safe structured failure observation
-and Backend alert incident/notification receipt. Historical source-validation
+Must 3 remains Closed. Must 5 is Closed by the separate OBS-D3D/E runtime
+evidence recorded in [OBS-D3F](../../docs/verification.md#obs-d3f-final-observability-documentation-closure); no Terraform ownership or configuration change was needed. Historical source-validation
 plans remain AUDIT EVIDENCE ONLY and must never be applied.
 
 The existing Python CI discover runs `test_monitoring.py`: locked provider 7.45.0,

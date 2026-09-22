@@ -1,10 +1,11 @@
 # CD-C3: candidate incident and E2E recovery contract
 
-Current status (OBS-D2A/B): **C3 runtime chain CLOSED; authorization defect CLOSED;
+Current status (OBS-D3F, 2026-09-22): **C3 runtime chain CLOSED; authorization defect CLOSED;
 Must 4 Closed; `CD_C1_ACTIVATION` UNCONFIGURED**. The current production pair is
-`cd-35675050740-1`, each at 100%, as recorded by [OBS-D2A](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
-Must 3 is Closed; Must 5 remains Open for safe structured failure observation
-and Backend incident/email receipt. The Historical [C4D closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+`cd-35684518093-2`, each at 100%, freshly read back in [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure).
+Must 3 and Must 5 are Closed; safe structured failure runtime, Backend incident
+OPEN/CLOSED and Human firing/recovery email delivery are PROVEN. OBS-D2A's
+`cd-35675050740-1` remains Historical previous-production evidence. The Historical [C4D closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
 records automatic CI/CD, E2E 8/8 PASS, PROVEN_ZERO cleanup, Human production approval
 and post-deploy PASS. The previous C3V and failed C4B pairs remain 0%.
 [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)

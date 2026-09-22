@@ -1,7 +1,7 @@
 # Portfolio Infrastructure Ownership
 
 - **Decision status:** Approved for Portfolio Finish P1
-- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: then-state 37, post-plan 0/0/0, authorization defect CLOSED. [OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) completes Monitoring adoption/apply/read-back: current state 42, serial 10, no-drift 0/0/0. Must 3 and Must 4 are Closed; Must 5 remains Open
+- **Implementation status:** P1B existing-production adoption, P1C-A disabled-WIF foundation, P1C-B operational least-privilege IAM, P1C-C dedicated Build execution, P1C-D dependency audit, and P1C-D2 Compute default SA Editor cleanup complete. CD-B2 activated the provider and closed PE-P1C-01B by runtime proof on 2026-09-06; actual provider is `ACTIVE` / `disabled = false`, and its historical post-apply plan was `0 add / 0 change / 0 destroy` with 30 resources. C3U applied the two-resource C3S IAM remediation: then-state 37, post-plan 0/0/0, authorization defect CLOSED. [OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) completes Monitoring adoption/apply/read-back: current state 42, serial 10, no-drift 0/0/0. Must 3 and Must 4 remain Closed; [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure) records Must 5 Closed with no remaining gap
 - **Scope ceiling:** [Portfolio Completion Contract Must 3 and Must 4](./portfolio-completion-contract.md)
 - **Production contract:** [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md)
 
@@ -24,7 +24,7 @@ Must 3 is Closed by [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evi
 Automatic run `35573153822` proves the fixed E2E path (8/8 PASS, PROVEN_ZERO cleanup),
 verify, Human production approval and promotion/post-deploy SUCCESS. Its pair
 `cd-35573153822-1` is Historical previous-production evidence. Current pair
-`cd-35675050740-1` is 100% on both services under [OBS-D2A](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
+`cd-35684518093-2` is 100% on both services under [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure); OBS-D2A retains the Historical previous pair `cd-35675050740-1`.
 [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation) retains
 the earlier failure and now runtime-proven fix. No infrastructure ownership,
 provider condition or IAM change is needed. `CD_C1_ACTIVATION` is UNCONFIGURED and
@@ -215,8 +215,8 @@ The automated candidate E2E prerequisite is now satisfied; see the [P2B proof](.
 The production Environment prerequisite and full automatic-delivery path are satisfied:
 C4D passed the fixed E2E/verify path, Human production approval, paired promotion
 and post-deploy verification. Must 4 is Closed with no remaining delivery gap;
-Must 3 is Closed by OBS-D2A/B; Must 5 remains Open for safe structured failure
-observation and Backend incident/notification receipt.
+Must 3 is Closed by OBS-D2A/B; Must 5 is Closed by OBS-D3D/E runtime proof
+and [OBS-D3F durable closure](./verification.md#obs-d3f-final-observability-documentation-closure), including safe structured failure observation and Backend incident/email delivery.
 CD-B2 closed the separate `PE-P1C-01B` Deploy-SA/WIF submission evidence. Historically, P2B did not
 activate the provider, create an Environment, implement CD, promote traffic or
 close Must 4; this subsequent Environment setup does not activate WIF/CD or
@@ -230,7 +230,8 @@ revisions `workout-journal-backend-p2b-081adb25` and
 not the production service URL. At P2B, production remained `00003-luc` / `00003-xar`
 at 100%, with the known-good `candidate-0829-923536` pair intact. C3V subsequently
 promoted `cd-35545739898-1`; C4D later served `cd-35573153822-1` at 100%.
-OBS-D2A now records `cd-35675050740-1` at 100% on both services. These revisions,
+Historical OBS-D2A records `cd-35675050740-1` at 100% on both services;
+OBS-D3F freshly confirms `cd-35684518093-2` at 100% on both. These revisions,
 tags, images and configuration remain outside Terraform ownership; keeping this
 proof pair does not authorize tag reassignment or deletion.
 
