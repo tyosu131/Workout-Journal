@@ -2,20 +2,186 @@
 
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
-Current runtime and infrastructure evidence: [OBS-D2A / OBS-D2B closure](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
-**Must 4 Closed; C4C remediation runtime PROVEN.** Automatic run `35573153822`
-passed E2E 8/8, PROVEN_ZERO cleanup, verify, Human production approval and
-promotion/post-deploy verification at C4D. Current pair is `cd-35675050740-1`,
-100% each; Must 3 is Closed and Must 5 remains Open under OBS-D2A/B.
-C3 runtime chain remains CLOSED. [C4C remediation](#cd-c4c-nested-e2e-authority-propagation)
-and [C4B offline validation](#cd-c4b-automatic-trigger-offline-validation) remain Historical phase records.
-Dated source-validation sections retain their
-phase-local NOT-YET results and do not override the latest runtime record.
+Current production and final Must 5 evidence: [OBS-D3F closure](#obs-d3f-final-observability-documentation-closure).
+**Must 3, Must 4 and Must 5: Closed.** Current production is `cd-35684518093-2`,
+100% on both services. [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
+retains Monitoring apply/no-drift and the Historical previous production pair.
+C4D retains the automatic-delivery proof that closed Must 4; C3 runtime chain
+remains CLOSED. Dated source/runtime sections retain their phase-local NOT-YET
+results and do not override the final runtime record.
+
+## OBS-D3F Final Observability Documentation Closure
+
+**Current evidence owner: OBS-D3F, 2026-09-22. Phase: Final Runtime Evidence
+Documentation Closure.** Source Map v3.1, Core Harness v3.2 and Workflow Router
+v3.2 route production facts to fresh GitHub/Cloud Run read-back, the Must 5
+boundary to the actual Completion Contract, and email receipt to Human evidence.
+OBS-D3D supplies the attempt 2 runtime proof; OBS-D3E establishes incident recovery,
+both Human email receipts and Must 5 closure. OBS-D3F durably records that evidence
+and the subsequent promoted pair, without executing another failure request.
+
+### Final authority and current production
+
+Fresh read-only authority and Cloud Run read-back completed at
+**2026-09-22T06:03:15Z**, after production completed at `2026-09-22T05:53:00Z`.
+
+| Evidence | Accepted value |
+| --- | --- |
+| Remote main / local HEAD | `05d68feecb1b251f996a0e15e1f2ae6cc6fa136b` |
+| Main CI | [35684377945](https://github.com/tyosu131/Workout-Journal/actions/runs/35684377945), push, SUCCESS, attempt 1, exact main SHA |
+| Automatic CD | [35684518093](https://github.com/tyosu131/Workout-Journal/actions/runs/35684518093/attempts/2), workflow_run, SUCCESS, attempt 2, exact main SHA |
+| Production job | [106625522700](https://github.com/tyosu131/Workout-Journal/actions/runs/35684518093/job/106625522700), SUCCESS |
+| Post-deploy | PASS; accepted OBS-D3F Human handoff and successful production job/verification step |
+| Rollback | NOT EXECUTED; accepted OBS-D3F Human handoff; no new rollback proof claimed |
+| Candidate ID / current production | `cd-35684518093-2` |
+| Backend production revision / traffic | `workout-journal-backend-cd-35684518093-2` / 100% / Ready |
+| Frontend production revision / traffic | `workout-journal-frontend-cd-35684518093-2` / 100% / Ready |
+| Backend image digest | `sha256:defec94aac491a731f3035e75a9c92599b90bd79a92b76b43179eba89c847bea` |
+| Frontend image digest | `sha256:5a0bf570f86270245dc1a8229a0f225d21532407e35b7a91e4711cfc10098d96` |
+| Exact Backend tag / Frontend BACKEND_INTERNAL_URL | `https://cd-35684518093-2---workout-journal-backend-cpbzb7lqza-an.a.run.app`; tag resolves to the paired Backend revision |
+| Historical previous production | `cd-35675050740-1`; its original 100%/100% evidence remains in OBS-D2A/B below |
+
+Cloud Run `trafficStatuses`, both revision Ready conditions, immutable tag targets
+and Frontend's exact Backend URL agree. This is post-promotion read-back, not an
+inference from main or latest-ready. OBS-D3D/E's earlier 0% candidate / previous
+pair 100% observations remain phase-local history.
+
+### Health and availability evidence
+
+| Signal | Evidence | Result |
+| --- | --- | --- |
+| Backend `/health` | OBS-D2A GET 200 with exact `{"status":"ok"}`; attempt 2 candidate health/verify succeeded before promotion | PROVEN |
+| Backend startup probe | OBS-D3F deployed HTTP `/health`:8080; delay 0, timeout 2s, period 5s, failure threshold 24 | PROVEN |
+| Backend liveness probe | OBS-D3F deployed HTTP `/health`:8080; delay 0, timeout 2s, period 30s, failure threshold 3 | PROVEN |
+| Frontend availability | OBS-D2A managed USA uptime: 36/36 true samples across Iowa, Oregon and Virginia; attempt 2 post-deploy PASS | PROVEN |
+
+API-omitted initial probe delay uses default 0. Frontend retains TCP startup on
+8080, timeout/period 240s, failure threshold 1. Historical uptime sample times and
+managed check identity remain in OBS-D2A/B. OBS-D3F sent no application requests.
+
+### Structured failure runtime: separate attempt records
+
+**Historical supporting evidence — OBS-D3B, 2026-09-22, attempt 1 only:**
+`cd-35684518093-1` produced **1** safe structured `server_failure` and **1**
+candidate 5xx; Backend incident **NONE**. These counts are excluded from the
+attempt 2 totals and are not used to prove alert delivery.
+
+**Authoritative runtime proof — OBS-D3D, 2026-09-22, attempt 2:**
+Human executed exactly **2 controlled requests**, HTTP **500 / 500**, against the
+exact tagged Backend candidate `workout-journal-backend-cd-35684518093-2`.
+At the exercise, both attempt 2 candidates were 0%, the previous production pair
+was 100%/100%, and production approval was waiting. The malformed-JSON requests
+to the non-application route used no credentials or application data. No retries
+or Supabase mutations were part of the exercise.
+
+Cloud Logging query scope was project `workout-journal-506909`,
+`resource.type="cloud_run_revision"`, service `workout-journal-backend`, exact
+attempt 2 revision, `jsonPayload.event="server_failure"`, and interval
+`2026-09-22T05:15:39.225052Z`–`2026-09-22T05:36:48.500248Z`.
+
+| Attempt 2 evidence | Accepted result |
+| --- | --- |
+| Controlled HTTP request count / status | 2 / 500, 500 |
+| Structured event count | 2 |
+| Event timestamps | `2026-09-22T05:29:21.939205Z`, `2026-09-22T05:29:25.043219Z` |
+| Severity / event / operation | ERROR / server_failure / server_handler |
+| Safe schema | PASS, both events; only allow-listed severity/event/operation/error fields, finite error name and optional integer status |
+| Forbidden payload | ABSENT; no raw message, stack, request URL/body, credentials, user identity, dependency payload or config values |
+| Candidate 5xx metric | 2; `run.googleapis.com/request_count`, response_code_class=5xx, exact attempt 2 revision |
+| Candidate positive metric interval | `2026-09-22T05:29:00.001Z`–`2026-09-22T05:30:00Z`, count 2 |
+| Service-wide aligned value | 2; 300s / ALIGN_SUM / REDUCE_SUM, grouped by project/location/service |
+| Service-wide aligned interval | `2026-09-22T05:28:58.127166Z`–`2026-09-22T05:33:58.127166Z`, value 2 |
+| Structured logging runtime | PROVEN |
+
+All positive service-wide 5xx in the inspected attempt 2 window came from that
+candidate. Attempt 1 is excluded by the window and revision attribution. The
+policy reduces revisions to a service-level incident; it does not label the
+incident as production-only. These are sanitized evidence facts, not raw logs.
+
+### Backend alert and Human notification receipt
+
+| Evidence | Accepted value |
+| --- | --- |
+| Policy | `projects/workout-journal-506909/alertPolicies/16194106629321602210` |
+| Metric scope | Backend service-wide 5xx in `asia-northeast1`, including tagged 0% candidates |
+| Condition | 300s / ALIGN_SUM / REDUCE_SUM / COMPARISON_GT 1 / duration 60s |
+| Incident | `projects/workout-journal-506909/alerts/0.ocx5ovcnnr5d` |
+| OPEN | `2026-09-22T05:35:20Z` |
+| CLOSED | `2026-09-22T05:39:14Z` |
+| Backend alert runtime | PROVEN |
+| Alert firing email | RECEIVED — Human confirmation accepted in OBS-D3E and reaffirmed in OBS-D3F handoff |
+| Recovery email | RECEIVED — Human confirmation accepted in OBS-D3E and reaffirmed in OBS-D3F handoff |
+| Notification delivery | PROVEN |
+| Notification destination exposed | NO |
+
+Receipt timestamps are not supplied; incident OPEN/CLOSED times are not email
+receipt times. OBS-D3D's `WAITING_FOR_HUMAN_EMAIL_CONFIRMATION` and OBS-D3E's
+`READY_FOR_PRODUCTION_APPROVAL` are **Historical intermediate states**, superseded
+by Human receipt and the successful promoted attempt 2. They are not Current gates.
+
+### Exact Must 5 requirement mapping
+
+Re-read [Completion Contract Must 5](./portfolio-completion-contract.md#must-5-observability):
+its six requirements are unchanged and map one-to-one as follows.
+
+| Must 5 requirement | Evidence | Result |
+| --- | --- | --- |
+| application and service health inspection | OBS-D2A + attempt 2 runtime health/verification | PASS |
+| a Cloud Run health probe | Deployed startup/liveness read-back in OBS-D3F | PASS |
+| sanitized structured failure logging | OBS-D3D attempt 2: two safe structured events | PASS |
+| frontend availability monitoring | OBS-D2A managed USA uptime runtime | PASS |
+| an actionable server-side failure alert | Attempt 2 incident OPEN/CLOSED + Human firing/recovery email delivery | PASS |
+| a documented inspection and recovery procedure | [Observability and paired recovery runbook](./cloud-run-deployment-runbook.md#observability) | PASS |
+
+**Must 3: Closed. Must 4: Closed. Must 5: Closed. Remaining Must 5 gap: None.**
+This does not close other Portfolio Musts or claim the separate Final Portfolio Audit.
+
+### Future final-docs merge and private-evidence retention
+
+**Future operational plan, not executed in OBS-D3F:** merging the final docs-only
+PR will again trigger automatic CD. Allow main CI, candidate, E2E and verify to
+run; **DO NOT approve production; cancel at the production approval wait** in the
+later merge phase. Preserve workflow behavior. The intended production pair
+remains `cd-35684518093-2`, 100%/100%; do not promote merely because docs changed.
+
+Keep the private OBS-D1 saved-plan directory until the final documentation PR is
+merged and this durable evidence is verified; delete it only after those conditions
+are met. This final retention condition supersedes the earlier OBS-D2B timing.
+No deletion occurs in OBS-D3F. Reconstructing the closure requires only this record,
+its dated linked evidence and the named GitHub/GCP identities; no private local
+path, notification destination, raw log payload or Terraform sensitive value is
+required.
+
+### OBS-D3F documentation validation and handoff
+
+| Offline closure check | Result |
+| --- | --- |
+| `git diff --check` | PASS |
+| Existing relative-link validation | 238 PASS: 221 outgoing + 17 inbound |
+| Existing anchor validation | 153 PASS |
+| Existing added-content sensitive-pattern validation | PASS; 0 sensitive-pattern hits and 0 real notification/personal email addresses in the entire diff |
+| Current/Historical contradiction validation | 38 technical documents searched; 38 status/identity occurrences classified: Current 15 / Historical 20 / Future 3 / stale Current 0; multiline stale-claim check and explicit Current production/runtime owner review PASS |
+| Existing historical/preservation validation | PASS; all 40 legacy occurrences remain Historical; original Must requirements, Must 3/4 matrix rows, all 42 resource rows, C4D evidence identities, P2B/R1–R7 proof bodies and deployment/rollback commands preserved |
+| OBS-D1/D2 evidence integrity | Technical evidence body unchanged except its table's Historical classification label; dated phase wrapper clarifies supersession |
+| Canonical completeness | Required authority, pair, request/event/metric, incident and Human receipt facts recorded without private local evidence dependencies |
+| Scope | 10 documentation files only; README inspected and unchanged; index empty; no new repository files; private OBS-D1 evidence retained |
+
+Current matches identify the promoted pair; Historical matches retain OBS-D2,
+separate attempts and superseded OBS-D3D/E gates; Future matches describe the
+later final-docs merge plan. The existing broader legacy-value audit also passes.
+These local checks prepare a **READY_FOR_FRESH_RESULT_AUDIT** handoff; they do not
+claim that the separate Fresh Result Audit has run.
+
+Application, Terraform `.tf`, workflow and tests are unchanged. Runtime mutation,
+failure requests, workflow dispatch/rerun/cancel, production approval, staging,
+commit, push and PR are NOT EXECUTED. The future merge plan above is not
+authorization to execute those actions in this phase.
 
 ## OBS-D2A post-apply runtime evidence and OBS-D2B closure
 
-**Current evidence owner: OBS-D2A, 2026-09-22, final read-back at
-02:44:39 UTC.** OBS-D2B records the accepted evidence below and closes the
+**Historical OBS-D2A/B evidence, 2026-09-22, final read-back at
+02:44:39 UTC.** All production, Current, Open and NOT-YET statements in this
+section describe that checkpoint; [OBS-D3F](#obs-d3f-final-observability-documentation-closure) owns the final production pair and Must 5 closure. OBS-D2B records the accepted evidence below and closes the
 remaining Must 3 documentation gap. This documentation phase performs only
 local edits and offline validation; it does not repeat Terraform operations,
 cloud reads, deployment, alert tests or notification tests. The earlier OBS-B/C,
@@ -127,7 +293,7 @@ startup **delay 0 / timeout 2 / period 5 / failureThreshold 24**, liveness
 delay uses the default 0. Frontend retains its existing TCP startup on port
 8080 (timeout 240 / period 240 / failureThreshold 1), equal to the prior revision.
 
-| Must 5 requirement | Current classification |
+| Must 5 requirement | Historical OBS-D2A classification |
 | --- | --- |
 | Application/service health inspection | PROVEN |
 | Cloud Run health probe | PROVEN |
@@ -188,7 +354,7 @@ approval. Commit/push/PR are NOT EXECUTED. Handoff: **READY_FOR_FRESH_RESULT_AUD
 ## OBS-B/C health and monitoring implementation
 
 **Historical OBS-B/C source/offline checkpoint**, superseded for current runtime
-by [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
+by [OBS-D3F](#obs-d3f-final-observability-documentation-closure).
 All NOT-YET statuses, state counts and production identities in this section
 belong to the source-validation phase.
 
@@ -1312,8 +1478,8 @@ commit/push/PR, dispatch, rerun, approval, secret payload access or runtime muta
 ## CD-C4D Automatic Delivery Runtime Verification
 
 **Historical C4D proof, 2026-09-21.** Production, Terraform and Must status
-statements in this section describe that checkpoint. Current production and
-Monitoring evidence are owned by [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
+statements in this section describe that checkpoint. Current production is owned by [OBS-D3F](#obs-d3f-final-observability-documentation-closure);
+Monitoring apply/no-drift evidence remains in [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 
 Recorded 2026-09-21. **Must 4 Closed; remaining gap None.** This is fresh read-only
 verification of an already successful release, followed by documentation closure.

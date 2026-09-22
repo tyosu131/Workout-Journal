@@ -3,12 +3,12 @@
 This runbook starts at the Human Gate. It does not authorize resource creation or deployment by itself.
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
-existing-service candidate/E2E/approval/promotion path. [OBS-D2A](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
-records current production `cd-35675050740-1`, both services at 100%, after
-successful main CI `35674841432` and automatic CD `35675050740` (attempt 1).
-Backend health/probes and Frontend uptime are PROVEN; Must 3 is Closed and
-Must 5 remains Open for structured failure runtime observation and Backend
-incident/notification receipt. [C4D automatic delivery proof](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+existing-service candidate/E2E/approval/promotion path. [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
+records fresh post-promotion production `cd-35684518093-2`, both services at 100%,
+after successful main CI `35684377945` (attempt 1) and automatic CD `35684518093`
+(attempt 2), production SUCCESS and post-deploy PASS. Must 3, Must 4 and Must 5
+are Closed. Health/probes, Frontend uptime, safe structured failure runtime,
+Backend incident OPEN/CLOSED and Human firing/recovery email delivery are PROVEN. [C4D automatic delivery proof](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
 retains the Historical `cd-35573153822-1` release, E2E 8/8 PASS, cleanup
 PROVEN_ZERO, Human approval and post-deploy PASS that closed Must 4.
 C3 runtime chain remains CLOSED.
@@ -316,14 +316,16 @@ After promotion, perform the required production browser smoke for the major v1 
 
 ## Observability
 
-**Current: OBS-D2A runtime read-back PROVEN; Must 3 Closed, Must 5 Open.**
-[Accepted evidence and exact identities](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) record 42 Terraform resources,
-Monitoring API adoption, one uptime check, two policies and one enabled/wired
-email channel, plus a no-drift post-apply plan. Current production is
-`cd-35675050740-1`, both services at 100%. Backend `GET /health` returned 200
-with exact body `{"status":"ok"}`; Frontend `/login` returned 200 and all three
-USA uptime locations emitted PASS. The OBS-A baseline of 37 resources, TCP
-Backend startup and `/health` 404 is Historical previous-production evidence.
+**Current: Must 3, Must 4 and Must 5 Closed; remaining Must 5 gap None.**
+[OBS-D3F accepted evidence and exact identities](./verification.md#obs-d3f-final-observability-documentation-closure)
+record current production `cd-35684518093-2`, 100% on both services, deployed
+startup/liveness probes, two safe structured failures, Backend incident OPEN/CLOSED
+and Human firing/recovery email delivery. [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure)
+retains 42-resource no-drift/Monitoring apply evidence and the previous production
+pair `cd-35675050740-1`. At that checkpoint, Backend GET `/health` returned 200
+with exact `{"status":"ok"}`, Frontend `/login` returned 200, and all three USA
+uptime locations emitted PASS. The OBS-A baseline of 37 resources, TCP Backend
+startup and `/health` 404 remains Historical previous-production evidence.
 
 The deployed source also defines HEAD `/health` 200 without a body and
 POST/PUT/PATCH/DELETE 405 before body/cookie parsing and application routes.
@@ -373,22 +375,26 @@ Inspection and diagnosis:
    post-rollback smoke and record the restored pair, operator, time and result.
    Alerts never change traffic automatically.
 
-Runtime acceptance is separate from configuration inspection. OBS-D2A proves
-applied resource read-back, uptime PASS and healthy revision probes. The deployed
-structured logger had zero natural `server_failure` events; runtime event proof
-is NOT YET. The remaining Must 5 evidence is a safe structured failure in Cloud
-Logging and a Backend alert incident with Human-confirmed email receipt.
-Channel configuration and policy wiring are PROVEN; receipt is NOT YET.
-Record channel/incident IDs and
-receipt time, not the private destination. Cloud Monitoring has no generic email
-test-send option; see [official notification testing](https://docs.cloud.google.com/monitoring/support/notification-options#test-notification-channel).
-A controlled failure test is **NOT EXECUTED** and requires a later explicit Human
-Gate naming the exact fresh Backend candidate revision and immutable tagged URL.
-A later merge of these documentation changes is expected to trigger automatic CD
-after successful main CI, creating a fresh candidate from the same
-observability-capable application source plus docs changes. Do not change CD
-trigger rules to suppress that run. Before seeking the later alert-proof Human
-Gate, prove all of the following from that fresh run:
+Runtime acceptance is separate from configuration inspection. Historical OBS-D2A
+found zero natural `server_failure` events. OBS-D3D attempt 2 subsequently proved
+two safe events and two 5xx, service-wide aligned value 2 and a Backend incident;
+OBS-D3E confirmed CLOSED plus Human receipt of firing and recovery email.
+**Structured logging runtime, Backend alert runtime and notification delivery:
+PROVEN.** Attempt 1 remains separate Historical supporting evidence, not part of
+the attempt 2 proof. The [canonical final record](./verification.md#obs-d3f-final-observability-documentation-closure)
+preserves the IDs, times, safe-schema results and exact requirement mapping.
+Record channel/incident IDs and available receipt times, not the private destination;
+never substitute incident times for missing receipt timestamps.
+
+**Future final-docs merge plan:** allow main CI / candidate / E2E / verify to run,
+**DO NOT approve production, and cancel at the production approval wait** during
+the later merge phase. Keep current production `cd-35684518093-2` at 100%/100%.
+Do not change workflow behavior. This plan is not executed in OBS-D3F.
+
+**Future verification procedure, only if separately requested:** Must 5 is already
+Closed, so no additional failure request is required. Any repeat needs a new
+explicit Human Gate naming the exact fresh Backend candidate revision and
+immutable tagged URL. Before that Gate, prove all of the following:
 
 - Candidate source is current merged main.
 - Backend candidate has 0% production traffic, with its exact immutable tagged URL.
