@@ -229,9 +229,9 @@ const buildStrengthSignal = (big3: GrowthSignalsBig3Input[]): GrowthSignal => {
     label: "Strength",
     status: "neutral",
     headline: "Strength data is available",
-    detail: "BIG3 trend data exists, but previous range comparison is not connected yet.",
+    detail: "BIG3 estimated 1RM trend points are available for this range.",
     evidence,
-    nextFocus: "Compare these top lift signals with the next range once previous-range logic exists.",
+    nextFocus: "Review these top lift signals alongside your recent training.",
   };
 };
 
@@ -270,7 +270,7 @@ const buildVolumeSignal = (muscleGroups: GrowthSignalsMuscleGroupInput[]): Growt
     headline: hasImbalance ? "Volume may be concentrated" : "Volume data is available",
     detail: hasImbalance
       ? "The top muscle group has at least 3x the sets of the next muscle group."
-      : "Muscle group volume exists for this range; previous range comparison is not connected yet.",
+      : "Muscle group volume is available for this range.",
     evidence,
     nextFocus: hasImbalance
       ? "Review whether this muscle group emphasis matches your plan."

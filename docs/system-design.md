@@ -34,8 +34,8 @@ Every claim below is labelled as one of the following:
 | User-defined tags | **Current / Implemented** | Note tags are saved with notes. The backend also creates, lists, and deletes user-scoped tag catalog entries in `user_tags`. |
 | Date-range analytics | **Current / Implemented** | The Analytics page fetches the authenticated notes range, normalizes nested sets, and derives analytics for selectable 4-week, 8-week, 12-week, 6-month, and all-time ranges. |
 | Exercise trends | **Current / Implemented** | The Exercises tab groups known aliases through current exercise metadata, retains unmatched names as raw groups, supports four metrics, and keeps an exact-value table fallback. |
-| BIG3, volume, effort, and Growth Signals | **Current / Implemented** | Analytics shows BIG3 estimated-1RM trends, muscle-group sets or volume load, set-level effort summaries, and five deterministic Growth Signals: strength, volume, consistency, effort, and exercise progress. |
-| Weekly summaries | **Current / Implemented** | The frontend builds deterministic aggregate input, renders a rule-based preview, and can call an authenticated backend weekly-summary endpoint backed by a mock provider. |
+| BIG3, volume, effort, and Growth Signals | **Current / Implemented** | Analytics shows BIG3 estimated-1RM trends, muscle-group sets or volume load, set-level effort summaries, and four visible deterministic Growth Signals: strength, volume, consistency, and effort. The shared exercise-progress placeholder is not rendered; actual exercise trends remain in the Exercises tab. |
+| Weekly summaries | **Current / Implemented** | The frontend builds deterministic aggregate input and renders its rule-based summary. The production UI does not invoke the retained authenticated backend weekly-summary endpoint, whose provider remains a local mock. |
 
 #### Weekly Summary Boundary
 

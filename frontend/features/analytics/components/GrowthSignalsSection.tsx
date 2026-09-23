@@ -93,7 +93,10 @@ const GrowthSignalCard: React.FC<{ signal: GrowthSignal }> = ({ signal }) => {
   );
 };
 
-const GrowthSignalsSection: React.FC<GrowthSignalsSectionProps> = ({ summary }) => (
+const GrowthSignalsSection: React.FC<GrowthSignalsSectionProps> = ({ summary }) => {
+  const visibleSignals = summary.signals.filter((signal) => signal.id !== "exercise_progress");
+
+  return (
   <Box
     as="section"
     aria-labelledby="growth-signals-heading"
@@ -114,7 +117,7 @@ const GrowthSignalsSection: React.FC<GrowthSignalsSectionProps> = ({ summary }) 
       </Box>
 
       <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
-        {summary.signals.map((signal) => (
+        {visibleSignals.map((signal) => (
           <GrowthSignalCard key={signal.id} signal={signal} />
         ))}
       </SimpleGrid>
@@ -135,6 +138,7 @@ const GrowthSignalsSection: React.FC<GrowthSignalsSectionProps> = ({ summary }) 
       )}
     </Stack>
   </Box>
-);
+  );
+};
 
 export default GrowthSignalsSection;

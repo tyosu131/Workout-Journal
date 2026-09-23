@@ -495,7 +495,7 @@ GitHub Actions runs the same baseline on push and pull request:
 - Weekly summary input builder prepares deterministic aggregate data for future AI/rule-based summaries without calling an AI API.
 - Weekly summary input includes deterministic Growth Signals for future rule-based and AI summaries.
 - Shared rule-based weekly summary tests are included in `npm test` and CI.
-- Analytics displays a deterministic rule-based weekly summary preview without calling an AI API.
+- Analytics displays a deterministic rule-based weekly summary without calling an AI API or exposing the mock generation action.
 - Rule-based weekly summary can use Growth Signals without calling an external AI API.
 - Shared weekly summary prompt builder tests are included in `npm test` and CI.
 - Weekly summary prompt builder creates provider-neutral prompt payloads without calling an external AI API.
@@ -503,14 +503,14 @@ GitHub Actions runs the same baseline on push and pull request:
 - Weekly summary response validation safely validates structured weekly summary responses before future AI rendering.
 - Shared Growth Signals helper tests are included in `npm test` and CI.
 - Growth Signals derive deterministic analytics signals without calling an external AI API.
-- Analytics displays Growth Signals from deterministic shared helper output.
+- Analytics displays the implemented strength, volume, consistency, and effort signals from deterministic shared helper output; it omits the shared exercise-progress placeholder.
 - Growth Signals are shown without calling an external AI API.
 - Frontend note set types allow optional `rpe`, `rir`, and `failure` fields.
 - Note input UI can optionally capture set-level `rpe`, `rir`, and `failure` from an advanced effort row.
 - Existing `weight` / `reps` / `rest` input remains the primary note entry flow.
 - The `/analytics` page scaffold reuses the authenticated notes range API and is covered by frontend lint and build checks.
 - Frontend weekly summary API helper tests are included in `npm test` and CI.
-- Analytics can request a mocked backend weekly summary response without calling an external AI API.
+- The retained frontend API helper can request a mocked backend weekly summary response, but the production Analytics UI does not expose that action.
 - Analytics uses Recharts for the BIG3 estimated 1RM line chart; BIG3 cards remain as accessible exact-value fallback content.
 - Analytics uses Recharts for the weekly muscle-group chart with `totalSets` / `totalVolumeLoad` metric toggle; the muscle-group table remains as exact-value fallback content.
 - Analytics includes an exercise trend selector using existing normalized set metrics and canonical exercise groups when metadata matches.

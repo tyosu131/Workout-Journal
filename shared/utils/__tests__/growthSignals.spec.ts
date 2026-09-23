@@ -120,7 +120,9 @@ describe("growthSignals", () => {
         "Deadlift max estimated 1RM: 185.",
         "Deadlift latest estimated 1RM: 180.",
       ]);
-      expect(strength.detail).toContain("previous range comparison is not connected yet");
+      expect(strength.detail).toBe(
+        "BIG3 estimated 1RM trend points are available for this range."
+      );
     });
 
     it("marks volume unknown when there is no muscle group data", () => {

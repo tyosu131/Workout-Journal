@@ -44,10 +44,7 @@ import {
 } from "../../../../shared/utils/trainingMetrics";
 import { buildWeeklySummaryInput } from "../../../../shared/utils/weeklySummaryInput";
 import { fetchNotesInRangeAPI } from "../../notes/api";
-import {
-  generateWeeklySummaryAPI,
-  type GenerateWeeklySummaryResponse,
-} from "../api/weeklySummaryApi";
+import { DETAILED_TREND_EMPTY_HEADING } from "../analyticsCopy";
 import AnalyticsRangeFilter, {
   type AnalyticsRange,
 } from "../components/AnalyticsRangeFilter";
@@ -98,14 +95,9 @@ const getDateRange = (range: AnalyticsRange): { start: string; end: string } => 
 const AnalyticsPage: React.FC = () => {
   const router = useRouter();
   const requestIdRef = useRef(0);
-  const weeklySummaryRequestIdRef = useRef(0);
   const [range, setRange] = useState<AnalyticsRange>("12w");
   const [reloadKey, setReloadKey] = useState(0);
   const [status, setStatus] = useState<LoadStatus>("loading");
-  const [generatedWeeklySummary, setGeneratedWeeklySummary] =
-    useState<GenerateWeeklySummaryResponse | null>(null);
-  const [weeklySummaryError, setWeeklySummaryError] = useState<string | null>(null);
-  const [isGeneratingWeeklySummary, setIsGeneratingWeeklySummary] = useState(false);
   const [noteCount, setNoteCount] = useState(0);
   const [normalizedSetCount, setNormalizedSetCount] = useState(0);
   const [big3Summaries, setBig3Summaries] = useState<Big3TrendSummary[]>(() =>
@@ -162,13 +154,6 @@ const AnalyticsPage: React.FC = () => {
   );
 
   useEffect(() => {
-    weeklySummaryRequestIdRef.current += 1;
-    setGeneratedWeeklySummary(null);
-    setWeeklySummaryError(null);
-    setIsGeneratingWeeklySummary(false);
-  }, [dateRange.end, dateRange.start, reloadKey]);
-
-  useEffect(() => {
     if (!getToken()) {
       router.replace(URLS.LOGIN_PAGE);
       return;
@@ -208,39 +193,6 @@ const AnalyticsPage: React.FC = () => {
       }
     };
   }, [dateRange.end, dateRange.start, reloadKey, router]);
-
-  const handleGenerateWeeklySummary = async () => {
-    if (status !== "success") {
-      return;
-    }
-
-    const requestId = ++weeklySummaryRequestIdRef.current;
-    setIsGeneratingWeeklySummary(true);
-    setWeeklySummaryError(null);
-    setGeneratedWeeklySummary(null);
-
-    try {
-      const response = await generateWeeklySummaryAPI({
-        rangeStart: dateRange.start,
-        rangeEnd: dateRange.end,
-        summaryInput: weeklySummaryInput,
-      });
-
-      if (requestId !== weeklySummaryRequestIdRef.current) {
-        return;
-      }
-
-      setGeneratedWeeklySummary(response);
-    } catch {
-      if (requestId === weeklySummaryRequestIdRef.current) {
-        setWeeklySummaryError("Mocked weekly summary request failed.");
-      }
-    } finally {
-      if (requestId === weeklySummaryRequestIdRef.current) {
-        setIsGeneratingWeeklySummary(false);
-      }
-    }
-  };
 
   const hasExerciseData = setsWithMetrics.some((set) => set.exerciseName.trim() !== "");
   const hasEffortData = effortSummary.effortLoggedSetCount > 0;
@@ -309,11 +261,6 @@ const AnalyticsPage: React.FC = () => {
                 summary={weeklySummary}
                 rangeStart={dateRange.start}
                 rangeEnd={dateRange.end}
-                generatedResponse={generatedWeeklySummary}
-                generationError={weeklySummaryError}
-                isGenerating={isGeneratingWeeklySummary}
-                canGenerate={status === "success"}
-                onGenerate={handleGenerateWeeklySummary}
               />
             </Box>
             <Box mb={6}>
@@ -325,7 +272,7 @@ const AnalyticsPage: React.FC = () => {
         {status === "success" && !hasAnalyticsData && (
           <Box border="1px solid" borderColor="gray.200" bg="white" p={8} textAlign="center">
             <Heading as="h2" size="sm" mb={2}>
-              No analytics data yet
+              {DETAILED_TREND_EMPTY_HEADING}
             </Heading>
             <Text color="gray.600">
               {noteCount === 0
