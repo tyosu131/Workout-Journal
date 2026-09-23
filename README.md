@@ -4,7 +4,7 @@
 
 Workout Journal keeps strength-training sessions organized by date. Record the exercises, sets and effort for a session, revisit an earlier workout, and compare trends before deciding what to do next. The calendar preserves session context; analytics turns those notes into a view of training consistency, volume and strength progression.
 
-The live link is the stable Frontend Cloud Run service URL, verified on 2026-09-22. The [production evidence record](./docs/portfolio-finalization.md#current-production) identifies the deployed source and paired revisions. Product v1 is complete; the separate [Portfolio Finish contract](./docs/portfolio-completion-contract.md) still has repository-maturity and final-audit gates.
+The live link is the stable Frontend Cloud Run service URL. The [production evidence record](./docs/portfolio-finalization.md#current-production) separates dated verified checkpoints from exact current revisions, which are owned by live Cloud Run read-back. Product v1 and the defined [Portfolio Finish scope](./docs/portfolio-completion-contract.md) are complete; future improvements remain outside that completion boundary.
 
 ## What you can do
 
@@ -100,8 +100,8 @@ Backend `/health` is dependency-free and backs Cloud Run startup/liveness probes
 - [Verification](./docs/verification.md): testing layers and observability evidence.
 - [Terraform ownership](./docs/portfolio-infra-ownership.md) and [Terraform setup](./infra/terraform/README.md): foundation versus delivery state.
 - [Supabase strategy](./supabase/README.md): schema, Auth, RLS and clean-start policy.
-- [Portfolio Completion Contract](./docs/portfolio-completion-contract.md): bounded Must conditions and remaining gates.
-- [Current production and repository maturity](./docs/portfolio-finalization.md): verified production, repository metadata, Release and license status.
+- [Portfolio Completion Contract](./docs/portfolio-completion-contract.md): completed Must conditions and scope boundary.
+- [Production checkpoints and repository maturity](./docs/portfolio-finalization.md): verified production, repository metadata, Release and license status.
 - [Original v1 production release](./docs/releases/workout-journal-v1.md): historical known-good artifact and smoke record.
 
 ## Run locally

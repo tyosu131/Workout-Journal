@@ -9,7 +9,7 @@ Every claim below is labelled as one of the following:
 - **Current / Implemented**: confirmed in the current repository code.
 - **Verified Infrastructure Fact**: confirmed by the reviewed Supabase backup, rather than inferred from application code.
 - **Verified Hosted Isolated Fact**: confirmed against the isolated Hosted Supabase verification project; this does not claim production configuration, deployment, or cutover.
-- **Current Production Evidence**: the current pair is owned by [PF-F1](./portfolio-finalization.md#current-production); dated observability closure evidence remains in [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure). The [v1 release record](./releases/workout-journal-v1.md) retains the original release artifact, production smoke and cleanup proof.
+- **Current Production Evidence**: exact current revisions, traffic and pairing are owned by live Cloud Run read-back; [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) is the latest verified Portfolio closure checkpoint; dated observability closure evidence remains in [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure). The [v1 release record](./releases/workout-journal-v1.md) retains the original release artifact, production smoke and cleanup proof.
 - **Current Design Decision**: an explicit current boundary or policy reflected in code and supporting design material.
 - **Future Direction**: a proposed next step, not an implemented capability.
 - **Open Question**: not verified from this repository, the reviewed backup, or the isolated Hosted evidence, as applicable.
@@ -388,7 +388,7 @@ Persisted notes
 
 ### API Status and Open Questions
 
-- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. PF-F1 owns the current pair, post-deploy PASS and stable public Frontend URL with a fresh `/login` 200 check; older release/OBS records remain dated evidence.
+- **Current Production Evidence:** The release record identifies the deployed revision pair, immutable image digests, exact Backend tagged URL, Frontend-to-Backend pairing, and successful production end-to-end smoke. PF-F5 records a dated pair and post-deploy PASS at the stable public Frontend URL; live Cloud Run read-back owns exact current state. All release/OBS/PF records retain their evidence dates.
 - **Open Question:** API versioning is not present in the inspected route mounts.
 - **Open Question:** A common error-response schema is not present across the current services.
 - **Open Question:** Server-side refresh-token revocation and rotation are not confirmed.
@@ -447,7 +447,7 @@ Persisted notes
 | Weekly-summary provider boundary | **Current / Implemented** | Invalid provider JSON or shape, or a provider throw, returns a `200` rule-based fallback with validation errors. The current adapter is local and mocked. | There is no provider retry, timeout, rate limit, or real-provider outage handling because no external provider is implemented. |
 | Supabase Auth and PostgreSQL | **Current / Implemented** | Route and service handlers generally catch Supabase errors and return endpoint-specific `500` responses. Password reset and authentication flows report the immediate API outcome. | No common error envelope, retry policy, transaction boundary, or production connectivity monitoring is implemented in the inspected code. |
 | Schema integrity | **Verified Hosted Isolated Fact** | The repository target migration defines `PRIMARY KEY (date, userid)` for `notes`, matching the application's upsert model. | The schema and multi-user isolation passed in the isolated Hosted project and were carried into the v1 production release. Ongoing schema monitoring remains outside the repository evidence; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key). |
-| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | PF-F1 records the current exact pair/post-deploy PASS and stable public Frontend host. Future candidates still require deployment-time verification. |
+| Production frontend-to-backend connectivity | **Current Production Evidence** | The browser calls Frontend same-origin `/api/*`; the Frontend server calls the exact paired Backend tagged URL from its runtime environment. Production smoke verified HTTPS, same-origin auth/note/tag/Calendar/Analytics/logout behavior, and the recorded revision pair. | PF-F5 records the dated closure pair/post-deploy PASS and stable public Frontend host; live Cloud Run read-back owns exact current pairing. Future candidates still require deployment-time verification. |
 
 ### Current Recovery Behavior
 
@@ -493,7 +493,7 @@ Persisted notes
 - **Verified Hosted Isolated Fact:** The composite daily-note key, [validation SQL](../supabase/validation/validate_initial_schema.sql), and multi-user end-to-end behavior passed in the isolated Hosted project; see [Data Model Risk: Daily Note Key](#data-model-risk-daily-note-key).
 - **Current Production Evidence:** Legacy test data was not imported. The v1 production release used the approved clean-start data policy.
 - **Current Production Evidence:** Production configuration, final release verification, deployment, major-workflow smoke, and cleanup are complete for v1; see the [v1 production release record](./releases/workout-journal-v1.md).
-- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. PF-F1 supplies the current exact pair/post-deploy PASS, public Frontend host and fresh GET `/login` 200 evidence for the portfolio README.
+- **Current Production Evidence:** The release record preserves the exact Backend tagged URL and paired revisions, and production smoke verified HTTPS, same-origin refresh/logout behavior, and server-to-server connectivity. PF-F5 supplies the dated closure pair/post-deploy PASS and stable public Frontend host for the portfolio README; exact current pairing requires live Cloud Run read-back.
 - **Open Question:** Resolve the resend-verification route and authentication-wrapper ambiguity documented in [Endpoint Inventory](#endpoint-inventory).
 - **Current / Implemented:** The endpoint accepts client-provided `summaryInput`, which is not equivalent to server-rebuilt analytics; see [API Security and Privacy](#api-security-and-privacy).
 - **Open Question:** Endpoint error envelopes remain inconsistent; see [Response and Error Boundaries](#response-and-error-boundaries).
@@ -528,7 +528,7 @@ ingestion and safe schema for two server_handler events, as recorded in OBS-D3F.
 
 ### Production Signals and Runtime Evidence
 
-**Current production:** [PF-F1](./portfolio-finalization.md#current-production) records `cd-35737278328-1`, both services at 100%.
+**Production evidence:** [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the dated Portfolio closure checkpoint. Exact current revisions and traffic are owned by live Cloud Run read-back.
 **Dated observability runtime proof:** [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
 records its then-promoted pair `cd-35684518093-2`,
 Backend health/startup/liveness PROVEN, Frontend availability PROVEN, two safe
@@ -589,8 +589,8 @@ remain Future Direction, not additional Must 5 acceptance conditions.
 
 1. Preserve the separate [P2A/P2B Must 2 proof](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) and [C4D automatic delivery closure](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure); Must 2 and Must 4 are Closed.
 2. Preserve the approved Terraform/CD ownership boundary and keyless WIF foundation; Must 3 is Closed by OBS-D1/D2A/B Monitoring apply/read-back/no-drift evidence.
-3. Preserve [OBS-D3F Must 5 closure](./verification.md#obs-d3f-final-observability-documentation-closure); current production is recorded in [PF-F1](./portfolio-finalization.md#current-production). Future documentation merges require their own operational scope.
-4. Preserve [Must 6 security closure](./portfolio-finalization.md#must-6-durable-closure); complete the accepted portfolio branch merge and repository-maturity post-merge verification.
+3. Preserve [OBS-D3F Must 5 closure](./verification.md#obs-d3f-final-observability-documentation-closure); [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) is the dated closure checkpoint, while live Cloud Run read-back owns exact current production. Future documentation merges require their own operational scope.
+4. Preserve [Must 6 security closure](./portfolio-finalization.md#must-6-durable-closure); [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) completes the defined Portfolio Finish scope. Further improvements require separate accepted scope.
 5. Resolve resend-verification route mapping and authentication-wrapper behavior only if a separate accepted scope requires it.
 6. Define common API error envelopes only if a separate accepted scope requires them.
 7. Add external-provider timeout, rate-limit, and observability design only before real provider integration; external AI integration is not a Portfolio Must.

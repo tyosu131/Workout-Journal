@@ -4,7 +4,7 @@
 
 筋トレを日付ごとのセッションとして記録し、過去の重量・回数・努力度を見返せるWebアプリです。カレンダーで前回の記録を探し、Analyticsで継続・ボリューム・筋力の傾向を確認して、次のトレーニングにつなげます。
 
-上記は2026-09-22に確認したFrontend Cloud Runの安定URLです。現在のsourceとrevision pairは[本番確認記録](./docs/portfolio-finalization.md#current-production)にあります。v1は完成済みですが、Portfolio Finishにはrepository maturityと最終監査のGateが残っています。
+上記はFrontend Cloud Runの安定URLです。[本番確認記録](./docs/portfolio-finalization.md#current-production)は日付付きcheckpointを保持し、正確な現在のrevisionはlive Cloud Run read-backを正本とします。v1と定義済みの[Portfolio Finish scope](./docs/portfolio-completion-contract.md)は完成済みで、今後の改善はその完了境界の外に残ります。
 
 ## 実装済みの機能
 

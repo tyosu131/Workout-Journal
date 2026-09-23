@@ -1,4 +1,134 @@
-# Portfolio Presentation and Repository Maturity — PF-F1 / PF-F2 / PF-F3
+# Portfolio Final Closure — PF-F5
+
+## Current production
+
+The stable public service URL is [Workout Journal](https://workout-journal-frontend-cpbzb7lqza-an.a.run.app).
+**Actual Cloud Run read-back owns exact current revisions, traffic and
+Frontend `BACKEND_INTERNAL_URL` pairing.** Use service traffic and the referenced
+revision configuration, not repository HEAD or `latestReadyRevisionName` alone.
+The deployment contract is owned by the [runbook](./cloud-run-deployment-runbook.md).
+
+The [PF-F5 record](#pf-f5-final-closure) is the latest verified Portfolio closure
+production checkpoint, dated 2026-09-23 (UTC). Its exact identities remain
+Historical evidence after any later deployment. A later main merge, including
+this documentation PR, may trigger normal automatic CD and create another pair;
+that does not invalidate this checkpoint or turn it into a timeless Current claim.
+
+## PF-F5 final closure
+
+**Portfolio Done — 2026-09-23 (UTC).** The defined
+[Completion Contract](./portfolio-completion-contract.md) remains the scope ceiling:
+Must 1–8 are Closed and Final Portfolio Audit Must findings are 0. Existing
+Post-v1 / Backlog remains outside that boundary; Done does not mean no future
+improvement is possible. This phase changes documentation only and stops before merge.
+
+### Post-merge evidence
+
+Fresh GitHub API read-back, rather than the prior phase's conclusions, established:
+
+| Fact | Verified evidence |
+| --- | --- |
+| Authority | Clean start; new branch `docs/portfolio-final-closure`; local main / fetched origin/main / GitHub main `baed21577944dba7fb8fad5b10b99c9d2a02cd8f`; no rebase |
+| PR #138 | [MERGED](https://github.com/tyosu131/Workout-Journal/pull/138), `2026-09-22T15:59:18Z`, merge SHA equals that main SHA |
+| Main CI | [35751052734](https://github.com/tyosu131/Workout-Journal/actions/runs/35751052734), SUCCESS / attempt 1 / exact main; `Lint, build, and test baseline` SUCCESS |
+| Post-merge CodeQL | [35751051757](https://github.com/tyosu131/Workout-Journal/actions/runs/35751051757), SUCCESS / attempt 1 / exact main; Default setup configured |
+| License | Root [LICENSE](../LICENSE) exists on default branch main; approved MIT policy and frontend metadata are merged; GitHub repository and license APIs detect **MIT License / MIT** |
+| Repository metadata | Description, homepage and all nine topics exactly match the [accepted PF-F3 values](#github-metadata--applied-and-verified) |
+| Release | [production-2026-09-22](https://github.com/tyosu131/Workout-Journal/releases/tag/production-2026-09-22) remains published, non-draft, non-prerelease; accepted title/date retained; Release target and tag resolve to `2d9ec91d8f11a83c0904de770cc8df436139325b` |
+
+The Release is a dated known-good snapshot. Its phase-local statement that
+Portfolio Finish was not yet complete remains Historical; PF-F5 does not mutate
+the Release, tag, metadata or license policy.
+
+### Automatic CD — independent attempt evidence
+
+Run **35751419123** is `workflow_run`, bound to main
+`baed21577944dba7fb8fad5b10b99c9d2a02cd8f` and CI `35751052734` / attempt 1.
+Both attempt endpoints and their job lists were read independently.
+
+| Attempt | Candidate / E2E / verify | Production / final diagnostic | Classification |
+| --- | --- | --- | --- |
+| [1](https://github.com/tyosu131/Workout-Journal/actions/runs/35751419123/attempts/1) | PASS / PASS / PASS | FAIL; `MANIFEST_VALIDATION_FAILED`, `FAIL / pre-build` | Historical expected fail-closed evidence; no production traffic write |
+| [2](https://github.com/tyosu131/Workout-Journal/actions/runs/35751419123/attempts/2) | PASS / PASS / PASS | SUCCESS; `PASS / post-deploy-verification` | Successful fresh delivery; candidate `cd-35751419123-2` |
+
+Attempt 1's [production log](https://github.com/tyosu131/Workout-Journal/actions/runs/35751419123/job/106830345027)
+contains manifest `capturedAt=2026-09-22T16:10:07.497682+00:00`.
+Verify completed at `16:12:58Z`; the Human-gated production job began at
+`2026-09-23T00:13:00Z` and rejected the manifest at `00:13:10Z`, about 8h03m after
+capture. Human approval occurred after the one-hour manifest TTL during that wait.
+[RELEASE_TTL](../e2e/release-contract.mjs) is `3600000` ms; offline validation of
+the logged manifest passes at capture time and returns `MANIFEST_STALE` at the
+production diagnostic time. The [controller](../.github/scripts/cd_release.py)
+validates `input_manifest` before credentials, recheck or any traffic write in
+`promote`; it maps validator failure to `MANIFEST_VALIDATION_FAILED`. Its
+promotion/rollback fields are null. The next attempt's captured traffic also
+retains the previous pair. **This is not a current product/CD defect and does not
+reopen Must 4.**
+
+Attempt 2's [E2E log](https://github.com/tyosu131/Workout-Journal/actions/runs/35751419123/job/106993682838)
+records all eight steps PASS, HTTPS cookie verified, cleanup `PROVEN_ZERO`
+(Auth/users/notes/user_tags all zero), receipt PERSISTED and evidence PASS.
+Its [production log](https://github.com/tyosu131/Workout-Journal/actions/runs/35751419123/job/106994191556)
+records post-deploy PASS at `2026-09-23T00:28:44Z`, with no promotion failure and
+rollback null. No new rollback execution is claimed.
+
+### Dated production closure checkpoint
+
+Read-only `gcloud run services describe` and `gcloud run revisions describe`
+completed by **2026-09-23T00:39:15Z** for project `workout-journal-506909`, region
+`asia-northeast1`. Actual traffic, revision readiness, tag resolution and image
+digests were checked against the attempt 2 manifest, not inferred from its success.
+
+| Field | Verified value at this checkpoint |
+| --- | --- |
+| Frontend revision / traffic / Ready | `workout-journal-frontend-cd-35751419123-2` / 100% / True |
+| Backend revision / traffic / Ready | `workout-journal-backend-cd-35751419123-2` / 100% / True |
+| Frontend `BACKEND_INTERNAL_URL` | `https://cd-35751419123-2---workout-journal-backend-cpbzb7lqza-an.a.run.app`; Backend tag resolves to the same active Backend revision |
+| Stable Frontend URL | `https://workout-journal-frontend-cpbzb7lqza-an.a.run.app` |
+| Source / Build | Manifest source `baed21577944dba7fb8fad5b10b99c9d2a02cd8f`; Build `58d40d06-c628-4446-97ea-bc98250a1986` SUCCESS |
+| Frontend digest | `sha256:d692f56f83264fe274d94d65c8f1fbd2bc1a1c3f5e8f5056cf2ccc3ca7b46551` |
+| Backend digest | `sha256:df1528d409c6f7ab5583683db12242b74afd58d20a12be59ad96d46b4eed0d11` |
+| Probes | Frontend TCP startup 8080; Backend HTTP `/health`:8080 startup/liveness retained |
+
+### Final Portfolio Audit
+
+Source Map v3.1, Core v3.2, Router v3.2, Review v3.1 and Pre-PR v3.1 were applied
+to this docs-only closure. First Pass before remediation: **Must 3 / Should 0 /
+Pending 0 / Decision Needed 0**: stale runtime ownership summaries, stale
+merge/license/completion gates, and missing final post-merge delivery history.
+Only those documentation findings were corrected, then affected checks regated.
+
+| Must | Fresh closure audit evidence | Result |
+| --- | --- | --- |
+| 1 | Repository-wide Current/Historical/Future review; stale summaries corrected; exact runtime currentness owned by live read-back; historical identities and scope ceiling preserved | Closed |
+| 2 | P2B scenario/cleanup proof re-read; attempt 2 independently corroborates all eight steps and zero residuals; E2E source/config unchanged | Closed |
+| 3 | OBS-D2A/B 42-resource apply/no-drift and WIF/ownership evidence re-read against the foundation source; no Terraform/IAM/identity changes | Closed |
+| 4 | C4D delivery and bounded C3 rollback evidence preserved; actual attempt 2 proves automatic paired delivery/post-deploy; attempt 1 correctly rejects expiry before writes | Closed |
+| 5 | OBS-D3F health/logging/uptime/incident and Human email-receipt proof re-read; live probes retained; monitoring source and recovery procedure unchanged | Closed |
+| 6 | Fresh main CI/CodeQL, Dependabot configuration and durable execution evidence; alerts/security updates, secret scanning/push protection and strict protected-main check verified | Closed |
+| 7 | English/Japanese READMEs are on main after #138; live URL, features, architecture, stack, CI/CD, IaC/security, tests, observability, recovery, decisions and documentation map verified; only stale closure/ownership sentences corrected | Closed |
+| 8 | Accepted metadata/Release verified; root MIT LICENSE on main and GitHub detection MIT; zero material stale Current claims; final audit Must 0 | Closed |
+
+Adversarial checks 1–12: all Must rows are Closed; checkpoint IDs have explicit
+dates/live ownership; attempt 1 is retained as fail-closed history; attempt 2
+success and MIT detection come from actual APIs/logs; both READMEs are on main;
+metadata/Release match accepted state; historical IDs are not globally replaced;
+this PR's later CD cannot stale a timeless revision claim; Backlog stays outside
+Done; TTL rejection alone does not reopen Must 4. **No Finding** for all cases.
+
+Final classifications: **Must 0 / Should 0 / Pending Evidence 0 / Decision Needed 0 /
+new Backlog 0**. Remaining Portfolio Must gap: **None**. Deterministic documentation
+checks cover 14 changed files, 310 relative links (296 outgoing / 14 inbound) and
+184 anchors with zero errors. `git diff --check`, stale-current searches, full effective-diff
+review and fresh GitHub/production read-back pass. No full local application suite,
+failure injection, destructive proof or runtime mutation is part of this phase.
+
+## Historical PF-F1 / PF-F2 / PF-F3 records
+
+Everything below retains its phase-local authority, identities, outcomes and
+then-open gates from 2026-09-22. Statements such as Current, NOT YET, merge required
+and READY_TO_CLOSE_AFTER_MERGE below describe those Historical checkpoints;
+the PF-F5 closure above supersedes their completion/currentness summaries.
 
 ## Scope and authority
 
@@ -17,11 +147,11 @@ not v1 Completion Contract Conditions 7/8. Product v1 is not reopened.
 - PF-F3 implements the subsequently approved MIT decision and exact GitHub metadata
   and Release. Production operations, stage, commit, push and PR remain outside scope.
 
-## Current production
+## PF-F1 historical production checkpoint
 
-This is the current production checkpoint, established by `gcloud run services
-describe` and `gcloud run revisions describe`, not by selecting a historical
-release revision or assuming that main must be deployed.
+**Historical — 2026-09-22 (UTC).** This PF-F1 checkpoint was established by
+`gcloud run services describe` and `gcloud run revisions describe`. The identities
+and results below remain evidence of that phase, not exact current runtime state.
 
 | Field | Verified value |
 | --- | --- |
@@ -252,7 +382,7 @@ Author-side Pre-PR reviewed scope, complete diff, empty index, MIT consistency,
 README, history boundaries, metadata/Release identity and link checks: **PASS**.
 Full application tests were not rerun: runtime source/config/dependencies are unchanged.
 
-## Current closure readiness
+## PF-F3 historical closure readiness
 
 - Must 1: READY_TO_CLOSE_AFTER_MERGE.
 - Must 2–5: Closed, preserved; no contrary evidence found.

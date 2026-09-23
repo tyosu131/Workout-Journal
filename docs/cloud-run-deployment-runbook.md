@@ -3,10 +3,12 @@
 This runbook starts at the Human Gate. It does not authorize resource creation or deployment by itself.
 
 CD-C1's [gated delivery source](./cd-c1-candidate-delivery.md) implements the
-existing-service candidate/E2E/approval/promotion path. [PF-F1 current production](./portfolio-finalization.md#current-production)
-records `cd-35737278328-1`, both services at 100%, source
-`2d9ec91d8f11a83c0904de770cc8df436139325b`, main CI `35736936685` and automatic
-CD `35737278328` SUCCESS / attempt 1, production/post-deploy PASS.
+existing-service candidate/E2E/approval/promotion path. The stable public URL is
+[Workout Journal](https://workout-journal-frontend-cpbzb7lqza-an.a.run.app).
+[PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the latest verified
+Portfolio closure production checkpoint. Exact current revisions, traffic and
+Frontend-to-Backend pairing are owned by live Cloud Run read-back; later main
+merges, including documentation, may trigger a new automatic CD.
 Must 3–6 are Closed. [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure)
 retains the Historical previous pair and durable health/probe, uptime, structured
 failure, Backend incident and Human notification proof. [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
@@ -386,7 +388,7 @@ preserves the IDs, times, safe-schema results and exact requirement mapping.
 Record channel/incident IDs and available receipt times, not the private destination;
 never substitute incident times for missing receipt timestamps.
 
-**Historical OBS-D3F docs-merge plan:** that phase planned to run CI/candidate/E2E/verify, cancel at production approval wait, and retain `cd-35684518093-2`. The later Must 6 release superseded that production identity; [PF-F1](./portfolio-finalization.md#current-production) owns current read-back. A future documentation merge requires its own operational authorization. PF-F1 authorizes no merge, cancellation, approval or deployment; workflow behavior is unchanged.
+**Historical OBS-D3F docs-merge plan:** that phase planned to run CI/candidate/E2E/verify, cancel at production approval wait, and retain `cd-35684518093-2`. The later Must 6 release superseded that production identity; [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) preserves a later dated checkpoint; live Cloud Run read-back owns exact current state. A future documentation merge requires its own operational authorization. PF-F1 authorizes no merge, cancellation, approval or deployment; workflow behavior is unchanged.
 
 **Future verification procedure, only if separately requested:** Must 5 is already
 Closed, so no additional failure request is required. Any repeat needs a new

@@ -27,8 +27,8 @@ C3 runtime chain is CLOSED; **Must 4 is Closed** by the
 Run `35573153822` (`workflow_run`, attempt 1) passed all eight steps, HTTPS cookie
 verification, PROVEN_ZERO cleanup (0/0/0/0), receipt PERSISTED and evidence PASS,
 then verify, Human production approval, promotion and post-deploy verification.
-That C4D pair is Historical previous-production evidence. Current production is
-`cd-35737278328-1`, both services at 100%, under [PF-F1](./portfolio-finalization.md#current-production). OBS-D2A's `cd-35675050740-1` is Historical previous production. The
+That C4D pair is Historical previous-production evidence. [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the dated closure
+checkpoint; live Cloud Run read-back owns exact current production. OBS-D2A's `cd-35675050740-1` is Historical previous production. The
 [C4B failure/C4C propagation fix](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation)
 remains Historical; the fix is now runtime PROVEN. Release E2E consumes
 qualified source/CI ID/attempt and explicit manual-release or automatic-release authority.

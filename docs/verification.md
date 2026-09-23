@@ -2,13 +2,13 @@
 
 This project uses Node 24 and separate dependency sets for the root workspace, frontend, and backend. Install each one before running local verification.
 
-Current production: [PF-F1 read-back](./portfolio-finalization.md#current-production),
-`cd-35737278328-1`, 100% on both services, source
-`2d9ec91d8f11a83c0904de770cc8df436139325b`, automatic CD `35737278328`
-SUCCESS / attempt 1. **Must 3–6: Closed.** [Must 6 security evidence](./portfolio-finalization.md#must-6-durable-closure)
-includes exact-main CI and CodeQL, Dependabot runtime and governance read-back.
-OBS-D3F below remains the durable Must 5 proof. All dated sections retain their
-phase-local identities, traffic and NOT-YET results; they do not override PF-F1.
+Latest verified Portfolio closure production checkpoint:
+[PF-F5](./portfolio-finalization.md#pf-f5-final-closure), dated 2026-09-23 (UTC).
+Exact current revisions, traffic and pairing are owned by live Cloud Run read-back;
+static checkpoints remain valid history after later deployments. **Must 1–8: Closed.**
+[PF-F1 security evidence](./portfolio-finalization.md#must-6-durable-closure) and
+OBS-D3F below retain durable proofs, with fresh GitHub/runtime corroboration in PF-F5.
+All dated sections retain their phase-local identities, traffic and NOT-YET results.
 
 ## OBS-D3F Final Observability Documentation Closure
 
@@ -1481,7 +1481,7 @@ commit/push/PR, dispatch, rerun, approval, secret payload access or runtime muta
 ## CD-C4D Automatic Delivery Runtime Verification
 
 **Historical C4D proof, 2026-09-21.** Production, Terraform and Must status
-statements in this section describe that checkpoint. Current production is owned by [PF-F1](./portfolio-finalization.md#current-production);
+statements in this section describe that checkpoint. Exact current production is owned by live Cloud Run read-back; [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) is a dated checkpoint;
 Monitoring apply/no-drift evidence remains in [OBS-D2A/B](#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 
 Recorded 2026-09-21. **Must 4 Closed; remaining gap None.** This is fresh read-only
