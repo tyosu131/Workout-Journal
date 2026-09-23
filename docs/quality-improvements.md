@@ -47,7 +47,7 @@ This project has been improved with cloud migration, production operation, and c
 - Added build-context exclusions for environment files, credentials, Git data, dependencies, coverage, and temporary artifacts.
 - Added Cloud Build configuration for two git-SHA-tagged Artifact Registry images.
 - Added a digest-based deployment, known-good revision-pair, redeploy, and rollback runbook.
-- Completed the approved Cloud Run/Supabase production deployment, major-workflow browser smoke, and synthetic-data cleanup. The original artifact and revision pair are Historical evidence in the [v1 production release record](./releases/workout-journal-v1.md); [PF-F1](./portfolio-finalization.md#current-production) records current production.
+- Completed the approved Cloud Run/Supabase production deployment, major-workflow browser smoke, and synthetic-data cleanup. The original artifact and revision pair are Historical evidence in the [v1 production release record](./releases/workout-journal-v1.md); [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the dated closure checkpoint; live Cloud Run read-back owns exact current production.
 
 ### Bug Fix
 
@@ -71,7 +71,7 @@ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 - Resolve or document the Google Fonts download warning during build.
 - Add more backend service and route tests.
 - Add Supabase success and error path tests.
-- Complete the separately scoped Must conditions in the [Portfolio Finish Completion Contract](./portfolio-completion-contract.md). This does not reopen the completed v1 deployment or smoke.
+- Preserve the completed [Portfolio Finish scope](./portfolio-completion-contract.md); further improvements require separate accepted scope. The existing Post-v1 backlog does not reopen v1 or Portfolio Done.
 - Triage advisories for each future release candidate; critical/high advisories block that candidate unless explicitly resolved or accepted through the applicable release process.
 
 ## How to Explain This Project

@@ -20,7 +20,7 @@ Monitoring read-back, uptime PASS and no-drift. Current state is **42 resources 
 GCS generation `1790044105183280`; all 42 planned actions were no-op in OBS-D2A.
 [OBS-D3F](../../docs/verification.md#obs-d3f-final-observability-documentation-closure) records Must 5 Closed: safe structured failure runtime, Backend incident OPEN/CLOSED and Human firing/recovery email delivery PROVEN; remaining gap None.
 Must 4 remains Closed by [C4D automatic delivery proof](../../docs/cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
-[PF-F1 current production](../../docs/portfolio-finalization.md#current-production) is `cd-35737278328-1`, both services at 100%; OBS-D3F is Historical previous production. OBS-D2A
+[PF-F5](../../docs/portfolio-finalization.md#pf-f5-final-closure) is the dated closure checkpoint; live Cloud Run read-back owns exact current production; OBS-D3F is Historical previous production. OBS-D2A
 pair `cd-35675050740-1` and C4D pair `cd-35573153822-1` are Historical. C3U's 37-resource and C4D release records below
 retain their own evidence dates. Manual activation remains UNCONFIGURED; automatic
 qualification does not require that latch.
@@ -351,7 +351,7 @@ The provider condition requires owner ID `95160728`, repository ID `790375516`, 
 
 At P1C-A closure, the dedicated deploy and build Service Accounts each had zero user-managed keys; the deploy Service Account had only the exact P1C-A `roles/iam.workloadIdentityUser` binding, and the build Service Account had no IAM binding. P1C-B subsequently added only the exact operational members documented below.
 
-The WIF foundation and P1C-B operational IAM support the [CD-B2 verified manual submission path](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof). The Deploy provider is enabled and PE-P1C-01B is Closed. At CD-B2, `cd.yml` supplied only manual submission proof; CD-C1 now replaces its source with gated candidate delivery desired state, without activation or full-CD runtime proof. Compute default Service Account Editor cleanup completed separately in P1C-D2. Production CD activation remains future work; CD-B2 added no IAM grants.
+**Historical CD-C1 source checkpoint (superseded by the C4D delivery proof above):** The WIF foundation and P1C-B operational IAM support the [CD-B2 verified manual submission path](../../docs/wif-submission-proof.md#cd-b2-verified-runtime-proof). The Deploy provider is enabled and PE-P1C-01B is Closed. At CD-B2, `cd.yml` supplied only manual submission proof; CD-C1 now replaces its source with gated candidate delivery desired state, without activation or full-CD runtime proof. Compute default Service Account Editor cleanup completed separately in P1C-D2. Production CD activation remains future work; CD-B2 added no IAM grants.
 
 ## Completed P1C-B operational IAM
 

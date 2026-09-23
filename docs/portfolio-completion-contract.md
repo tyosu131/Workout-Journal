@@ -2,7 +2,7 @@
 
 - **Version:** 1.0
 - **Decision date:** 2026-08-29
-- **Status:** Adopted for Portfolio Finish scope; Portfolio Done is not yet achieved
+- **Status:** Portfolio Done — PF-F5 closure verified 2026-09-23 (UTC)
 - **Owner:** Project owner
 - **Purpose:** Define the bounded completion ceiling for presenting the completed Workout-Journal v1 as a mature portfolio project without reopening v1 product scope
 
@@ -22,6 +22,11 @@ Final Portfolio Audit Must finding count = 0
 
 Open Backlog items do not prevent Portfolio Done when they are outside this contract.
 
+**PF-F5 result: Must 1–8 Closed; Final Portfolio Audit Must findings 0; remaining
+Portfolio Must gap: None.** [Final closure evidence](./portfolio-finalization.md#pf-f5-final-closure)
+establishes completion of this defined Portfolio Finish scope. It does not imply
+that no future improvements or Post-v1 / Backlog items remain.
+
 ## 2. Source of Truth and Status Language
 
 ### Evidence Routing
@@ -33,13 +38,24 @@ Portfolio Finish does not apply one priority chain to every kind of evidence. Us
 | Portfolio Finish completion boundary | Current Portfolio Completion Contract / Project owner decision |
 | Repository-specific implementation, placement, and verification method | Current Repository Harness / architecture / guideline / approved pattern |
 | Repository implementation / current behavior | Target branch actual code / config / tests / runtime result |
-| Production deployment / live runtime state | Current release evidence + actual production Cloud Run / Supabase state |
+| Production deployment / live runtime state | Actual production Cloud Run read-back owns exact current revisions, traffic and pairing; dated release evidence supplies checkpoints; actual Supabase state owns its runtime facts |
 | Deployment / rollback contract | Current deployment runbook + actual deployment configuration |
 | GitHub repository / PR / CI / protection / Release state | Actual GitHub state obtained through authorized GitHub tooling / CLI |
 | Historical design / past decisions | ADR / PR / commit history / explicitly historical design documents |
 | External technology behavior | Official primary documentation |
 
-The current production pair `cd-35737278328-1` (100% each), exact source and fresh post-promotion read-back are recorded in [PF-F1](./portfolio-finalization.md#current-production). [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure) retains the Historical previous production pair and the durable Must 5 runtime proof. [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) preserves the Historical previous production pair and Monitoring apply/no-drift evidence. [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure) retains the Historical automatic-delivery proof that closed Must 4. The [v1 production release record](./releases/workout-journal-v1.md) remains the original known-good v1 evidence. The [Cloud Run deployment runbook](./cloud-run-deployment-runbook.md) defines the current deployment, candidate-pairing, promotion, redeploy, and rollback contract.
+The stable public service is [Workout Journal](https://workout-journal-frontend-cpbzb7lqza-an.a.run.app).
+[PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the latest verified
+Portfolio closure production checkpoint. Exact current revisions, traffic and
+pairing are owned by live Cloud Run read-back, not a static document or main SHA;
+a later merge, including this documentation PR, may trigger another automatic CD.
+[PF-F1](./portfolio-finalization.md#pf-f1-historical-production-checkpoint),
+[OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure),
+[OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure),
+[C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure)
+and the [v1 release](./releases/workout-journal-v1.md) retain their dated Historical
+identities and durable proofs. The [deployment runbook](./cloud-run-deployment-runbook.md)
+owns the deployment, candidate-pairing, promotion, redeploy and rollback contract.
 
 Claims must distinguish:
 
@@ -181,16 +197,15 @@ Portfolio Done requires:
 - zero material stale claims in current documentation; and
 - a final Portfolio Audit with zero Must findings.
 
-**Current maturity state (PF-F3):** The approved description, stable Frontend
-homepage and exact topics are SET / VERIFIED. The known-good production
-[GitHub Release](https://github.com/tyosu131/Workout-Journal/releases/tag/production-2026-09-22)
-is CREATED / VERIFIED at `2d9ec91d8f11a83c0904de770cc8df436139325b`, independently
-of the later portfolio branch. Human approved MIT; root LICENSE and frontend
-package/root-lock metadata are implemented on this branch. GitHub default-branch
-MIT detection is NOT YET / PENDING MERGE. [PF-F3 evidence](./portfolio-finalization.md#repository-maturity-read-back)
-supersedes the Historical PF-F1/PF-F2 metadata and license gaps. Must 8 remains
-READY_TO_CLOSE_AFTER_MERGE_AND_FINAL_AUDIT, not Closed: LICENSE must reach main,
-MIT detection must be re-read, and the final audit gate must remain satisfied.
+**Current maturity state (PF-F5): Closed.** Fresh GitHub read-back confirms the
+approved description, stable Frontend homepage and topics; published
+[Release](https://github.com/tyosu131/Workout-Journal/releases/tag/production-2026-09-22)
+and tag still identify the Historical known-good source
+`2d9ec91d8f11a83c0904de770cc8df436139325b`. PR #138 is merged; root LICENSE and
+approved MIT metadata are on default branch main, and GitHub detects **MIT License**.
+Zero material stale Current claims and Final Portfolio Audit **Must 0** complete
+Must 8. [PF-F5 evidence](./portfolio-finalization.md#pf-f5-final-closure) supersedes
+the Historical PF-F3 merge/detection gate without changing that Release artifact.
 
 ## 4. Explicit Non-goals
 
@@ -327,18 +342,21 @@ default-SA-grant prevention remains Backlog / separate hardening.
 
 | Must | Status | Evidence | Remaining gap | Owner phase |
 | --- | --- | --- | --- | --- |
-| 1. Documentation consistency | READY_TO_CLOSE_AFTER_MERGE | PF-F1 current/historical corrections, PF-F2 Fresh Audit and PF-F3 maturity synchronization; see [claim audit](./portfolio-finalization.md#portfolio-presentation-and-claim-audit) | Merge accepted documentation; preserve audit validity | PF-F1/F2/F3 + Final Portfolio Audit |
+| 1. Documentation consistency | Closed | [PF-F5 closure and fresh audit](./portfolio-finalization.md#pf-f5-final-closure): zero material stale Current claims; live runtime ownership explicit; Historical/Future boundaries and scope ceiling preserved | None | PF-F5 |
 | 2. Automated production-like E2E smoke | Closed | P2A local isolated foundation plus P2B actual HTTPS 0% candidate proof: run `p2b-1788593776629-9943a84c9ea7c644` passed login, note create/autosave/read, tag create/use/delete, Calendar, Analytics and logout on exact paired candidate `p2b-081adb25`; production traffic stayed 100%, Auth/profile/notes/user_tags residuals were zero and sanitized evidence passed leak inspection. Implementation and proof were freshly reviewed on 2026-09-05; the [durable E2E evidence record](./e2e-smoke-runbook.md#p2b-verified-candidate-proof) does not depend on local JSON availability | None for Must 2; subsequent CD integration and production promotion evidence closed Must 4 | P2A + P2B |
 | 3. Infrastructure as Code / Identity | Closed | P1B imported the eight-resource existing GCP foundation without cloud resource mutation; P1C-A added the disabled keyless WIF foundation; P1C-B added and verified the exact 13-member operational least-privilege IAM layer; P1C-C verified dedicated Build execution from exact commit `709c55a934783917184d09831facc085e7bc19c9`, including both immutable image digests and Cloud Logging, without Cloud Run mutation; P1C-D found zero current active Compute default SA dependencies; after a separate Human Gate, P1C-D2 removed only its legacy project-level `roles/editor` binding outside Terraform; post-removal lightweight production verification passed. CD-B2 applied the exact provider update, confirmed actual `ACTIVE` / `disabled = false`, and closed [PE-P1C-01B with runtime evidence](./wif-submission-proof.md#cd-b2-verified-runtime-proof) on 2026-09-06. At CD-B2 closure Terraform had 30 resources with a no-op post-plan. CD-C2A provisioned five E2E resources, giving 35; CD-C2B verified the no-op baseline and dedicated key/version 1. CD-C2C provider activation is COMPLETE; R8 run `35411846680` at source `6c0b91579f2caff02e9e190249c4c4bd73e877d1` closes isolated A/B/C WIF proof with all checks PASS and runtime-verifies R7 remediation. C3U added the two C3S Operation IAM resources: then-state 37, post-plan 0/0/0, remediation runtime PROVEN. [OBS-D1/D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure) completes reviewed merged-source plan, Human apply (1 import / 4 add), Monitoring API adoption, uptime/channel/two-policy read-back and three-location uptime PASS; current state 42, serial 10, all 42 planned actions no-op, no Terraform/CD ownership conflict | None | P1 + IaC + OBS-D1/D2A/B |
 | 4. Continuous Delivery | Closed | [C4D automatic runtime closure and requirement mapping](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure): PR #114 / main `03f45f3b7ba2d48040cffcb2130318717a1e9d09` → CI `35572912520` SUCCESS / attempt 1 → automatic workflow_run CD `35573153822` SUCCESS / attempt 1. Exact CI/source binding, OIDC/WIF, Build `b53e2ad8-8e66-4f98-a3f6-f4a380f383c8`, immutable paired 0% candidates, 8/8 E2E, PROVEN_ZERO cleanup, matching hashes, Human production Environment approval, Backend then Frontend promotion and post-deploy PASS. Historical C4D pair `cd-35573153822-1` at 100% each; activation UNCONFIGURED at that checkpoint. C3 bounded rollback evidence retained; no C4 rollback claimed | None | CD phase / C4D closure |
 | 5. Observability | Closed | [OBS-D3F final evidence and exact requirement mapping](./verification.md#obs-d3f-final-observability-documentation-closure): health/probes and USA uptime PROVEN; attempt 2 safe structured failure runtime PROVEN; Backend alert incident OPEN/CLOSED and Human firing/recovery email delivery PROVEN; inspection/recovery procedure IMPLEMENTED | None | OBS-D3D/E runtime + OBS-D3F documentation closure |
 | 6. Security / Repository Governance | Closed | [PF-F1 durable closure](./portfolio-finalization.md#must-6-durable-closure): #124 merged; exact-main CI/CodeQL SUCCESS; main Dependabot config and actual version/security automation; secret controls; protected main and strict required check; automatic CD/production SUCCESS | None | Must 6 post-merge + PF-F1 durable record |
-| 7. Portfolio presentation | READY_TO_CLOSE_AFTER_MERGE | PF-F1 English/Japanese README with current live URL, source-backed features, architecture/delivery visuals and owner-document links; PF-F2 Fresh Audit accepted; PF-F3 adds approved MIT disclosure | Merge accepted presentation | PF-F1/F2/F3 |
-| 8. Repository maturity / final evidence | READY_TO_CLOSE_AFTER_MERGE_AND_FINAL_AUDIT | [PF-F3 execution/read-back](./portfolio-finalization.md#repository-maturity-read-back): approved metadata applied, exact production Release published, MIT implemented locally | Merge LICENSE/documentation; verify GitHub MIT detection on default branch and retain passing final audit | PF-F3 + post-merge read-back |
+| 7. Portfolio presentation | Closed | [PF-F5 default-branch read-back](./portfolio-finalization.md#pf-f5-final-closure): PR #138 merged; English/Japanese READMEs cover the live URL, features, architecture, stack, CI/CD, IaC/security, testing, observability, recovery, decisions and documentation map | None | PF-F5 |
+| 8. Repository maturity / final evidence | Closed | [PF-F5 final evidence](./portfolio-finalization.md#pf-f5-final-closure): approved metadata and Release verified; MIT policy/root LICENSE on main and GitHub detection MIT; zero stale Current claims and final audit Must 0 | None | PF-F5 |
 
 ## 6. P6 README Gap Register
 
-PF-F1 implements the following presentation checklist in the English/Japanese READMEs. PF-F2 accepted it; it is READY_TO_CLOSE_AFTER_MERGE, not a declaration of Portfolio Done:
+PF-F5 verified the following accepted presentation checklist in the English/Japanese
+READMEs on default branch main after PR #138 merged. **Must 7: Closed.** The
+[final closure audit](./portfolio-finalization.md#pf-f5-final-closure) also confirms
+all other Must conditions; no README rewrite is required:
 
 - the exact Live production URL;
 - screenshots or other appropriate visual evidence;

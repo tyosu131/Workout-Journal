@@ -23,8 +23,8 @@ now proves the manually dispatched production path; C3 runtime chain is CLOSED.
 Must 3 is Closed by [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure); Must 4 is Closed by [C4D](./cd-c1-candidate-delivery.md#c4d-automatic-production-delivery-runtime-closure).
 Automatic run `35573153822` proves the fixed E2E path (8/8 PASS, PROVEN_ZERO cleanup),
 verify, Human production approval and promotion/post-deploy SUCCESS. Its pair
-`cd-35573153822-1` is Historical previous-production evidence. Current pair
-`cd-35737278328-1` is 100% on both services under [PF-F1](./portfolio-finalization.md#current-production); OBS-D2A retains the Historical previous pair `cd-35675050740-1`.
+`cd-35573153822-1` is Historical previous-production evidence. [PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the dated closure
+checkpoint; live Cloud Run read-back owns exact current revisions, traffic and pairing; OBS-D2A retains the Historical previous pair `cd-35675050740-1`.
 [C4C](./cd-c1-candidate-delivery.md#c4c-nested-playwright-authority-remediation) retains
 the earlier failure and now runtime-proven fix. No infrastructure ownership,
 provider condition or IAM change is needed. `CD_C1_ACTIVATION` is UNCONFIGURED and
@@ -231,7 +231,7 @@ not the production service URL. At P2B, production remained `00003-luc` / `00003
 at 100%, with the known-good `candidate-0829-923536` pair intact. C3V subsequently
 promoted `cd-35545739898-1`; C4D later served `cd-35573153822-1` at 100%.
 Historical OBS-D2A records `cd-35675050740-1` at 100% on both services;
-Historical OBS-D3F confirmed `cd-35684518093-2` at 100% on both; [PF-F1](./portfolio-finalization.md#current-production) now confirms `cd-35737278328-1`. These revisions,
+Historical OBS-D3F confirmed `cd-35684518093-2` at 100% on both; Historical [PF-F1](./portfolio-finalization.md#pf-f1-historical-production-checkpoint) confirmed `cd-35737278328-1`. These revisions,
 tags, images and configuration remain outside Terraform ownership; keeping this
 proof pair does not authorize tag reassignment or deletion.
 

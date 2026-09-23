@@ -1,10 +1,9 @@
 # CD-C1: dedicated candidate E2E and gated delivery
 
-Current runtime status (PF-F1, 2026-09-22): **Must 3–6 Closed**.
-[PF-F1 current production](./portfolio-finalization.md#current-production) is
-`cd-35737278328-1`, both services at 100%, from main
-`2d9ec91d8f11a83c0904de770cc8df436139325b`, required CI `35736936685`
-SUCCESS / attempt 1 and automatic CD `35737278328` SUCCESS / attempt 1.
+Current delivery status: **Must 3–6 Closed**.
+[PF-F5](./portfolio-finalization.md#pf-f5-final-closure) records the latest verified
+Portfolio closure production checkpoint. Exact current revisions, traffic and
+pairing are owned by live Cloud Run read-back, not a static run identity.
 [OBS-D3F](./verification.md#obs-d3f-final-observability-documentation-closure) retains
 Historical previous production and durable Must 5 evidence, including separate
 attempts, incident OPEN/CLOSED and Human firing/recovery receipts.
@@ -958,7 +957,7 @@ plan and verified authorization; C3V then completed the fresh production release
 C3R2 read-back and C3S authority retain Backend `workout-journal-backend-00003-luc`
 and Frontend `workout-journal-frontend-00003-xar` at 100%, both C3P candidates at
 0%, and `CD_C1_ACTIVATION` UNCONFIGURED. These are historical phase snapshots;
-the current pair is recorded in the PF-F1 summary above.
+exact current pairing is owned by live Cloud Run read-back; the summary above links the dated closure checkpoint.
 
 P2B's `APPLICATION_SHA`, fixed production names/tag and v1 builder remain solely
 as the historical manual proof oracle. GitHub Actions rejects v1 manifests.
@@ -967,8 +966,8 @@ CD-C1 does not use that builder's fixed SHA, Build ID, digests or pair.
 ## C3U and C3V runtime closure
 
 Historical C3W checkpoint: production/activation/status statements in this section
-describe that closure. C4D below owns Must 4 closure; the PF-F1 summary
-above owns current production and Must 3 status.
+describe that closure. C4D below owns Must 4 closure; the summary above links
+the dated PF-F5 checkpoint and Must 3 status. Live Cloud Run read-back owns exact current production.
 
 **C3 runtime chain: CLOSED. Must 4: OPEN.** This is the C3W documentation closure
 of C3P → C3R2 → C3S → C3U → C3V, not a new runtime execution.
@@ -1303,8 +1302,8 @@ rerun or runtime mutation was performed in C4C implementation.
 ## C4D automatic production delivery runtime closure
 
 **Historical C4D checkpoint, 2026-09-21.** The proof below retains its original
-source, run, production pair and then-open Must 3 status. Current production is
-owned by [PF-F1](./portfolio-finalization.md#current-production);
+source, run, production pair and then-open Must 3 status. Exact current production is owned by live Cloud Run read-back;
+[PF-F5](./portfolio-finalization.md#pf-f5-final-closure) is a dated checkpoint;
 Must 3 closure remains in [OBS-D2A/B](./verification.md#obs-d2a-post-apply-runtime-evidence-and-obs-d2b-closure).
 
 On 2026-09-21, read-only GitHub and GCP reacquisition established **Must 4 Closed;
