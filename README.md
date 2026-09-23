@@ -12,8 +12,8 @@ The live link is the stable Frontend Cloud Run service URL. The [production evid
 - **Keep dated workout notes:** create, save and reopen notes with exercise names, exercise notes, weight, reps and rest; add, duplicate or remove exercises and sets. Edits are saved through the authenticated notes API.
 - **Record effort:** optional set-level RPE, RIR and failure inputs feed effort summaries without treating missing values as zero effort.
 - **Navigate your history:** browse the monthly calendar, organize sessions with personal tags, and find previous notes by tag. Create and delete tags from the catalog.
-- **Review progress:** select a date range for BIG3 estimated one-rep-max trends, muscle-group sets/volume, exercise trends with table fallbacks, effort summaries and five deterministic Growth Signals: strength, volume, consistency, effort and exercise progress.
-- **Read a weekly summary:** a rule-based preview explains the recorded data. The optional generation endpoint currently uses a local mock provider with fallback; external AI is not integrated.
+- **Review progress:** select a date range for BIG3 estimated one-rep-max trends, muscle-group sets/volume, exercise trends with table fallbacks, effort summaries and four visible deterministic Growth Signals: strength, volume, consistency and effort.
+- **Read a weekly summary:** a rule-based summary explains the recorded data. The production UI does not offer generated summaries; the retained backend endpoint uses a local mock provider with fallback, and external AI is not integrated.
 
 ## Architecture
 

@@ -1,11 +1,7 @@
 import React from "react";
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
   Badge,
   Box,
-  Button,
   Flex,
   Heading,
   List,
@@ -17,19 +13,11 @@ import {
 import type {
   RuleBasedWeeklySummary,
 } from "../../../../shared/utils/ruleBasedWeeklySummary";
-import type {
-  GenerateWeeklySummaryResponse,
-} from "../api/weeklySummaryApi";
 
 type WeeklySummaryPreviewSectionProps = {
   summary: RuleBasedWeeklySummary;
   rangeStart: string;
   rangeEnd: string;
-  generatedResponse?: GenerateWeeklySummaryResponse | null;
-  generationError?: string | null;
-  isGenerating?: boolean;
-  canGenerate?: boolean;
-  onGenerate?: () => void;
 };
 
 type SummaryListProps = {
@@ -61,10 +49,6 @@ const SummaryList: React.FC<SummaryListProps> = ({
       </List>
     )}
   </Box>
-);
-
-const getGeneratedLabel = (source: GenerateWeeklySummaryResponse["source"]) => (
-  source === "ai" ? "Mocked endpoint response" : "Fallback summary"
 );
 
 const SummaryCard: React.FC<{
@@ -126,11 +110,6 @@ const WeeklySummaryPreviewSection: React.FC<WeeklySummaryPreviewSectionProps> = 
   summary,
   rangeStart,
   rangeEnd,
-  generatedResponse = null,
-  generationError = null,
-  isGenerating = false,
-  canGenerate = true,
-  onGenerate,
 }) => (
   <Box
     as="section"
@@ -156,53 +135,13 @@ const WeeklySummaryPreviewSection: React.FC<WeeklySummaryPreviewSectionProps> = 
             {rangeStart} to {rangeEnd}
           </Text>
         </Box>
-        <Button
-          colorScheme="teal"
-          size="sm"
-          onClick={onGenerate}
-          isLoading={isGenerating}
-          loadingText="Generating"
-          isDisabled={!canGenerate || isGenerating || !onGenerate}
-          alignSelf={{ base: "stretch", sm: "center" }}
-          w={{ base: "100%", sm: "auto" }}
-        >
-          Generate AI summary
-        </Button>
       </Flex>
 
       <Text fontSize="sm" color="gray.600">
-        Uses the mocked backend endpoint for now. The local rule-based preview remains visible.
+        A rule-based overview of your logged training in this range.
       </Text>
 
-      {generationError && (
-        <Alert status="error" variant="left-accent">
-          <AlertIcon />
-          <AlertDescription>{generationError}</AlertDescription>
-        </Alert>
-      )}
-
-      <SummaryCard summary={summary} badgeLabel="Rule-based preview" />
-
-      {generatedResponse && (
-        <Box>
-          <SummaryCard
-            summary={generatedResponse.summary}
-            badgeLabel={getGeneratedLabel(generatedResponse.source)}
-            badgeColorScheme={generatedResponse.source === "ai" ? "teal" : "orange"}
-          />
-          {generatedResponse.validationErrors.length > 0 && (
-            <Text mt={2} fontSize="xs" color="gray.500">
-              Validation notes: {generatedResponse.validationErrors.slice(0, 2).join(" ")}
-            </Text>
-          )}
-        </Box>
-      )}
-
-      {!generatedResponse && (
-        <Text fontSize="xs" color="gray.500">
-          Generated endpoint response will appear here after the request completes.
-        </Text>
-      )}
+      <SummaryCard summary={summary} badgeLabel="Rule-based" />
     </Stack>
   </Box>
 );
