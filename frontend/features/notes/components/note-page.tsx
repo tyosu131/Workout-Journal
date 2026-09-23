@@ -67,6 +67,8 @@ const NotePage: React.FC = () => {
   const [newTag, setNewTag] = useState("");
   const [allTags, setAllTags] = useState<string[]>([]);
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const [isTagSubmitting, setIsTagSubmitting] = useState(false);
+  const isTagSubmittingRef = useRef(false);
   const [folded, setFolded] = useState<boolean[]>([]);
   const [expandedEffortRows, setExpandedEffortRows] = useState<
     Record<string, boolean>
@@ -164,11 +166,26 @@ const NotePage: React.FC = () => {
 
   const { handleAddTagAndSave, handleRemoveTagAndSave } = useTagHandlers(noteData, setNoteData);
 
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && newTag.trim()) {
-      handleAddTagAndSave(newTag.trim());
+  const submitNewTag = async () => {
+    const trimmedTag = newTag.trim();
+    if (!trimmedTag || isTagSubmittingRef.current) return;
+
+    isTagSubmittingRef.current = true;
+    setIsTagSubmitting(true);
+    try {
+      await handleAddTagAndSave(trimmedTag);
       setNewTag("");
       setIsTagPopoverOpen(false);
+    } finally {
+      isTagSubmittingRef.current = false;
+      setIsTagSubmitting(false);
+    }
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      void submitNewTag();
     }
   };
 
@@ -258,49 +275,65 @@ const NotePage: React.FC = () => {
               );
             })}
           </Box>
-          <Popover
-            isOpen={isTagPopoverOpen}
-            onClose={() => setIsTagPopoverOpen(false)}
-            closeOnBlur={true}
-            placement="bottom-start"
-          >
-            <PopoverTrigger>
-              <Input
-                placeholder="Select an option or create one"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                width="30%"
-                onKeyDown={handleTagInputKeyDown}
-                onClick={handleTagInputClick}
-              />
-            </PopoverTrigger>
-            <PopoverContent w="320px">
-              <PopoverArrow />
-              <PopoverCloseButton />
-              <PopoverBody>
-                <Text fontSize="sm" color="gray.500" mb={2}>
-                  Select an option or create one
-                </Text>
-                {allTags.map((tagOption) => {
-                  const tagStyle = getTagStyle(tagOption);
-                  return (
-                    <Flex
-                      key={tagOption}
-                      p={2}
-                      alignItems="center"
-                      gap={2}
-                      _hover={{ bg: "gray.100", cursor: "pointer" }}
-                      onClick={() => handleTagOptionClick(tagOption)}
-                    >
-                      <Tag {...tagStyle} borderRadius="full">
-                        <TagLabel>{tagOption}</TagLabel>
-                      </Tag>
-                    </Flex>
-                  );
-                })}
-              </PopoverBody>
-            </PopoverContent>
-          </Popover>
+          <Flex width={{ base: "100%", md: "420px" }} gap={2} alignItems="center">
+            <Popover
+              isOpen={isTagPopoverOpen}
+              onClose={() => setIsTagPopoverOpen(false)}
+              closeOnBlur={true}
+              placement="bottom-start"
+            >
+              <PopoverTrigger>
+                <Input
+                  aria-label="Tag name"
+                  placeholder="Select an option or create one"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  flex="1"
+                  minW={0}
+                  onKeyDown={handleTagInputKeyDown}
+                  onClick={handleTagInputClick}
+                />
+              </PopoverTrigger>
+              <PopoverContent
+                width={{ base: "calc(100vw - 32px)", sm: "320px" }}
+                maxW="calc(100vw - 32px)"
+              >
+                <PopoverArrow />
+                <PopoverCloseButton />
+                <PopoverBody>
+                  <Text fontSize="sm" color="gray.500" mb={2}>
+                    Select an option or create one
+                  </Text>
+                  {allTags.map((tagOption) => {
+                    const tagStyle = getTagStyle(tagOption);
+                    return (
+                      <Flex
+                        key={tagOption}
+                        p={2}
+                        alignItems="center"
+                        gap={2}
+                        _hover={{ bg: "gray.100", cursor: "pointer" }}
+                        onClick={() => handleTagOptionClick(tagOption)}
+                      >
+                        <Tag {...tagStyle} borderRadius="full">
+                          <TagLabel>{tagOption}</TagLabel>
+                        </Tag>
+                      </Flex>
+                    );
+                  })}
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
+            <Button
+              colorScheme="blue"
+              onClick={() => void submitNewTag()}
+              isLoading={isTagSubmitting}
+              isDisabled={!newTag.trim() || isTagSubmitting}
+              flexShrink={0}
+            >
+              Add
+            </Button>
+          </Flex>
           <Button
             variant="outline"
             onClick={handleShowPreviousNotes}
